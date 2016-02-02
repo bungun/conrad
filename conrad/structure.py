@@ -1,0 +1,3 @@
+"""
+structure.py docstring
+"""
