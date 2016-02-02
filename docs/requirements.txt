@@ -1,8 +1,4 @@
 sphinx
 sphinx_rtd_theme
-cvxpy
-scipy
 numpy
-ecos
-scs
 ../conrad
