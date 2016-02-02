@@ -1,0 +1,7 @@
+../conrad
+sphinx
+cvxpy
+scipy
+numpy
+ecos
+scs
