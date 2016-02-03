@@ -59,7 +59,7 @@ class DoseConstraint(object):
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
-	    return 2 * [100 * self.fraction], [self.dose_requested, self.dose_actual]
+	    return 2 * [100 * self.fraction], [self.dose_requested, self.dose_actual], self.direction
 	
 
 	def get_maxmargin_fulfillers(self, y):
