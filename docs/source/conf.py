@@ -15,6 +15,8 @@
 import sys
 import os
 import sphinx_rtd_theme
+from recommonmark.parser import CommonMarkParser
+
 
 # to import conrad:
 sys.path.insert(0, os.path.abspath(os.path.join('..', '..')))
@@ -46,11 +48,15 @@ templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
+
+source_parsers = {
+    '.md': CommonMarkParser,
+}
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
+
 
 # The master toctree document.
 master_doc = 'index'
@@ -74,7 +80,7 @@ release = __version__
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = u'python'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -123,10 +129,7 @@ html_theme = 'sphinx_rtd_theme'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-   'github_user': 'cvxgrp',
-   'github_repo': 'cvxpy',
-}
+# html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
