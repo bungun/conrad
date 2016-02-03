@@ -1,22 +1,46 @@
-import os
-import sys
-import numpy as np
-import matplotlib
+"""
+dvh.py docstring
+"""
 
-class DVH(object):
-	def __init__(self, dose, percentile, **options):
-		self.dose = dose
+
+class DoseConstraint(object):
+	"""
+	
+	"""
+
+	def __init__(self, dose, percentile, direction):
+		self.id = None
+		self.dose_requested = dose
 		self.percentile = percentile
-		self.options = options
-		self.maxdose = None
-		
-	def plot(self, canvas, **options):
-		for key in self.options:
-			if not key in options:
-				options[key]=self.options[key]
-		canvas.plot(self.dose, self.percentile, **options)
-		if self.maxdose is not None:
-			canvas.xlim(0, 1.1 * self.maxdose)
+		self.direction = direction # this could also be called constr_type or something
+		self.dose_actual = None
+
+		# TODO: figure out how to specify constraint direction (ge/le, upper/lower, ...)
+
+	def set_actual_dose(self, slack):
+		if self.direction == "upper":
+			self.dose_actual = self.dose_requested + slack
 		else:
-			canvas.xlim(0, 1.1 * np.max(self.dose))
-		canvas.ylim(0, 100)
+			self.dose_actual = self.dose_requested - slack
+
+
+	@property
+	def constr_id(self):
+		""" TODO: return constraint UUID ? """
+		pass
+
+	@property
+	def plot_data(self):
+		""" TODO: return plottable data """
+	    pass
+	
+
+class DVHCurve(object):
+	def __init__(self):
+		pass
+
+	@property
+	def plot_data(self):
+		""" TODO: return plottable data """
+		pass
+
