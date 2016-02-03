@@ -1,12 +1,29 @@
+from conrad.dvh import DoseConstraint
+from conrad.structure import Structure
+from conrad.problem import PlanningProblem
+from conrad.run_data import RunRecord
+# TODO: imports
+# TODO: unit test
 """
-case.py docstring
+TODO: case.py docstring
 """
 
-import os
-import sys
-import numpy as np
-import matplotlib
-import cxvpy
+def gen_constraint_id(label, constraint_count):
+	""" TODO: docstring """
+	return "sid:{}:cid:{}".format(label, constraint_count)
+
+def constraint2label(constr_id):
+	""" TODO: docstring """
+	return constr_id.split(:)[1]
+
+def default_weights(is_target = False):
+	""" TODO: docstring """
+	if is_target:
+		# w_under = 1, w_over = 0.05
+		return 1., 0.05
+	else:
+		return None, 0.1
+
 
 class Case(object):
 	"""TODO:
@@ -21,160 +38,113 @@ class Case(object):
 			dose_constraints (dict, or probably string/tuple list)
 	"""
 
-	# def __init__(self):
-	# 	"""Case.__init__() docstring"""
-	# 	self.problem = None
-	# 	self.clinical_spec = None
-	# 	self.voxel_labels = None
-	# 	self.structures = {}
+	def __init__(self):
+		"""TODO: Case.__init__() docstring"""
+		self.problem = PlanningProblem()
+		self.prescription = None
+		self.voxel_labels = None
+		self.structures = {}
 
-	# 	# dose matrix
-	# 	self.A = None
-	# 	# self.shape = (self.voxels, self.beams) = A.shape
+		# counts go with life of Case object,
+		# even if, e.g., all constraints removed from a run
+		self.constraint_count = 0
+		self.run_count = 0
 
-	# 	# (most recent) beam intensity design
-	# 	self.x = None
-	# 	self.run_records = {}
+		# for now, assume A sorted!
+		# need: structure sizes, structure pointers
+		# need: structure order (plotting)
+		# need: parse full mat + data into Structure()s
+		# need: digest clinical spec
+		# some kind of plotting!
 
-	# def add_dvh_constraint(self):
-	# 	pass
-	# 	# return constr id?
+		# dose matrix
+		self.A = None
+		# self.shape = (self.voxels, self.beams) = A.shape
 
-	# def drop_dvh_constraint(self, constr_id):
-	# 	pass
+		self.run_records = {}
 
-	# def form_objective(self):
-	# 	# do something with self.structures, self.problem
-	# 	pass
+	def add_dvh_constraint(self, label, dose, fraction, direction):
+		""" TODO: docstring """
+		self.constraint_count += 1
+		constr = DoseConstraint(dose, fraction, direction)
+		cid = gen_constraint_id(label, self.constraint_count)
+		self.structures[label].add_constraint(cid, constr)
+		return cid
 
-	# def form_constraints(self):
-	# 	pass
+	def drop_dvh_constraint(self, constr_id):
+		""" TODO: docstring """
+		label = constraint2label(constr_id)
+		self.structures[label].remove_constraint(constr_id)
 
-	# def form_problem(self):
-	# 	pass
+	def change_objective(self, label, dose = None, 
+		w_under = None, w_over = None):
+		""" TODO: docstring """
+		self.structures[label].set_objective(dose, w_under, w_over)
 
-	# def plan(self):
-	# 	# should emit run record with run id
-	# 	pass
+	def plan(self, *args, **kwargs):
+		""" TODO: docstring """
 
-	# def get_design(self):
-	# 	pass
+		# check for targets
+		if not self.has_targets:
+			print str("Warning: plan has no targets."
+				"Not running optimization.\n\n")
+			return
 
+		# use 2 pass OFF by default
+		use_2pass = 'dvh_2pass' in args
+
+		# dvh slack ON by default
+		use_slack = not 'dvh_no_slack' in args
+
+		# objective weight for slack minimization
+		gamma = kwargs['dvh_wt_slack'] if 'dvh_wt_slack' in kwargs else None
+		if gamma is not None: kwargs['gamma'] = gamma
+
+		rr = RunRecord(self.structures, 
+			use_2pass = use_2pass, 
+			use_slack = use_slack, 
+			gamma = gamma)
+
+
+		# solve problem
+		self.problem.solve(self.structures, rr.output, *args, **kwargs)
+
+		self.run_count += 1
+		self.run_records[run_count] = rr
+
+
+	def calc_doses(self, x):
+		""" TODO: docstring """
+		for s in self.structures.itervals():
+			s.calc_y(x)
+
+	@property
+	def plotting_data(self):
+		""" TODO: docstring """
+		d = {}
+		for label, s in self.structures.iteritems():
+			d[label] = s.plotting_data
+	    return d
+		
+	@property
+	def n_structures(self):
+		""" TODO: docstring """
+	    return len(self.structures.keys())
 	
-	def __init__(self, structures, prescription, num_beams, dvh_constrs_by_struct = None):
-		if constraints is None:
-			constraints = []
-		self.num_beams = num_beams		   # TODO: Extract from A matrix
-		self.prescription = prescription
-		self.structures = structures
-		self.dvh_constrs_by_struct = dvh_constrs_by_struct
-	
-	def num_beams(self):
-		return self.num_beams
-	
-	def num_dvh_constr(self):
+	@property
+	def n_beams(self):
+		""" TODO: docstring """
+		return self.A.shape[1]
+
+	@property
+	def n_dvh_constraints(self):
+		""" TODO: docstring """
 		return sum([dc.count for dc in self.dvh_constrs_by_struct])
 	
-	def plan(self, wt_under = 1., wt_over = 0.05, wt_oar = 0.2, solver = ECOS, flex_constrs = False, second_pass = False):
-		b = self.prescription
-		n = self.num_beams()
-		n_constr = self.num_dvh_constr()
-		
-		# Compute weights in objective function
-		alpha = wt_over / wt_under
-		c_ = (alpha + 1)/2
-		d_ = (alpha - 1)/2
-		c = c_ * (b > 0) + wt_oar * (b == 0)
-		d = d_ * (b > 0)
-		
-		# Define variables
-		x = Variable(n)
-		beta = Variable(n_constr)
-		
-		# Define objective and constraints
-		obj = Minimize( c.T * abs(A*x - b) + d.T * (A*x - b) )
-		constraints = [x >= 0]
-		
-		if flex_constrs:
-			b_slack = Variable(n_constr)
-			obj += Minimize( wt_slack * sum_entries(b_slack) )
-			constraints += [b_slack >= 0]
-		constraints += self._prob_dvh_constrs(A, b, beta, b_slack, flex_constrs)
-		
-		prob = Problem(obj, constraints)
-		prob.solve(solver = solver)
-		if not second_pass:     # TODO: Return beta and b_slack as well?
-			return (prob, x)
-		
-		# Second pass with exact voxel DVH constraints
-		x_exact = Variable(n)
-		constraints_exact = [x_exact >= 0]
-		constraints_exact += self._prob_exact_constrs(A, b, x, x_exact)
-		prob_exact = Problem(obj, constraints_exact)
-		prob_exact.solve(solver = solver)
-		return (prob_exact, x_exact)
-	
-	# Upper bound: \sum max(beta + (Ax - (b + b_slack)), 0) <= beta * p
-	# Lower bound: \sum max(beta - (Ax - (b - b_slack)), 0) <= beta * p
-	@staticmethod
-	def dvh_restriction(A, x, b, p, beta, upper = True, slack = 0):
-		sign = 1 if upper else -1
-		return sum_entries(pos( beta + sign * (A * x - (b + sign * slack)) )) <= beta * p
-	
-	# Constrain only p voxels that satisfy DVH constraint by largest margin
-	@staticmethod
-	def dvh_exact_constrs(A, x, b, p, x_exact, upper = True):
-		sign = 1 if upper else -1
-		constr_diff = sign * (A.dot(x.value) - b)
-		idx_sort_diff = np.argsort(constr_diff, axis = 0)
-		idx_sub = idx_sort_diff[0:floor(p)]
-		return sign * (A[idx_sub, :] * x_exact - b) <= 0
-	
-	# Restrict DVH constraints using convex approximation
-	def _prob_dvh_constrs(self, A, x, b, beta, b_slack, flex_constrs = False):
-		constr_idx = 0
-		constr_solver = []
-		n_structures = len(self.structures)
-		
-		for s in xrange(n_structures):
-			i_start = self.structures[s].pointer
-			i_end = self.structures[s + 1].pointer - 1
-			A_sub = A[i_start : i_end, :]
-			b_sub = b[i_start : i_end, :]
-			
-			for dvh_constr in self.dvh_constrs_by_struct[s].constraints:
-				p = self.structures[s].size * (dvh_constr.percentile / 100.)
-				# b_ = dvh_constr.dose
-				# sign = -1 + 2 * dvh_constr.upper_bound
-				# if flex_constrs:
-				#	b_ += sign * b_slack[constr_idx]
-				# constr = sum_entries(pos(beta[constr_idx] + sign * (A_sub * x - b_) )) <= beta[constr_idx] * p
-				
-				slack = b_slack[constr_idx] if flex_constrs else 0
-				constr = dvh_restriction(A_sub, x, dvh_constr.dose, p, beta[constr_idx], dvh_constr.upper_bound, slack)
-				constr_solver.append(constr)
-				constr_idx += 1
-		return constr_solver
-	
-	# Determine exact voxels to constrain
-	def _prob_exact_constrs(self, A, b, x, x_exact):
-		constr_idx = 0
-		constr_exact = []
-		n_structures = len(self.structures)
-	
-		for s in xrange(n_structures):
-			i_start = self.structures[s].pointer
-			i_end = self.structures[s + 1].pointer - 1
-			A_sub = A[i_start : i_end, :]
-			b_sub = b[i_start : i_end, :]
-			
-			for dvh_constr in self.dvh_constrs_by_struct[s].constraints:
-				p = self.structures[s].size * (dvh_constr.percentile / 100.)
-				# b_ = dvh_constr.dose
-				# sign = -1 + 2 * dvh_constr.upper_bound
-				
-				constr = dvh_exact_constrs(A_sub, x, dvh_constr.dose, p, x_exact, dvh_constr.upper_bound)
-				constr_exact.append(constr)
-				constr_idx += 1
-		return constr_exact
-	
+	@property
+	def has_targets(self):
+		""" TODO: docstring """
+		for s in self.structures.iteritems():
+			if s.is_target: return True
+		return False
+

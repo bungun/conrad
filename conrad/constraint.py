@@ -14,7 +14,8 @@ class DVHConstraint(object):
 	@property
 	def tuple(self):
 		return (self.dose, self.percentile, self.upper_bound)
-		
+	
+	@property	
 	def is_upper(self):
 		return self.upper_bound
 
