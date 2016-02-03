@@ -110,7 +110,7 @@ class Case(object):
 		x_exact = Variable(n)
 		constraints_exact = [x_exact >= 0]
 		constraints_exact += self._prob_exact_constrs(A, b, x, x_exact)
-		prob_exact = Problem(obj, constr_exact)
+		prob_exact = Problem(obj, constraints_exact)
 		prob_exact.solve(solver = solver)
 		return (prob_exact, x_exact)
 	
@@ -118,10 +118,17 @@ class Case(object):
 	# Lower bound: \sum max(beta - (Ax - (b - b_slack)), 0) <= beta * p
 	@staticmethod
 	def dvh_restriction(A, x, b, p, beta, upper = True, slack = 0):
-		if upper:
-			return sum_entries(pos( beta + (A * x - (b + slack)) )) <= beta * p
-		else:
-			return sum_entries(pos( beta - (A * x - (b - slack)) )) <= beta * p
+		sign = 1 if upper else -1
+		return sum_entries(pos( beta + sign * (A * x - (b + sign * slack)) )) <= beta * p
+	
+	# Constrain only p voxels that satisfy DVH constraint by largest margin
+	@staticmethod
+	def dvh_exact_constrs(A, x, b, p, x_exact, upper = True):
+		sign = 1 if upper else -1
+		constr_diff = sign * (A.dot(x.value) - b)
+		idx_sort_diff = np.argsort(constr_diff, axis = 0)
+		idx_sub = idx_sort_diff[0:floor(p)]
+		return sign * (A[idx_sub, :] * x_exact - b) <= 0
 	
 	# Restrict DVH constraints using convex approximation
 	def _prob_dvh_constrs(self, A, x, b, beta, b_slack, flex_constrs = False):
@@ -137,7 +144,7 @@ class Case(object):
 			
 			for dvh_constr in self.dvh_constrs_by_struct[s].constraints:
 				p = self.structures[s].size * (dvh_constr.percentile / 100.)
-				b_ = dvh_constr.dose
+				# b_ = dvh_constr.dose
 				# sign = -1 + 2 * dvh_constr.upper_bound
 				# if flex_constrs:
 				#	b_ += sign * b_slack[constr_idx]
@@ -163,15 +170,10 @@ class Case(object):
 			
 			for dvh_constr in self.dvh_constrs_by_struct[s].constraints:
 				p = self.structures[s].size * (dvh_constr.percentile / 100.)
-				sign = -1 + 2 * dvh_constr.upper_bound
-				b_ = dvh_constr.dose
+				# b_ = dvh_constr.dose
+				# sign = -1 + 2 * dvh_constr.upper_bound
 				
-				# Save p voxels that satisfy constraint by largest margin
-				constr_diff = sign * (A_sub.dot(x.value) - b_)
-				i_diff = np.argsort(constr_diff, axis = 0)
-				i_diff_sub = i_diff[0:floor(p)]
-				
-				constr = sign * (A_sub[i_diff_sub, :] * x_exact - b_) <= 0
+				constr = dvh_exact_constrs(A_sub, x, dvh_constr.dose, p, x_exact, dvh_constr.upper_bound)
 				constr_exact.append(constr)
 				constr_idx += 1
 		return constr_exact
