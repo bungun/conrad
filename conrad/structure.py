@@ -23,7 +23,7 @@ class Structure(object):
 		# dvh curve and constraints data for plotting
 		self.dvh_curve = None
 
-		# subsection of dose matrix corresponding to structure
+		# (pointer to) subsection of dose matrix corresponding to structure
 		self.A = None
 
 		# clustered version of same dose matrix, voxels
