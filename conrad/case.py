@@ -114,8 +114,17 @@ class Case(object):
 		prob_exact.solve(solver = solver)
 		return (prob_exact, x_exact)
 	
+	# Upper bound: \sum max(beta + (Ax - (b + b_slack)), 0) <= beta * p
+	# Lower bound: \sum max(beta - (Ax - (b - b_slack)), 0) <= beta * p
+	@staticmethod
+	def dvh_restriction(A, x, b, p, beta, upper = True, slack = 0):
+		if upper:
+			return sum_entries(pos( beta + (A * x - (b + slack)) )) <= beta * p
+		else:
+			return sum_entries(pos( beta - (A * x - (b - slack)) )) <= beta * p
+	
 	# Restrict DVH constraints using convex approximation
-	def _prob_dvh_constrs(self, A, b, x, b_slack, beta, flex_constrs = False):
+	def _prob_dvh_constrs(self, A, x, b, beta, b_slack, flex_constrs = False):
 		constr_idx = 0
 		constr_solver = []
 		n_structures = len(self.structures)
@@ -128,17 +137,16 @@ class Case(object):
 			
 			for dvh_constr in self.dvh_constrs_by_struct[s].constraints:
 				p = self.structures[s].size * (dvh_constr.percentile / 100.)
-				sign = -1 + 2 * dvh_constr.upper_bound
 				b_ = dvh_constr.dose
-				if flex_constrs:
-					b_ += sign * b_slack[constr_idx]
+				# sign = -1 + 2 * dvh_constr.upper_bound
+				# if flex_constrs:
+				#	b_ += sign * b_slack[constr_idx]
+				# constr = sum_entries(pos(beta[constr_idx] + sign * (A_sub * x - b_) )) <= beta[constr_idx] * p
 				
-				# Lower bound: \sum max(beta - (Ax - (b - b_slack)), 0) <= beta * p
-				# Upper bound: \sum max(beta + (Ax - (b + b_slack)), 0) <= beta * p
-				constr = sum_entries(pos(beta[constr_idx] + sign * (A_sub * x - b_) )) <= beta[constr_idx] * p
+				slack = b_slack[constr_idx] if flex_constrs else 0
+				constr = dvh_restriction(A_sub, x, dvh_constr.dose, p, beta[constr_idx], dvh_constr.upper_bound, slack)
 				constr_solver.append(constr)
 				constr_idx += 1
-		
 		return constr_solver
 	
 	# Determine exact voxels to constrain
@@ -166,6 +174,5 @@ class Case(object):
 				constr = sign * (A_sub[i_diff_sub, :] * x_exact - b_) <= 0
 				constr_exact.append(constr)
 				constr_idx += 1
-		
 		return constr_exact
-		
+	
