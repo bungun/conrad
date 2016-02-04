@@ -17,7 +17,7 @@ def panels_to_cols(n_panels):
 		n_cols += 1
 	if n_panels > 4:
 		n_cols += 1
-	if n_panels > 7
+	if n_panels > 7:
 		panels += 1
 
 class DVHPlot(object):
@@ -67,8 +67,7 @@ class DVHPlot(object):
 		plt.clear(self.fig)
 
 
-		max_dose = reduce(max, 
-			data['curve']['dose'].max() for data in plot_data.itervals())
+		max_dose = max([data['curve']['dose'].max() for data in plot_data.itervals()])
 
 
 		for label, data in plot_data:

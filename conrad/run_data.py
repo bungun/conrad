@@ -32,8 +32,8 @@ class RunProfile(object):
 		for label, s in structures.iteritems():
 			self.objectives[label] = {'label' : label,
 			'name' : s.name, 'dose' : s.dose, 
-			'w_under', s.w_under_raw,
-			'w_over', s.w_over_raw }
+			'w_under' : s.w_under_raw,
+			'w_over' : s.w_over_raw }
 
 	def pull_constraints(self, structures):
 		""" TODO: docstring """

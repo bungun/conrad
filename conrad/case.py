@@ -18,7 +18,7 @@ def gen_constraint_id(label, constraint_count):
 
 def constraint2label(constr_id):
 	""" TODO: docstring """
-	return constr_id.split(:)[1]
+	return constr_id.split(':')[1]
 
 def default_weights(is_target = False):
 	""" TODO: docstring """
@@ -50,7 +50,7 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 		ptr2 += size
 
 		# assess sorting of label blocks:
-		if not all(map(lambda v: v == label, voxel_labels[ptr1:ptr2]))
+		if not all(map(lambda v: v == label, voxel_labels[ptr1:ptr2])):
 			ValueError("inputs voxel_labels and dose_matrix are expected "
 				"to be (block) sorted in the order specified by argument "
 				"`label_order'. voxel_labels not block sorted.")
@@ -183,12 +183,12 @@ class Case(object):
 		d = {}
 		for label, s in self.structures.iteritems():
 			d[label] = s.plotting_data
-	    return d
+		return d
 		
 	@property
 	def n_structures(self):
 		""" TODO: docstring """
-	    return len(self.structures.keys())
+		return len(self.structures.keys())
 	
 	@property
 	def n_voxels(self):
@@ -211,4 +211,3 @@ class Case(object):
 		for s in self.structures.iteritems():
 			if s.is_target: return True
 		return False
-

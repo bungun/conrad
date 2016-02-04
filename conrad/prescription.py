@@ -192,38 +192,61 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 		# - "D__% < x Gy"
 		# - "D__% > x Gy"
 		if rdose:
+			#-----------------------------------------------------#
+			# constraint in form "{LHS} <> {x} Gy"
+			#
+			# conversion to canonical form:
+			# -if LHS == "D__" : (none required).
+			# -if LHS == "min", "mean", "max" : 
+			#	convert to D0, D50, D100, respectively.
+			# (inequality direction preserved)
+			#-----------------------------------------------------#
+
 			# parse dose
 			if 'cGy' in right:
-				dvhc['dose'] = float(right.strip('cGy')) / 100.
+				dose = float(right.strip('cGy')) / 100.
 			else:
-				dvhc['dose'] = float(right.strip('Gy'))
+				dose = float(right.strip('Gy'))
 		
 			# parse percentile
 			if 'mean' in left or 'Mean' in left:
-				dvhc['percentile'] = 50.
+				percentile = 50.
 			elif 'min' in left or 'Min' in left:
-				dvhc['percentile'] = 0.
+				percentile = 0.
 			elif 'max' in left or 'Max' in left:
-				dvhc['percentile'] = 100.
+				percentile = 100.
 			else:
-				dvhc['percentile'] = float(left.strip('%').strip('d').strip('D'))
+				percentile = float(left.strip('%').strip('d').strip('D'))
 
-			# TODO: parse direction
+			# parse direction:
+			# dose on right-hand side of inequality is same as canonical
+			# form, so parsed inequality direction = input inequality direction
+			direction = '<' if lt else '>'
 
 		# cases: 
 		# - "x Gy to < p %"
 		# - "x Gy to > p %"
 		elif ldose:
+			#-----------------------------------------------------#
+			# constraint in form "{x} Gy <> {p} %"
+			#
+			# conversion to canonical form:
+			# {x} Gy < {p} % ---> D{p} > {x} Gy
+			# {x} Gy > {p} % ---> D{p} < {x} Gy
+			# (inequality direction flips)
+			#-----------------------------------------------------#
+
 			# parse dose
 			if 'cGy' in left:
-				dvhc['dose'] = float(left.strip('cGy')) / 100.
+				dose = float(left.strip('cGy')) / 100.
 			else:
-				dvhc['dose'] = float(left.strip('Gy'))
+				dose = float(left.strip('Gy'))
 
 			# parse percentile
-			dvhc['percentile'] = float(right.strip('%'))
+			percentile = float(right.strip('%'))
 
-			# TODO: parse direction
+			# parse direction
+			direction = '>' if lt else '<'
 
 		# cases: 
 		# - "V__% < p %"
@@ -231,39 +254,48 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 		# - "D__% < {frac} rx"
 		# - "D__% > {frac} rx"
 		else:
+			#-----------------------------------------------------#
+			# constraint in form "V__% <> p%"
+			#
+			# conversion to canonical form:
+			# V{x}% < {p} % ---> D{p} > {x/100} * {rx_dose} Gy
+			# V{x}% > {p} % ---> D{p} < {x/100} * {rx_dose} Gy
+			# (inequality direction flips)
+			#-----------------------------------------------------#
 			if not 'rx' in right:
 				# parse dose
 				reldose = float(left.strip('%').strip('v').strip('V'))
-				dvhc['dose'] = reldose / 100. * rx_dose
+				dose = reldose / 100. * rx_dose
 
 				# parse percentile
-				dvhc['percentile'] = float(right.strip('%'))
+				percentile = float(right.strip('%'))
+
+				# parse direction:
+				direction = '>' if lt else '<'
+
+			#-----------------------------------------------------#
+			# constraint in form "D__% <> {frac} rx"
+			#
+			# conversion to canonical form:
+			# D{p}% < {frac} rx ---> D{p} < {frac} * {rx_dose} Gy
+			# D{p}% >{frac} rx ---> D{p} > {frac} * {rx_dose} Gy
+			# (inequality direction preserved)
+			#-----------------------------------------------------#
 			else:
 				# parse dose
-				dvhc['dose'] = rx_dose * float(right.strip('rx'))
+				dose = rx_dose * float(right.strip('rx'))
 
 				# parse percentile
-				dvhc['percentile'] = float(left.strip('%').strip('d').strip('D'))
+				percentile = float(left.strip('%').strip('d').strip('D'))
+
+				# parse direction:
+				# 
+				direction = '<' if lt else '>'
 
 
-			# TODO: parse direction
+		return 'D{} {}= {}Gy'.format(percentile,
+			direction, dose)
 
-
-		# cases:
-		# x Gy to < > p%
-		elif 'Gy' in left:
-			dvhc['dose'] = float(left.strip('cGy')) / 100.
-			left_parsed = True
-			dose_parsed = True
-
-		elif 'Gy' in right:
-			dvhc['dose'] = float(left.strip('Gy'))
-			left_parsed = True
-			dose_parsed = True
-
-		elif rx_dose is None:
-			ValueError("Dose constraint does not "
-				"specify a ")
 	except:
 		print str("Unknown parsing error. Input = {}".format(
 			string_constraint))
@@ -328,6 +360,3 @@ class Prescription(object):
 			print str("Unknown error: prescription_data could not be "
 				"converted to conrad.Prescription() datatype.") 
 			raise
-
-
-	def convert mean_dose_2_dvh(self,)
