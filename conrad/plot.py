@@ -23,14 +23,14 @@ def panels_to_cols(n_panels):
 class DVHPlot(object):
 	""" TODO: docstring """
 
-	def __init__(self, n_panels, panels_by_structure, names_by_structure):
+	def __init__(self, panels_by_structure, names_by_structure):
 		""" TODO: docstring """
 		self.fig = plt.figure()
 		self.n_structures = len(panels_by_structure.keys())
 		self.panels_by_structure = panels_by_structure
-		self.panel_counts = reduce(max, panels_by_structure.itervals())
-		self.cols = panels_to_cols(self.panel_counts)
-		self.rows = int(ceil(float(self.panel_counts) / self.cols))
+		self.n_panels = n_panels
+		self.cols = panels_to_cols(n_panels)
+		self.rows = int(ceil(float(n_panels) / self.cols))
 		self.names_by_structure = names_by_structure
 		self.colors_by_structure = None
 
@@ -87,9 +87,13 @@ class DVHPlot(object):
 				plt.plot(constraint['percentile'][0], 
 					constraint['symbol'][0], alpha  = 0.7, **options)
 
+		plt.show()
 
 	def save(self, filepath):
-		plt.savefig(filepath, bbox_inches = 'tight')
+		try:
+			plt.savefig(filepath, bbox_inches = 'tight')
+		except:
+			print str('could not save plot to file: {}'.format(filepath))
 
 	def __del__(self):
 		""" TODO: docstring """

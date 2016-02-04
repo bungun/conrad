@@ -3,6 +3,7 @@ from conrad.structure import Structure
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
 from conrad.run_data import RunRecord
+from conrad.plot import DVHPlot
 from operator import add 
 from numpy import cumsum
 
@@ -104,7 +105,16 @@ class Case(object):
 		self.A = A
 		# self.shape = (self.voxels, self.beams) = A.shape
 
+
 		self.run_records = {}
+
+		# plot setup
+		panels_by_structure = {}
+		names_by_structure = {}
+		for idx, label in enumerate(label_order):
+			panels_by_structure[label] = idx
+			names_by_structure[label] = self.structures[label].name
+		self.plot = DVHPlot(panels_by_structure, names_by_structure)
 
 	def add_dvh_constraint(self, label, dose, fraction, direction):
 		""" TODO: docstring """
@@ -155,6 +165,11 @@ class Case(object):
 		# save output
 		self.run_count += 1
 		self.run_records[run_count] = rr
+
+		if 'plot' in args:
+			self.plot.plot(self.plotting_data)
+			if 'plotfile' in kwargs:
+				self.plot.save(kwargs['plotfile'])
 
 
 	def calc_doses(self, x):
