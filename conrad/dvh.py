@@ -6,6 +6,36 @@ from np import copy as np_copy, sort as np_sort, linspace
 TODO: dvh.py docstring
 """
 
+def canonical_string_to_tuple(string_constraint):
+	""" TODO: docstring
+
+	convert input string, in canonical form:
+		"D{p} <= {d}" or "D{p} >= {d}"
+
+	to canonical tuple 
+		(d, p/100, '<') or (d, p/100, '>'), respectively
+	"""
+	left, right = string_constraint.split('=')
+	fraction = float(left.strip('<').strip('>').strip('D')) / 100.
+	dose = float(right.strip('Gy'))
+	direction = '<' if '<' in string_constraint else '>'
+	return (dose, fraction, direction)
+
+
+def tuple_to_canonical_string(tuple_constraint):
+	""" TODO: docstring
+
+	convert input tuple, in canonical form:
+		(d, f, '<') or (d, f, '>')
+
+	to canonical string 
+		"D{f * 100} <= {d}" or "D{f * 100} >= {d}", respectively
+	"""
+	d, f, ineq = tuple_constraint
+	return "D{} {}= {}Gy".format(f * 100, ineq, d)
+
+	return (dose, fraction, direction)
+
 class DoseConstraint(object):
 	"""
 		Dose constraint is specified as a tuple:

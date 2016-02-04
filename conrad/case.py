@@ -3,6 +3,8 @@ from conrad.structure import Structure
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
 from conrad.run_data import RunRecord
+from operator import add 
+from numpy import cumsum
 
 # TODO: unit test
 """
@@ -25,34 +27,46 @@ def default_weights(is_target = False):
 	else:
 		return None, 0.1
 
-def build_structures(voxel_labels, structure_names, dose_matrix):
-	"""TODO: docstring"""
+def build_structures(prescription, voxel_labels, label_order, dose_matrix):
+	"""TODO: docstring
+
+	NB: ASSUMES dose_matrix IS SORTED IN SAME ORDER AS LABELS IN voxel_labels
+	
+	(fails if voxel_labels unsorted; TODO: sorting? pre-sort?)
+	"""
+
+	if not dose_matrix.shape[0] == len(voxel_labels):
+		ValueError("length of vector voxel_labels and "
+			"number of rows in dose_matrix must be equal.")
+
+	structures = prescription.structure_dict
+	ptr1 = ptr2 = 0
+
+	for l in label_order:
+		# obtain structure size
+		size = reduce(add, map(lambda v : v == label, voxel_labels))
+		structures[l].size = size
+		ptr2 += size
+
+		# assess sorting of label blocks:
+		if not all(map(lambda v: v == label, voxel_labels[ptr1:ptr2]))
+			ValueError("inputs voxel_labels and dose_matrix are expected "
+				"to be (block) sorted in the order specified by argument "
+				"`label_order'. voxel_labels not block sorted.")
+		
+		# partition dose matrix	into blocks
+		structures[l].A_full = structures[l].A = dose_matrix[ptr1:ptr2, :]
+		structures[l].set_block_indices(ptr1, ptr2)
+		ptr1 = ptr2
+
+	return structures
 
 
 
 def transfer_prescription(prescription, structures):
 	"""TODO: docstring"""
+	pass
 
-
-name : PTV
-label : 1
-is_target: Yes
-dose : 35.
-constraints:
- - "D99 <= 1.1rx"
- - "D20 >= 10.1Gy"
- - "D90 >= 32.3Gy"
-
-rx = [{	'name' : 'PTV',
-		'label' : 1,
-		'is_target' : True,
-		'dose' : 35.,
-		'constraints' : ['D99 <= 1.1rx', 'D20 >= 10.1Gy', 'D90 >= 32.3Gy']},
-	  {	'name' : 'OAR1',
-	  	'label' : 2,
-	  	'is_target' : False,
-	  	'dose' : None,
-	  	'constraints' : ['D595 <= 20Gy']}	
 
 class Case(object):
 	"""TODO: docstring
@@ -68,28 +82,26 @@ class Case(object):
 			dose_constraints (dict, or probably string/tuple list)
 	"""
 
-	def __init__(self, A, voxel_labels, structure_names, prescription):
+	def __init__(self, A, voxel_labels, label_order, prescription_raw):
 		"""TODO: Case.__init__() docstring"""
 		self.problem = PlanningProblem()
-		self.prescription = Prescription(prescription)
 		self.voxel_labels = voxel_labels
-		self.structures = build_structures(voxel_labels, structure_names, A)
-		transfer_prescription(self.prescription, self.structures)
+		
+		# digest clinical specification
+		self.prescription = Prescription(prescription_raw)
+
+		# parse full mat + data into Structure objects
+		self.structures = build_structures(self.prescription, 
+			voxel_labels, label_order, A)
+
 
 		# counts go with life of Case object,
 		# even if, e.g., all constraints removed from a run
 		self.constraint_count = 0
 		self.run_count = 0
 
-		# for now, assume A sorted!
-		# need: structure sizes, structure pointers
-		# need: structure order (plotting)
-		# need: parse full mat + data into Structure()s
-		# need: digest clinical spec
-		# some kind of plotting!
-
 		# dose matrix
-		self.A = None
+		self.A = A
 		# self.shape = (self.voxels, self.beams) = A.shape
 
 		self.run_records = {}
@@ -163,6 +175,11 @@ class Case(object):
 		""" TODO: docstring """
 	    return len(self.structures.keys())
 	
+	@property
+	def n_voxels(self):
+		""" TODO: docstring """
+		return self.A.shape[0]
+
 	@property
 	def n_beams(self):
 		""" TODO: docstring """

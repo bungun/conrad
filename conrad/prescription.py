@@ -1,64 +1,62 @@
+from conrad.dvh import canonical_string_to_tuple
+from conrad.structure import Structure
+from os import path
+import json, yaml
+from traceback import format_exc
+
 # TODO: unit test
 """
 TODO: prescription.py docstring
 
-Examples to illustrate expected format:
+Parsing methods expect following format:
 
 YAML:
 =====
 
-name : PTV
-label : 1
-is_target: Yes
-dose : 35.
-constraints:
- - "D99 <= 1.1rx"
- - "D20 >= 10.1Gy"
- - "D90 >= 32.3Gy"
+- name : PTV
+  label : 1
+  is_target: Yes
+  dose : 35.
+  constraints:
+  - "D99 <= 1.1rx"
+  - "D20 >= 10.1Gy"
+  - "D90 >= 32.3Gy"
+
+- name : OAR1
+  label : 2
+  is_target: No
+  dose : 
+  constraints:
+  - "D95 <= 20Gy"
 
 
-Python dictionary, JSON
-=======================
 
-rx = [{	'name' : 'PTV',
+Python list of dictionaries (JSON approximately same)
+=====================================================
+
+	[{
+		'name' : 'PTV',
 		'label' : 1,
 		'is_target' : True,
 		'dose' : 35.,
-		'constraints' : ['D99 <= 1.1rx', 'D20 >= 10.1Gy', 'D90 >= 32.3Gy']},
-	  {	'name' : 'OAR1',
+		'constraints' : ['D99 <= 1.1rx', 'D20 >= 10.1Gy', 'D90 >= 32.3Gy']
+	},
+
+	{
+ 		'name' : 'OAR1',
 	  	'label' : 2,
 	  	'is_target' : False,
 	  	'dose' : None,
-	  	'constraints' : ['D595 <= 20Gy']}	
+	  	'constraints' : ['D95 <= 20Gy']
+	}]
 
+
+( JSON differences: 
+	- double quote instead of single
+	- true/false instead of True/False
+	- null instead of None )
 """
 
-def read_yaml_rx():
-	""" TODO: docstring """
-	pass
-
-def read_json_rx():
-	""" TODO: docstring """
-	pass
-
-
-def canonical_string_to_tuple(string_constraint):
-	""" TODO: docstring
-
-	convert input string, in canonical form:
-		"D{p} <= {d}" or "D{p} >= {d}"
-
-	to canonical tuple 
-		(d, p/100, '<') or (d, p/100, '>'), respectively
-
-	(see conrad.dvh for canonical tuple description)
-
-	"""
-	left, right = string_constraint.split('=')
-	fraction = float(left.strip('<').strip('>').strip('D')) / 100.
-	dose = float(right.strip('Gy'))
-	direction = '<' if '<' in string_constraint else '>'
-	return (dose, fraction, direction)
 
 def canonicalize_dvhstring(string_constraint, rx_dose=None):
 	""" TODO: docstring
@@ -272,19 +270,64 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 		raise
 
 
+
+
 class Prescription(object):
 	""" TODO: docstring """
 
 	def __init__(self, prescription_data = None):
 		""" TODO: docstring """
-		self.dvh_constraints = []
-		self.rx_
+		self.constraint_dict = {}
+		self.structure_dict = {}
 		if prescription_data is not None:
 			self.digest(prescription_data) 
+
 
 	def digest(self, prescription_data):
 		""" TODO: docstring """
 
+		err = None
+		data_valid = False
+		if isinstance(prescription_data, list):
+			rx_list = prescription_data
+			data_valid = True
+
+		if isinstance(data_valid, str):
+			if path.isfile(prescription_data):
+				try:
+					f = open(prescription_data)
+					if '.json' in prescription_data:
+						rx_list = json.load(f)
+					else:
+						rx_list = yaml.safe_load(f)
+					f.close
+					data_valid = True
+
+				except:
+					err = format_exc()
+
+		if not data_valid:
+			if err is not None: print err 
+			TypeError("input prescription_data expected to be "
+				"a list or the path to a valid JSON or YAML file.")
+
+		try:
+			for item in rx_list:
+				label = item['label']
+				self.structure_dict[label] = Structure(
+					label = item['label'],
+					name = item['name'],
+					is_target = bool(item['is_target']), 
+					dose = float(item['dose']))
+				self.constraint_dict[label] = []
+				for string in item['constraints']:
+					constr = canonicalize_dvhstring(string)
+					self.constraint_dict[label].append(
+						canonical_string_to_tuple(constr))
+		except:
+			print str("Unknown error: prescription_data could not be "
+				"converted to conrad.Prescription() datatype.") 
+			raise
 
 
 	def convert mean_dose_2_dvh(self,)

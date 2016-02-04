@@ -23,6 +23,8 @@ class Structure(object):
 
 		# number of voxels in structure
 		self.size = options['size'] if 'size' in options else None
+		self.start_index = None
+		self.stop_index = None
 
 		# prescribed dose
 		self.dose = options['dose'] if 'dose' in options else 0.
@@ -75,8 +77,11 @@ class Structure(object):
 				if self._w_over is None:
 					self._w_over = W_NONTARG_DEFAULT
 
+	def set_block_indices(self, idx_start, idx_stop):
+		self.start_index = ptr_start
+		self.stop_index = ptr_stop
 
-	def set_objective(dose, w_under, w_over):
+	def set_objective(self, dose, w_under, w_over):
 		if self.is_target:
 			if dose is not None:
 				self.dose = dose
