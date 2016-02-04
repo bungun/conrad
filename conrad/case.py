@@ -1,8 +1,9 @@
 from conrad.dvh import DoseConstraint
 from conrad.structure import Structure
+from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
 from conrad.run_data import RunRecord
-# TODO: imports
+
 # TODO: unit test
 """
 TODO: case.py docstring
@@ -24,26 +25,56 @@ def default_weights(is_target = False):
 	else:
 		return None, 0.1
 
+def build_structures(voxel_labels, structure_names, dose_matrix):
+	"""TODO: docstring"""
+
+
+
+def transfer_prescription(prescription, structures):
+	"""TODO: docstring"""
+
+
+name : PTV
+label : 1
+is_target: Yes
+dose : 35.
+constraints:
+ - "D99 <= 1.1rx"
+ - "D20 >= 10.1Gy"
+ - "D90 >= 32.3Gy"
+
+rx = [{	'name' : 'PTV',
+		'label' : 1,
+		'is_target' : True,
+		'dose' : 35.,
+		'constraints' : ['D99 <= 1.1rx', 'D20 >= 10.1Gy', 'D90 >= 32.3Gy']},
+	  {	'name' : 'OAR1',
+	  	'label' : 2,
+	  	'is_target' : False,
+	  	'dose' : None,
+	  	'constraints' : ['D595 <= 20Gy']}	
 
 class Case(object):
-	"""TODO:
+	"""TODO: docstring
 
 	initialize a case with:
 		- dose matrix, A, matrix \in R^m x n, m = # voxels, n = # beams
-		- voxel labels, (int) vector in \R^m
-		- prescription: dictionary where each element has the fields:
+		- voxel labels, vector{int} in \R^m
+		- structure_names, dict{labels, names}
+		- prescription: dict{labels, dict}, where each element has the fields:
 			label (int, also the key)
 			dose (float)
 			is_target (bool)
 			dose_constraints (dict, or probably string/tuple list)
 	"""
 
-	def __init__(self):
+	def __init__(self, A, voxel_labels, structure_names, prescription):
 		"""TODO: Case.__init__() docstring"""
 		self.problem = PlanningProblem()
-		self.prescription = None
-		self.voxel_labels = None
-		self.structures = {}
+		self.prescription = Prescription(prescription)
+		self.voxel_labels = voxel_labels
+		self.structures = build_structures(voxel_labels, structure_names, A)
+		transfer_prescription(self.prescription, self.structures)
 
 		# counts go with life of Case object,
 		# even if, e.g., all constraints removed from a run
@@ -109,6 +140,7 @@ class Case(object):
 		# solve problem
 		self.problem.solve(self.structures, rr.output, *args, **kwargs)
 
+		# save output
 		self.run_count += 1
 		self.run_records[run_count] = rr
 

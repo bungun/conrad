@@ -20,13 +20,19 @@ class DoseConstraint(object):
 		(30, 0.2, '<')
 
 		is interpreted as the (upper) DVH constraint:
+
+			D20 <= 30 Gy, i.e.,
+
 		"no more than 20 percent of the structure voxels 
-		may receive over 30Gy of dose"
+		may receive over 30Gy of dose",
 
 		Conversely,
 		(55, 0.8, '>')
 
 		is interpreted as the (lower) DVH constaint:
+
+			D80 >= 55 Gy, i.e.,
+		
 		"at least 80 percent of the structure voxels 
 		must receive at least 55Gy of dose"
 
@@ -96,7 +102,7 @@ class DoseConstraint(object):
 		return (y - self.dose_requested).argsort()[start:end]
 
 	def __str__(self):
-		return 'V{} {}= {}Gy\n'.format(
+		return 'D{} {}= {}Gy\n'.format(
 			100 * self.fraction,
 			self.direction, 
 			self.dose_requested)

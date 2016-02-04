@@ -23,46 +23,7 @@ def get_cd_from_wts(wt_over, wt_under):
 	d = (alpha + 1) / 2
 	return c, d
 
-def dvh_constraint_restriction(A, x, constr, beta, slack = None):
-	""" Form the upper (or lower) DVH constraint: 
-
-		upper constraint: \sum (beta + (Ax - (b + slack)))_+ <= beta * vox_limit
-		lower constraint: \sum (beta - (Ax - (b - slack)))_+ <= beta * vox_limit
-
-	"""
-	if not isinstance(constr, DoseConstraint):
-		TypeError("parameter constr must be of type "
-			"conrad.DoseConstraint. Provided: {}".format(type(constr)))
-
-def dvh_restriction(A, x, b, p, beta, upper = True, slack = 0):
-	""" TODO: docstring """
-	sign = 1 if constr.upper else -1
-	fraction = constr.fraction if constr.upper else 1. - constr.fraction
-	p = fraction * A.shape[0]
-	b = constr.dose_requested
-
-	if slack is not None:
-		return sum_entries(pos( beta + sign * (A * x - (b + sign * slack)) )) <= beta * p
-	else:
-		return sum_entries(pos( beta + sign * (A * x - b)) ) <= beta * p
-
-def dvh_constraint_exact(A, x, y, constr, had_slack = False):
-	""" TODO: docstring """
-	if not isinstance(constr, DoseConstraint):
-		TypeError("parameter constr must be of type "
-			"conrad.DoseConstraint. Provided: {}".format(type(constr)))
-
-	sign = 1 if constr.upper else -1
-	if had_slack and constr.dose_actual is not None:
-		b = constr.dose_actual
-	else:
-		b = constr.dose_requested
-	idx_exact = constr.get_maxmargin_fulfillers(y)
-	A_exact = np.copy(A[idx_exact, :])
-	return sign * (A_exact * x - b) <= 0
-
-
-class PlanningProblem(object):
+class SolverCVXPY(object):
 	""" TODO: docstring """
 
 	def __init__(self):
@@ -72,7 +33,7 @@ class PlanningProblem(object):
 		self.problem = None
 		self.use_2pass = False
 		self.use_slack = True
-		self.x = None
+		self._x = None
 		self.gamma = GAMMA_DEFAULT
 		self.dvh_vars = {}
 		self.slack_vars = {}
@@ -84,9 +45,9 @@ class PlanningProblem(object):
 		""" TODO: docstring """
 		self.use_slack = not 'dvh_no_slack' in options
 		self.use_2pass = 'dvh_2pass' in options
-		self.x = Variable(n_beams)
+		self._x = Variable(n_beams)
 		self.objective = Minimize(0)
-		self.constraints = [self.x >= 0]
+		self.constraints = [self._x >= 0]
 		self.dvh_vars = {}
 		self.slack_vars = {}
 		self.problem = Problem(self.objective, self.constraints)
@@ -96,7 +57,7 @@ class PlanningProblem(object):
 
 	def clear_dvh_constraints(self):
 		""" TODO: docstring """
-		self.constraints = [self.x >= 0]
+		self.constraints = [self._x >= 0]
 		self.objective = 0
 		self.problem = Minimize(self.objective, self.constraints)
 
@@ -108,6 +69,44 @@ class PlanningProblem(object):
 			c, d = get_cd_from_wts(structure.wt_over, structure.wt_under)
 			self.problem.objective += Minimize(c.T * abs(A * x - b) + d.T * (A * x - b))
 
+	@staticmethod
+	def __dvh_constraint_restriction(A, x, constr, beta, slack = None):
+		""" Form the upper (or lower) DVH constraint: 
+
+			upper constraint: \sum (beta + (Ax - (b + slack)))_+ <= beta * vox_limit
+			lower constraint: \sum (beta - (Ax - (b - slack)))_+ <= beta * vox_limit
+
+		"""
+		if not isinstance(constr, DoseConstraint):
+			TypeError("parameter constr must be of type "
+				"conrad.DoseConstraint. Provided: {}".format(type(constr)))
+
+		sign = 1 if constr.upper else -1
+		fraction = constr.fraction if constr.upper else 1. - constr.fraction
+		p = fraction * A.shape[0]
+		b = constr.dose_requested
+
+		if slack is not None:
+			return sum_entries(pos( beta + sign * (A * x - (b + sign * slack)) )) <= beta * p
+		else:
+			return sum_entries(pos( beta + sign * (A * x - b)) ) <= beta * p
+
+	@staticmethod
+	def __dvh_constraint_exact(A, x, y, constr, had_slack = False):
+		""" TODO: docstring """
+		if not isinstance(constr, DoseConstraint):
+			TypeError("parameter constr must be of type "
+				"conrad.DoseConstraint. Provided: {}".format(type(constr)))
+
+		sign = 1 if constr.upper else -1
+		if had_slack and constr.dose_actual is not None:
+			b = constr.dose_actual
+		else:
+			b = constr.dose_requested
+		idx_exact = constr.get_maxmargin_fulfillers(y)
+		A_exact = np.copy(A[idx_exact, :])
+		return sign * (A_exact * x - b) <= 0
+
 	def add_dvh_constraint(self, structure, exact = False):
 		""" TODO: docstring """
 		# extract dvh constraint from structure,
@@ -118,8 +117,8 @@ class PlanningProblem(object):
 			if exact and self.use_2pass and structure.y is not None:
 				
 				# build exact constraint
-				dvh_constr = dvh_constraint_exact(structure.A,
-					self.x, structure.y, 
+				dvh_constr = __dvh_constraint_exact(structure.A,
+					self._x, structure.y, 
 					structure.dose_constraints[cid],
 					had_slack = self.use_slack)
 
@@ -144,28 +143,31 @@ class PlanningProblem(object):
 				self.slack_vars[cid] = s
 
 				# build convex restriction to constraint
-				dvh_constr = dvh_constraint_restriction(structure.A,
-					self.x, structure.dose_constraints[cid], beta, s)
+				dvh_constr = __dvh_constraint_restriction(structure.A,
+					self._x, structure.dose_constraints[cid], beta, s)
 
 				# add it to problem
 				self.problem.constraints += [ dvh_constr ] 
 
+	
+	def get_slack_value(self, constr_id):
+		return self.slack_vars[constr_id].value if constr_id in slack_vars else None
 
-	# some methods pertaining to the 2pass method
+	def get_dvh_slope(self, constr_id):
+		return 1. / self.dvh_vars[constr_id].value if constr_id in slack_vars else None
 
-	def update_dvh_constraint(self, structure):
-		""" TODO: docstring """
-		for cid in structure.dose_constraints:
-			slack = self.slack_vars[cid].value
-			structure.dose_constraints[cid].set_actual_dose(slack)
+	@property
+	def x(self):
+		return squeeze(array(self._x.value))
 
-	def update_structure(self, structure, exact = False):
-		""" TODO: docstring """
-		structure.calc_y(self.x.value)
-		if not exact:
-			self.update_dvh_constraint(structure)
+	@property
+	def x_dual(self):
+		try:
+			return squeee(array(self.problem.constraints[0].dual_value))
+		except:
+			return None
 
-	def __solve(self, *options, **kwargs):
+	def solve(self, *options, **kwargs):
 		""" TODO: docstring """
 
 		# set verbosity level
@@ -201,6 +203,28 @@ class PlanningProblem(object):
 
 		return ret != inf and not isinstance(ret, str)
 
+
+class PlanningProblem(object):
+	""" TODO: docstring """
+
+	def __init__(self):
+		""" TODO: docstring """
+		self.solver = SolverCVXPY()
+		self.use_slack = None
+		self.use_2pass = None
+
+	def update_dvh_constraint(self, structure):
+		""" TODO: docstring """
+		for cid in structure.dose_constraints:
+			slack = self.solver.slack_value(cid)
+			structure.dose_constraints[cid].set_actual_dose(slack)
+
+	def update_structure(self, structure, exact = False):
+		""" TODO: docstring """
+		structure.calc_y(self.solver.x)
+		if not exact:
+			self.update_dvh_constraint(structure)
+
 	def solve(self, structure_dict, run_output, *options, **kwargs):
 		""" TODO: docstring """
 
@@ -213,17 +237,19 @@ class PlanningProblem(object):
 
 		# initialize problem with size and options
 		# ----------------------------------------
-		self.init_problem(n_beams, *options, **kwargs)
+		self.use_slack = not 'dvh_no_slack' in options
+		self.use_2pass = 'dvh_2pass' in options
+		self.solver.init_problem(n_beams, *options, **kwargs)
 
 		# add terms and constraints
 		# -------------------------
 		for st in structure_dict.itervalues():
-			self.add_term(st)
-			self.add_dvh_constraint(st)
+			self.solver.add_term(st)
+			self.solver.add_dvh_constraint(st)
 
 		# solve
 		# -----
-		feasible = self.__solve(*options, **kwargs)
+		feasible = self.solver.solve(*options, **kwargs)
 
 		if not feasible:
 			print "problem infeasible as formulated"
@@ -238,31 +264,28 @@ class PlanningProblem(object):
 
 		# recover primal variable x and
 		# dual variable lambda associated with ineq. Ax >= 0
-		run_output.optimal_variables['x'] = squeeze(array(self.x.value))
-		run_output.optimal_variables['lambda'] = squeeze(
-			array(self.problem.constraints[0].dual_value))
+		run_output.optimal_variables['x'] = self.solver.x
+		run_output.optimal_variables['lambda'] = self.solver.x_dual
 
 		# recover dvh constraint slope variables
 		for st in structure_dict.itervalues():
 			for cid in st.dose_constraints.keys():
-				run_output.optimal_dvh_slopes[cid] = 1. / self.dvh_vars[cid].value 
+				run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(cid)
 
 		# second pass, if applicable
 		# --------------------------
 		if self.use_2pass and feasible:
 
-			self.clear_dvh_constraints()
+			self.solver.clear_dvh_constraints()
 
 			for st in structure_dict.itervalues():
-				self.add_term(st)
-				self.add_dvh_constraint(st, exact = True)	
+				self.solver.add_term(st)
+				self.solver.add_dvh_constraint(st, exact = True)	
 
-			self.__solve(*options, **kwargs)
+			self.solver.solve(*options, **kwargs)
 
 			for st in structure_dict.itervalues():
 				self.update_structure(st, exact = True)
 
-			run_output.optimal_variables['x_exact'] = squeeze(
-				array(self.x.value))
-			run_output.optimal_variables['lambda_exact'] = squeeze(
-				array(self.problem.constraints[0].dual_value))
+			run_output.optimal_variables['x_exact'] = self.solver.x
+			run_output.optimal_variables['lambda_exact'] = self.solver.x_dual
