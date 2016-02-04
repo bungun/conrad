@@ -95,7 +95,9 @@ class DoseConstraint(object):
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
-	    return 2 * [100 * self.fraction], [self.dose_requested, self.dose_actual], self.direction
+	    return {'percentile' : 2 * [100 * self.fraction], 
+	    	'dose' :[self.dose_requested, self.dose_actual], 
+	    	'symbol' : self.direction}
 	
 
 	def get_maxmargin_fulfillers(self, y):
@@ -165,4 +167,4 @@ class DVHCurve(object):
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
-		return self.percentiles, self.doses
+		return {'percentile' : self.percentiles, 'dose' : self.doses}
