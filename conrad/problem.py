@@ -9,7 +9,7 @@ VERBOSE_DEFAULT = 1
 MAXITER_DEFAULT = 2000
 
 def println(*msg):
-	print(*msg)
+	print(msg)
 
 # TODO: unit test
 """
@@ -17,7 +17,7 @@ TODO: problem.py docstring
 """
 
 def get_cd_from_wts(wt_over, wt_under):
-""" TODO: docstring """
+	""" TODO: docstring """
 	alpha = wt_over / wt_under
 	c = (alpha + 1) / 2
 	d = (alpha + 1) / 2
@@ -186,7 +186,7 @@ class SolverCVXPY(object):
 				solver = ECOS, 
 				verbose = VERBOSE, 
 				max_iters = maxiter, 
-				reltol = reltol
+				reltol = reltol,
 				reltol_inacc = reltol, 
 				feastol = reltol, 
 				feastol_inacc = reltol)

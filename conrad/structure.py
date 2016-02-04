@@ -1,4 +1,4 @@
-from np import ndarray, array, squeeze
+from numpy import ndarray, array, squeeze
 from scipy.sparse import csr_matrix, csc_matrix
 from conrad.dvh import DVHCurve
 
@@ -32,7 +32,7 @@ class Structure(object):
 			self.is_target = self.dose > 0 
 		if self.is_target is not None:
 			if self.is_target and self.dose is None:
-			self.dose = DOSE_DEFAULT
+				self.dose = DOSE_DEFAULT
 
 		# dictionary of DoseConstraint objects attached to 
 		# structure, keyed by constraint id (which is passed 
@@ -133,7 +133,7 @@ class Structure(object):
 	@property
 	def y(self):
 		""" TODO: docstring """
-	    return self._y
+		return self._y
 	
 	def has_constraint(self, constr_id):
 		""" TODO: docstring """
