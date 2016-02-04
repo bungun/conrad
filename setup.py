@@ -1,5 +1,7 @@
 from setuptools import setup
 
+LONG_DESC = "TODO: LONG DESCRIPTION"
+
 setup(
     name='conrad',
     version='0.0.1a',
