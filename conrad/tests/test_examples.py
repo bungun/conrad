@@ -1,9 +1,9 @@
 import conrad
 import numpy as np
 import unittest
-
 import cvxpy
-# from cvxpy import Structure, Prescription
+
+from conrad import Structure, Prescription
 
 # some tests should be here
 class TestExamples(unittest.TestCase):
