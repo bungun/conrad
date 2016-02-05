@@ -158,7 +158,8 @@ class Structure(object):
 		""" TODO: docstring """
 		d = {}
 		d['curve'] = self.dvh_curve.plotting_data
-		d['constraints'] = [dc.plotting_data for dc in self.dose_constraints]
+		d['constraints'] = [dc.plotting_data for dc in self.dose_constraints.itervalues()]
+		return d
 
 
 	def __header_string(self):
