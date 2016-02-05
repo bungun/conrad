@@ -214,13 +214,13 @@ class PlanningProblem(object):
 		self.use_slack = None
 		self.use_2pass = None
 
-	def update_dvh_constraint(self, structure):
+	def __update_dvh_constraint(self, structure):
 		""" TODO: docstring """
 		for cid in structure.dose_constraints:
 			slack = self.solver.slack_value(cid)
 			structure.dose_constraints[cid].set_actual_dose(slack)
 
-	def update_structure(self, structure, exact = False):
+	def __update_structure(self, structure, exact = False):
 		""" TODO: docstring """
 		structure.calc_y(self.solver.x)
 		if not exact:
