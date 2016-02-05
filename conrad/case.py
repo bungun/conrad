@@ -109,7 +109,6 @@ class Case(object):
 		self.A = A
 		# self.shape = (self.voxels, self.beams) = A.shape
 
-
 		self.run_records = {}
 
 		# plot setup
@@ -188,6 +187,10 @@ class Case(object):
 		# save output
 		self.run_count += 1
 		self.run_records[self.run_count] = rr
+
+		# update doses
+		x_key = 'x_exact' if use_2pass else 'x'
+		self.calc_doses(rr.output.optimal_variables[x_key])
 
 		if 'plot' in args:
 			self.plot.plot(self.plotting_data)
