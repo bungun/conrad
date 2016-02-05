@@ -72,6 +72,9 @@ class TestExamples(unittest.TestCase):
 	 	self.setup_yaml_json()
 	 	input_file = path.abspath('json_rx.json')
 	 	cs = Case(self.A, self.voxel_labels, self.label_order, input_file)
+
+	 	print "prescription loaded from JSON:\n", cs.prescription 
+
 	 	cs.plan("ECOS", verbose = 1)
 
 	 def test_rx_from_YAML(self):
@@ -79,6 +82,9 @@ class TestExamples(unittest.TestCase):
 	 	self.setup_yaml_json()
 	 	input_file = path.abspath('yaml_rx.yml')
 	 	cs = Case(self.A, self.voxel_labels, self.label_order, input_file)
+
+	 	print "prescription loaded from YAML:\n", cs.prescription 
+
 	 	cs.plan("ECOS", verbose = 1)
 
 	 def test_plotting(self, case):
