@@ -184,7 +184,7 @@ class Structure(object):
 	def __constr_string(self):
 		""" TODO: docstring """
 		out = ""
-		for dc in self.dose_constraints.itervals():
+		for dc in self.dose_constraints.itervalues():
 			out += dc.__str__()
 		out += "\n"
 		return out

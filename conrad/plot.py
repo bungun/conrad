@@ -79,7 +79,7 @@ class DVHPlot(object):
 		plt.clear(self.fig)
 
 
-		max_dose = max([data['curve']['dose'].max() for data in plot_data.itervals()])
+		max_dose = max([data['curve']['dose'].max() for data in plot_data.itervalues()])
 
 
 		for label, data in plot_data:

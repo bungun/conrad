@@ -200,7 +200,7 @@ class Case(object):
 
 	def calc_doses(self, x):
 		""" TODO: docstring """
-		for s in self.structures.itervals():
+		for s in self.structures.itervalues():
 			s.calc_y(x)
 
 	@property
