@@ -57,7 +57,7 @@ class Structure(object):
 		# self.A_lin = None
 
 
-		self.A = A_full
+		self.A = self.A_full
 		# TODO: switching to clustered / fully compressed
 		# representation of matrix based on **options keyword args
 
@@ -78,8 +78,8 @@ class Structure(object):
 					self._w_over = W_NONTARG_DEFAULT
 
 	def set_block_indices(self, idx_start, idx_stop):
-		self.start_index = ptr_start
-		self.stop_index = ptr_stop
+		self.start_index = idx_start
+		self.stop_index = idx_stop
 
 	def set_objective(self, dose, w_under, w_over):
 		if self.is_target:
@@ -105,7 +105,7 @@ class Structure(object):
 	@property
 	def w_over(self):
 		""" TODO: docstring """
-		if isinstance(self._w_oveer, (float, int)):
+		if isinstance(self._w_over, (float, int)):
 		    return self._w_over / float(self.size)
 		else:
 			return None
@@ -118,9 +118,9 @@ class Structure(object):
 		""" TODO: docstring """
 		x = squeeze(array(x))
 		if isinstance(self.A, (csr_matrix, csc_matrix)):
-			self.y = squeeze(self.A * x)
-		elif isinstance(A, ndarray):
-			self.y = A.dot(x)
+			self._y = squeeze(self.A * x)
+		elif isinstance(self.A, ndarray):
+			self._y = self.A.dot(x)
 		else:
 			TypeError("input A must by a numpy or "
 				"scipy sparse matrix")

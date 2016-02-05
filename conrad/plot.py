@@ -1,5 +1,7 @@
 import matplotlib
 from matplotlib import pyplot as plt
+from matplotlib.pyplot import get_cmap
+from matplotlib.colors import LinearSegmentedColormap
 from os import path
 from math import ceil 
 from numpy import linspace
@@ -9,7 +11,7 @@ from numpy import linspace
 """
 TODO: plot.py docstring
 """
-#plotting logic
+# plotting logic
 
 def panels_to_cols(n_panels):
 	n_cols = 1
@@ -19,6 +21,7 @@ def panels_to_cols(n_panels):
 		n_cols += 1
 	if n_panels > 7:
 		panels += 1
+	return n_cols
 
 class DVHPlot(object):
 	""" TODO: docstring """
@@ -28,11 +31,11 @@ class DVHPlot(object):
 		self.fig = plt.figure()
 		self.n_structures = len(panels_by_structure.keys())
 		self.panels_by_structure = panels_by_structure
-		self.n_panels = n_panels
-		self.cols = panels_to_cols(n_panels)
-		self.rows = int(ceil(float(n_panels) / self.cols))
+		self.n_panels = max(panels_by_structure.itervalues())
+		self.cols = panels_to_cols(self.n_panels)
+		self.rows = int(ceil(float(self.n_panels) / self.cols))
 		self.names_by_structure = names_by_structure
-		self.colors_by_structure = None
+		self.colors_by_structure = {}
 
 		# set colors to something to start
 		self.autoset_series_colors()
@@ -50,10 +53,10 @@ class DVHPlot(object):
 	def autoset_series_colors(self, structure_order_dict = None, colormap = None):
 		""" TODO: docstring """
 		if isinstance(colormap, LinearSegmentedColormap):
-			colors = map(colormap, linspace(0.1, 0.9, n_structures))
+			colors = map(colormap, linspace(0.1, 0.9, self.n_structures))
 		else:
 			cmap = get_cmap('rainbow')
-			colors = map(cmap, np.linspace(0.9,0.1,len(dvhlist)))
+			colors = map(cmap, linspace(0.9, 0.1, self.n_structures))
 		
 		for idx, label in enumerate(self.panels_by_structure.keys()):
 			if structure_order_dict is not None:

@@ -19,9 +19,7 @@
 - display dose distribution slices
  
 
-##Version 0.0.1 (alpha)
+## Version 0.0.1 (alpha)
 
-TODO: case initialization logic
-TODO: plotting (python)
+DEBUG: plotting (python)
 TODO: plotting (browser)
-

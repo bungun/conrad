@@ -352,10 +352,11 @@ class Prescription(object):
 					is_target = bool(item['is_target']), 
 					dose = float(item['dose']))
 				self.constraint_dict[label] = []
-				for string in item['constraints']:
-					constr = canonicalize_dvhstring(string)
-					self.constraint_dict[label].append(
-						canonical_string_to_tuple(constr))
+				if item['constraints'] is not None:
+					for string in item['constraints']:
+						constr = canonicalize_dvhstring(string)
+						self.constraint_dict[label].append(
+							canonical_string_to_tuple(constr))
 		except:
 			print str("Unknown error: prescription_data could not be "
 				"converted to conrad.Prescription() datatype.") 
