@@ -95,15 +95,11 @@ class Case(object):
 		# parse full mat + data into Structure objects
 		self.structures = build_structures(self.prescription, 
 			voxel_labels, label_order, A)
-<<<<<<< HEAD
 
 		# set of IDs active constraints 
 		# (maintained as DVH constraints added/removed)
 		self.active_constraint_IDs = set()
 
-=======
-		
->>>>>>> d046ae0bbde20aa23e49dcd29aa58afc85db91f9
 		# counts go with life of Case object,
 		# even if, e.g., all constraints removed from a run
 		self.constraint_count = 0

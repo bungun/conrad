@@ -16,8 +16,8 @@ setup(
     long_description=LONG_DESC,
     install_requires=['cvxpy',
                       'numpy >= 1.8',
-                      'toolz"'],
+                      'toolz'],
     test_suite = 'nose.collector',
-    tests_require = ['nose']
+    tests_require = ['nose'],
     use_2to3=True,
 )
