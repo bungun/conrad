@@ -159,6 +159,7 @@ class Case(object):
 	def plan(self, *args, **kwargs):
 		""" TODO: docstring """
 
+
 		# check for targets
 		if not self.has_targets:
 			print str("Warning: plan has no targets."
@@ -192,7 +193,8 @@ class Case(object):
 		x_key = 'x_exact' if use_2pass else 'x'
 		self.calc_doses(rr.output.optimal_variables[x_key])
 
-		if 'plot' in args:
+		draw_plot = kwargs['plot'] if 'plot' in kwargs else False
+		if draw_plot:
 			self.plot.plot(self.plotting_data)
 			if 'plotfile' in kwargs:
 				self.plot.save(kwargs['plotfile'])

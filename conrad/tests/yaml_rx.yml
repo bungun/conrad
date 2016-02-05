@@ -1,0 +1,23 @@
+- name : PTV_JSON
+  label : 1
+  is_target : Yes
+  dose : 1.0
+  constraints :
+  - D85 > 0.8 Gy
+  - D99 < 1.2 Gy
+
+- name : OAR_RESILIENT
+  label : 4
+  is_target : No
+  dose :
+  constraints :
+  - D50 < 0.6 Gy
+  - D100 < 0.8 Gy
+	
+- name : OAR_SENSITIVE
+  label : 7
+  is_target : No
+  dose :
+  constraints :
+  - D50 < 0.3 Gy
+  - D100 < 0.6 Gy

@@ -23,3 +23,4 @@
 
 DEBUG: plotting (python)
 TODO: plotting (browser)
+TODO: __str__ method for RunRecord	

@@ -59,9 +59,6 @@ class RunProfile(object):
 				obj['dose'], obj['w_under'], obj['w_over'])
 
 
-
-
-
 class RunOutput(object):
 	""" TODO: docstring """
 	def __init__(self):
