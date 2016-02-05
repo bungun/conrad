@@ -1,5 +1,7 @@
 from setuptools import setup
 
+LONG_DESC = "TODO: LONG DESCRIPTION"
+
 setup(
     name='conrad',
     version='0.0.1a',
@@ -11,10 +13,11 @@ setup(
     license='GPLv3',
     zip_safe=False,
     description='A convex optimization framework for radiation therapy treament planning',
-    install_requires=["cvxpy",
-                      "numpy >= 1.8",
-                      "toolz"],
-    test_suite="nose.collector",
-    tests_require=["nose"],
+    long_description=LONG_DESC,
+    install_requires=['cvxpy',
+                      'numpy >= 1.8',
+                      'toolz"'],
+    test_suite = 'nose.collector',
+    tests_require = ['nose']
     use_2to3=True,
 )
