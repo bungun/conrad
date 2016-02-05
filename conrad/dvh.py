@@ -155,11 +155,11 @@ class DVHCurve(object):
 	def make(y, maxlength = MAX_LENGTH):
 		""" TODO: docstring """
 		if len(y) <= maxlength:
-			self.doses = y[:]
+			doses = y[:]
 		elif len(y) <= 2 * maxlength:
-			dose = y[::2]
+			doses = y[::2]
 		else:
-			dose = y[::len(y) / maxlength]
+			doses = y[::len(y) / maxlength]
 
 		self.doses = np_sort(np_copy(doses))
 		self.percentiles = linspace(100, 0, len(self.doses))
