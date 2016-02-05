@@ -118,7 +118,7 @@ class SolverCVXPY(object):
 			if exact and self.use_2pass and structure.y is not None:
 				
 				# build exact constraint
-				dvh_constr = __dvh_constraint_exact(structure.A,
+				dvh_constr = self.__dvh_constraint_exact(structure.A,
 					self._x, structure.y, 
 					structure.dose_constraints[cid],
 					had_slack = self.use_slack)
@@ -144,7 +144,7 @@ class SolverCVXPY(object):
 				self.slack_vars[cid] = s
 
 				# build convex restriction to constraint
-				dvh_constr = __dvh_constraint_restriction(structure.A,
+				dvh_constr = self.__dvh_constraint_restriction(structure.A,
 					self._x, structure.dose_constraints[cid], beta, s)
 
 				# add it to problem
@@ -152,10 +152,10 @@ class SolverCVXPY(object):
 
 	
 	def get_slack_value(self, constr_id):
-		return self.slack_vars[constr_id].value if constr_id in slack_vars else None
+		return self.slack_vars[constr_id].value if constr_id in self.slack_vars else None
 
 	def get_dvh_slope(self, constr_id):
-		return 1. / self.dvh_vars[constr_id].value if constr_id in slack_vars else None
+		return 1. / self.dvh_vars[constr_id].value if constr_id in self.slack_vars else None
 
 	@property
 	def x(self):
@@ -217,7 +217,7 @@ class PlanningProblem(object):
 	def __update_dvh_constraint(self, structure):
 		""" TODO: docstring """
 		for cid in structure.dose_constraints:
-			slack = self.solver.slack_value(cid)
+			slack = self.solver.slack_vars[cid].value
 			structure.dose_constraints[cid].set_actual_dose(slack)
 
 	def __update_structure(self, structure, exact = False):

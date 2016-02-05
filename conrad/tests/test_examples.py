@@ -8,25 +8,33 @@ from conrad import Case
 # some tests should be here
 class TestExamples(unittest.TestCase):
 	""" Unit tests using example problems. """
+	def setUp(self):
+		self.m_targ = 100
+		self.m_oar = 400
+		self.m = self.m_targ + self.m_oar
+		self.n = 200
+		
+		# Construct dose matrix
+		A_targ = np.random.rand(self.m_targ, self.n)
+		A_oar = 0.5 * np.random.rand(self.m_oar, self.n)
+		self.A = np.vstack((A_targ, A_oar))
 	
 	def test_basic(self):
-		# Construct dose matrix
-		m_targ = 100
-		m_oar = 400
-		m = m_targ + m_oar
-		n = 200
-		
-		lab_targ = 0
-		lab_oar = 1
-
-		A_targ = np.random.rand(m_targ, n)
-		A_oar = 0.5 * np.random.rand(m_oar, n)
-		A = np.vstack((A_targ, A_oar))
-		
 		# Prescription for each structure
-		rx = [{'label': lab_targ, 'name': 'tumor', 'is_target': True,  'dose': 1., 'constraints': None},
+		lab_tum = 0
+		lab_oar = 1
+		rx = [{'label': lab_tum, 'name': 'tumor', 'is_target': True,  'dose': 1., 'constraints': None},
 			  {'label': lab_oar,  'name': 'oar',   'is_target': False, 'dose': 0., 'constraints': None}]
 		
 		# Construct and solve case
-		cs = Case(A, [lab_targ] * m_targ + [lab_oar] * m_oar, [lab_targ, lab_oar], rx)
+		label_order = [lab_tum, lab_oar]
+		voxel_labels = [lab_tum] * self.m_targ + [lab_oar] * self.m_oar
+		cs = Case(self.A, voxel_labels, label_order, rx)
 		cs.plan("ECOS", verbose = 1)
+		
+		# Add DVH constraints and re-solve
+		cs.add_dvh_constraint(lab_tum, 1.05, 30., '<')
+		cs.add_dvh_constraint(lab_tum, 0.8, 20., '>')
+		cs.add_dvh_constraint(lab_oar, 0.5, 50, '<')
+		cs.add_dvh_constraint(lab_oar, 0.55, 10, '>')
+		cs.plan("SCS", verbose = 1)

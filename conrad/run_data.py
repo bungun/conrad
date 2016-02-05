@@ -40,7 +40,7 @@ class RunProfile(object):
 		for label, s in structures.iteritems():
 			for cid, dc in s.dose_constraints.iteritems():
 				self.constraints[cid] = {'label' : label,
-				'constraint_id' : cid, 'dose' : dc.dose,
+				'constraint_id' : cid, 'dose_requested' : dc.dose_requested,
 				'percentile' : 100 * dc.fraction,
 				'direction' : dc.direction }
 
