@@ -1,10 +1,19 @@
 import matplotlib
-from matplotlib import pyplot as plt
-from matplotlib.pyplot import get_cmap
-from matplotlib.colors import LinearSegmentedColormap
 from os import path
 from math import ceil 
 from numpy import linspace
+from os import getenv
+
+if getenv('DISPLAY') is not None: 
+	import matplotlib.pyplot as plt
+	SHOW = plt.show
+else:
+	matplotlib.use('Agg')
+	import matplotlib.pyplot as plt
+	SHOW = lambda : None
+
+from matplotlib.pyplot import get_cmap
+from matplotlib.colors import LinearSegmentedColormap
 
 # TODO: unit test
 
@@ -89,7 +98,7 @@ class DVHPlot(object):
 				plt.plot(constraint['percentile'][0], 
 					constraint['symbol'][0], alpha  = 0.7, **options)
 
-		plt.show()
+		SHOW()
 
 	def save(self, filepath):
 		try:
