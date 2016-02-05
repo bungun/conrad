@@ -162,30 +162,42 @@ class Structure(object):
 
 
 	def __header_string(self):
+		""" TODO: docstring """
 		out = 'Structure: {}'.format(self.label)
 		if self.name != '':
 			out += " ({})".format(self.name)
 			out += "\n"
 		return out		
 
-	@property
-	def objective_string(self):
+	def __obj_string(self):
 		""" TODO: docstring """
-		out = self.__header_string()
-		out += "target? {}\n".format(self.is_target)
+		out = "target? {}\n".format(self.is_target)
 		out += "rx dose: {}\n".format(self.dose)
 		if self.is_target:
 			out += "weight_under: {}\n".format(self._w_under)
 			out += "weight_over: {}\n".format(self._w_over)			
 		else:
 			out += "weight: {}\n".format(self._w_over)
+		out += "\n"		
+		return out
+
+	def __constr_string(self):
+		""" TODO: docstring """
+		out = ""
+		for dc in self.dose_constraints.itervals():
+			out += dc.__str__()
 		out += "\n"
 		return out
 
 	@property
+	def objective_string(self):
+		""" TODO: docstring """
+		return self.__header_string + self.__obj_string
+
+	@property
 	def constraints_string(self):
 		""" TODO: docstring """
-		out = self.__header_string()
-		for dc in self.dose_constraints.itervals():
-			out += dc.__str__()
-		return out
+		return self.__header_string + self.__constr_string
+
+	def __str__(self):
+		return self.__header_string + self.__obj_string + self.__constr_string

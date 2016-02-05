@@ -369,10 +369,12 @@ class Prescription(object):
 
 	@property
 	def list(self):
+		""" TODO: docstring """
 	    return self.rx_list
 	
 	@property
 	def dict(self):
+		""" TODO: docstring """
 		rx_dict = {}
 		for structure in self.rx_list:
 			rx_dict[structure.label] = structure
@@ -380,4 +382,9 @@ class Prescription(object):
 
 	@property
 	def constraints_by_label(self):
+		""" TODO: docstring """
 		return self.constraint_dict
+
+	def __str__(self):
+		""" TODO: docstring """
+		return str(self.rx_list)
