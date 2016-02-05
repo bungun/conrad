@@ -196,7 +196,7 @@ class SolverCVXPY(object):
 				verbose = VERBOSE,
 				max_iters = maxiter,
 				reltol = reltol,
-				use_indirect=False)
+				use_indirect = False)
 
 		PRINT("status: {}".format(prob.status))
 		PRINT("optimal value: {}".format(prob.value))
@@ -232,7 +232,7 @@ class PlanningProblem(object):
 		# (attached to any structure)
 		# -------------------------------------
 		for st in structure_dict.itervalues():
-			n_beams = st.A.size[0]
+			n_beams = st.A.shape[0]
 			break
 
 		# initialize problem with size and options

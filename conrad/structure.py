@@ -148,6 +148,11 @@ class Structure(object):
 		""" TODO: docstring """
 		self.dose_constraints[constr_id] = constr	
 
+	def remove_all_constraints(self):
+		""" TODO: docstring """
+		for cid in self.dose_constraints:
+			del self.dose_constraints[cid]
+
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
@@ -163,6 +168,7 @@ class Structure(object):
 			out += "\n"
 		return out		
 
+	@property
 	def objective_string(self):
 		""" TODO: docstring """
 		out = self.__header_string()
@@ -176,6 +182,7 @@ class Structure(object):
 		out += "\n"
 		return out
 
+	@property
 	def constraints_string(self):
 		""" TODO: docstring """
 		out = self.__header_string()

@@ -73,9 +73,9 @@ class Case(object):
 	"""TODO: docstring
 
 	initialize a case with:
-		- dose matrix, A, matrix \in R^m x n, m = # voxels, n = # beams
-		- voxel labels, vector{int} in \R^m
-		- structure_names, dict{labels, names}
+		- dose matrix (A): matrix \in R^m x n, m = # voxels, n = # beams
+		- voxel labels: vector{int} in \R^m
+		- label_order: list{labels}, (labels are integers) TODO: finish description 
 		- prescription: dict{labels, dict}, where each element has the fields:
 			label (int, also the key)
 			dose (float)
@@ -89,12 +89,16 @@ class Case(object):
 		self.voxel_labels = voxel_labels
 		
 		# digest clinical specification
+
 		self.prescription = Prescription(prescription_raw)
 
 		# parse full mat + data into Structure objects
 		self.structures = build_structures(self.prescription, 
 			voxel_labels, label_order, A)
 
+		# set of IDs active constraints 
+		# (maintained as DVH constraints added/removed)
+		self.active_constraint_IDs = set()
 
 		# counts go with life of Case object,
 		# even if, e.g., all constraints removed from a run
@@ -122,12 +126,31 @@ class Case(object):
 		constr = DoseConstraint(dose, fraction, direction)
 		cid = gen_constraint_id(label, self.constraint_count)
 		self.structures[label].add_constraint(cid, constr)
+		self.active_constraint_IDs.add(cid)
 		return cid
 
 	def drop_dvh_constraint(self, constr_id):
 		""" TODO: docstring """
 		label = constraint2label(constr_id)
 		self.structures[label].remove_constraint(constr_id)
+		self.active_constraint_IDs.remove(constr_id)
+
+	def drop_all_dvh_constraints(self):
+		""" TODO: docstring """
+		for cid in self.active_constraint_IDs:
+			self.drop_dvh_constraint(cid)
+
+	def add_all_rx_constraints(self):
+		""" TODO: docstring """
+		contraint_dict = self.prescription.constraints_by_label
+		for label, constr_list in constraint_dict.iteritems():
+			for constr in constr_list:
+				self.add_dvh_constraint(label, *constr)
+
+	def drop_all_but_rx_constraints(self):
+		""" TODO: docstring """
+		self.drop_all_dvh_constraints()
+		self.add_all_rx_constraints()
 
 	def change_objective(self, label, dose = None, 
 		w_under = None, w_over = None):

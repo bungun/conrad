@@ -114,8 +114,8 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 	- "V__ > p %"
 
 		variants: "V__%", "v__%", "V__", "v__"
-		meaning: volume at __ percent of rx dose less than 
-			(greater than) p percent of volume
+		meaning: volume receiving __ percent of rx dose less than 
+			(greater than) p percent of structure volume
 	
 
 	 - "D__ < {frac} rx"
@@ -311,6 +311,7 @@ class Prescription(object):
 		""" TODO: docstring """
 		self.constraint_dict = {}
 		self.structure_dict = {}
+		self.rx_list
 		if prescription_data is not None:
 			self.digest(prescription_data) 
 
@@ -356,7 +357,24 @@ class Prescription(object):
 					constr = canonicalize_dvhstring(string)
 					self.constraint_dict[label].append(
 						canonical_string_to_tuple(constr))
+
+			self.rx_list = rx_list
 		except:
 			print str("Unknown error: prescription_data could not be "
 				"converted to conrad.Prescription() datatype.") 
 			raise
+
+	@property
+	def list(self):
+	    return self.rx_list
+	
+	@property
+	def dict(self):
+		rx_dict = {}
+		for structure in self.rx_list:
+			rx_dict[structure.label] = structure
+		return self.rx_dict
+
+	@property
+	def constraints_by_label(self):
+		return self.constraint_dict

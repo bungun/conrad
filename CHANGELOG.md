@@ -24,4 +24,6 @@
 TODO: case initialization logic
 TODO: plotting (python)
 TODO: plotting (browser)
-
+TODO: prescription .list and .dict methods
+TODO: case -> add_rx_constraints()
+TODO: case -> remove_all_constraints()
