@@ -116,6 +116,9 @@ class Structure(object):
 
 	def calc_y(self, x):
 		""" TODO: docstring """
+
+		# calculate dose from input vector x:
+		# 	y = Ax
 		x = squeeze(array(x))
 		if isinstance(self.A, (csr_matrix, csc_matrix)):
 			self._y = squeeze(self.A * x)
@@ -124,6 +127,9 @@ class Structure(object):
 		else:
 			TypeError("input A must by a numpy or "
 				"scipy sparse matrix")
+
+		# make DVH curve from calculated dose
+		self.dvh_curve.make(self._y)
 
 	def get_y(self, x):
 		""" TODO: docstring """
