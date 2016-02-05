@@ -1,5 +1,5 @@
 from cvxpy import *
-from numpy import inf, array, squeeze
+from numpy import inf, array, squeeze, ones
 from conrad.dvh import DVHCurve, DoseConstraint
 
 GAMMA_DEFAULT = 1e-2
@@ -66,8 +66,9 @@ class SolverCVXPY(object):
 		if structure.is_target:
 			A = structure.A
 			b = structure.dose
-			c, d = get_cd_from_wts(structure.wt_over, structure.wt_under)
-			self.problem.objective += Minimize(c.T * abs(A * x - b) + d.T * (A * x - b))
+			x = self._x
+			c, d = get_cd_from_wts(structure.w_over, structure.w_under)
+			self.problem.objective += Minimize(c * sum_entries(abs(A * x - b)) + d * sum_entries((A * x - b)))
 
 	@staticmethod
 	def __dvh_constraint_restriction(A, x, constr, beta, slack = None):
@@ -171,7 +172,7 @@ class SolverCVXPY(object):
 		""" TODO: docstring """
 
 		# set verbosity level
-		VERBOSE = bool(kwargs['verbose']) if 'verbose' in kwargs else VERBOSE_DEFAULT
+		VERBOSE = bool(kwargs['verbose']) if 'verbose' in kwargs else bool(VERBOSE_DEFAULT)
 		PRINT = println if VERBOSE else lambda : None
 		
 		# solver options
@@ -195,11 +196,16 @@ class SolverCVXPY(object):
 				solver = SCS,
 				verbose = VERBOSE,
 				max_iters = maxiter,
+<<<<<<< HEAD
 				reltol = reltol,
 				use_indirect = False)
+=======
+				eps = reltol,
+				use_indirect=False)
+>>>>>>> d046ae0bbde20aa23e49dcd29aa58afc85db91f9
 
-		PRINT("status: {}".format(prob.status))
-		PRINT("optimal value: {}".format(prob.value))
+		PRINT("status: {}".format(self.problem.status))
+		PRINT("optimal value: {}".format(self.problem.value))
 
 		return ret != inf and not isinstance(ret, str)
 
@@ -232,7 +238,11 @@ class PlanningProblem(object):
 		# (attached to any structure)
 		# -------------------------------------
 		for st in structure_dict.itervalues():
+<<<<<<< HEAD
 			n_beams = st.A.shape[0]
+=======
+			n_beams = st.A.shape[1]
+>>>>>>> d046ae0bbde20aa23e49dcd29aa58afc85db91f9
 			break
 
 		# initialize problem with size and options

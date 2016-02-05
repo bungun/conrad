@@ -43,10 +43,10 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 	structures = prescription.structure_dict
 	ptr1 = ptr2 = 0
 
-	for l in label_order:
+	for label in label_order:
 		# obtain structure size
 		size = reduce(add, map(lambda v : v == label, voxel_labels))
-		structures[l].size = size
+		structures[label].size = size
 		ptr2 += size
 
 		# assess sorting of label blocks:
@@ -56,8 +56,8 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 				"`label_order'. voxel_labels not block sorted.")
 		
 		# partition dose matrix	into blocks
-		structures[l].A_full = structures[l].A = dose_matrix[ptr1:ptr2, :]
-		structures[l].set_block_indices(ptr1, ptr2)
+		structures[label].A_full = structures[label].A = dose_matrix[ptr1:ptr2, :]
+		structures[label].set_block_indices(ptr1, ptr2)
 		ptr1 = ptr2
 
 	return structures
@@ -95,11 +95,15 @@ class Case(object):
 		# parse full mat + data into Structure objects
 		self.structures = build_structures(self.prescription, 
 			voxel_labels, label_order, A)
+<<<<<<< HEAD
 
 		# set of IDs active constraints 
 		# (maintained as DVH constraints added/removed)
 		self.active_constraint_IDs = set()
 
+=======
+		
+>>>>>>> d046ae0bbde20aa23e49dcd29aa58afc85db91f9
 		# counts go with life of Case object,
 		# even if, e.g., all constraints removed from a run
 		self.constraint_count = 0
@@ -187,7 +191,7 @@ class Case(object):
 
 		# save output
 		self.run_count += 1
-		self.run_records[run_count] = rr
+		self.run_records[self.run_count] = rr
 
 		if 'plot' in args:
 			self.plot.plot(self.plotting_data)
@@ -231,6 +235,6 @@ class Case(object):
 	@property
 	def has_targets(self):
 		""" TODO: docstring """
-		for s in self.structures.iteritems():
+		for s in self.structures.itervalues():
 			if s.is_target: return True
 		return False

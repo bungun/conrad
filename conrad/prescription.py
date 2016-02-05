@@ -353,16 +353,25 @@ class Prescription(object):
 					is_target = bool(item['is_target']), 
 					dose = float(item['dose']))
 				self.constraint_dict[label] = []
+<<<<<<< HEAD
 				for string in item['constraints']:
 					constr = canonicalize_dvhstring(string)
 					self.constraint_dict[label].append(
 						canonical_string_to_tuple(constr))
 
 			self.rx_list = rx_list
+=======
+				if item['constraints'] is not None:
+					for string in item['constraints']:
+						constr = canonicalize_dvhstring(string)
+						self.constraint_dict[label].append(
+							canonical_string_to_tuple(constr))
+>>>>>>> d046ae0bbde20aa23e49dcd29aa58afc85db91f9
 		except:
 			print str("Unknown error: prescription_data could not be "
 				"converted to conrad.Prescription() datatype.") 
 			raise
+<<<<<<< HEAD
 
 	@property
 	def list(self):
@@ -378,3 +387,5 @@ class Prescription(object):
 	@property
 	def constraints_by_label(self):
 		return self.constraint_dict
+=======
+>>>>>>> d046ae0bbde20aa23e49dcd29aa58afc85db91f9
