@@ -224,7 +224,7 @@ class PlanningProblem(object):
 		""" TODO: docstring """
 		structure.calc_y(self.solver.x)
 		if not exact:
-			self.update_dvh_constraint(structure)
+			self.__update_dvh_constraint(structure)
 
 	def solve(self, structure_dict, run_output, *options, **kwargs):
 		""" TODO: docstring """
@@ -258,7 +258,7 @@ class PlanningProblem(object):
 		# relay output to structures
 		# --------------------------
 		for st in structure_dict.itervalues():
-			self.update_structure(st)
+			self.__update_structure(st)
 
 		# relay output to run_output object
 		# ---------------------------------
@@ -286,7 +286,7 @@ class PlanningProblem(object):
 			self.solver.solve(*options, **kwargs)
 
 			for st in structure_dict.itervalues():
-				self.update_structure(st, exact = True)
+				self.__update_structure(st, exact = True)
 
 			run_output.optimal_variables['x_exact'] = self.solver.x
 			run_output.optimal_variables['lambda_exact'] = self.solver.x_dual
