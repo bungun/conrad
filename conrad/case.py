@@ -83,7 +83,8 @@ class Case(object):
 			dose_constraints (dict, or probably string/tuple list)
 	"""
 
-	def __init__(self, A, voxel_labels, label_order, prescription_raw):
+	def __init__(self, A, voxel_labels, label_order, 
+		prescription_raw, suppress_rx_constraints = False):
 		"""TODO: Case.__init__() docstring"""
 		self.problem = PlanningProblem()
 		self.voxel_labels = voxel_labels
@@ -104,6 +105,10 @@ class Case(object):
 		# even if, e.g., all constraints removed from a run
 		self.constraint_count = 0
 		self.run_count = 0
+
+		# append prescription constraints unless suppressed:
+		if not suppress_rx_constraints:
+			self.add_all_rx_constraints()
 
 		# dose matrix
 		self.A = A
@@ -141,7 +146,7 @@ class Case(object):
 
 	def add_all_rx_constraints(self):
 		""" TODO: docstring """
-		contraint_dict = self.prescription.constraints_by_label
+		constraint_dict = self.prescription.constraints_by_label
 		for label, constr_list in constraint_dict.iteritems():
 			for constr in constr_list:
 				self.add_dvh_constraint(label, *constr)

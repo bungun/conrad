@@ -89,7 +89,7 @@ class DVHPlot(object):
 			plt.plot(data['curve']['dose'], data['curve']['percentile'],
 				color = color, label = name, **options)
 			plt.xlim(0, 1.1 * max_dose)
-			plt.ylim(0, 100)
+			plt.ylim(0, 103)
 
 			for constraint in data['constraints']:
 				plt.plot(constraint['dose'][0], constraint['percentile'][0], 

@@ -1,5 +1,4 @@
-from numpy import copy as np_copy, sort as np_sort, linspace
-
+from numpy import copy as np_copy, sort as np_sort, linspace, insert
 # TODO: unit test
 
 """
@@ -129,8 +128,8 @@ class DoseConstraint(object):
 		# int() conversion truncates
 		n_returned = int(non_viol * len(y))
 
-		start = -n_returned if upper else None
-		end = None if upper else n_returned
+		start = -n_returned if self.upper else None
+		end = None if self.upper else n_returned
 		return (y - self.dose_requested).argsort()[start:end]
 
 	def __str__(self):
@@ -161,8 +160,8 @@ class DVHCurve(object):
 		else:
 			doses = y[::len(y) / maxlength]
 
-		self.doses = np_sort(np_copy(doses))
-		self.percentiles = linspace(100, 0, len(self.doses))
+		self.doses = insert(np_sort(np_copy(doses)), 0, 0.)
+		self.percentiles = insert(linspace(100, 0, len(self.doses) - 1), 0, 100.)
 
 	@property
 	def plotting_data(self):

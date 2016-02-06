@@ -1,5 +1,5 @@
 from cvxpy import *
-from numpy import inf, array, squeeze, ones
+from numpy import inf, array, squeeze, ones, copy as np_copy
 from conrad.dvh import DVHCurve, DoseConstraint
 
 GAMMA_DEFAULT = 1e-2
@@ -58,8 +58,8 @@ class SolverCVXPY(object):
 	def clear_dvh_constraints(self):
 		""" TODO: docstring """
 		self.constraints = [self._x >= 0]
-		self.objective = 0
-		self.problem = Minimize(self.objective, self.constraints)
+		self.objective = Minimize(0)
+		self.problem = Problem(self.objective, self.constraints)
 
 	def add_term(self, structure):
 		"""extract clinical objective from structure"""
@@ -105,7 +105,7 @@ class SolverCVXPY(object):
 		else:
 			b = constr.dose_requested
 		idx_exact = constr.get_maxmargin_fulfillers(y)
-		A_exact = np.copy(A[idx_exact, :])
+		A_exact = np_copy(A[idx_exact, :])
 		return sign * (A_exact * x - b) <= 0
 
 	def add_dvh_constraint(self, structure, exact = False):

@@ -52,4 +52,4 @@ class TestExternalData(unittest.TestCase):
 
 	 	print "prescription loaded from YAML:\n", cs.prescription 
 
-	 	cs.plan("ECOS", verbose = 1)
+	 	cs.plan("ECOS", verbose = 1, plot = True)

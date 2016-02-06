@@ -21,6 +21,7 @@
 
 ## Version 0.0.1 (alpha)
 
-DEBUG: plotting (python)
+DEBUG: plotting DVH constraints (python)
+DEBUG: 2-pass (python)
 TODO: plotting (browser)
 TODO: __str__ method for RunRecord	
