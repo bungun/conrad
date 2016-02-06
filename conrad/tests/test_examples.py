@@ -37,7 +37,7 @@ class TestExamples(unittest.TestCase):
 		cs.add_dvh_constraint(lab_tum, 0.8, 0.2, '>')
 		cs.add_dvh_constraint(lab_oar, 0.5, 0.5, '<')
 		cs.add_dvh_constraint(lab_oar, 0.55, 0.1, '>')
-		cs.plan("ECOS", verbose = 1)
+		cs.plan("ECOS", 'dvh_no_slack', verbose = 1)
 		
 		# try plotting:
 		cs.plan("ECOS", plot = True)

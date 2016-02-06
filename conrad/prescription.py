@@ -142,11 +142,10 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 			"\n(input = {})".format(string_constraint))
 
 	lt = '<' in string_constraint
-
 	if lt:
-		left, right = string_constraint.split('<').strip('=')
+		left, right = string_constraint.strip('=').split('<')
 	else:
-		left, right = string_constraint.split('>').strip('=')
+		left, right = string_constraint.strip('=').split('>')
 
 	rdose = 'Gy' in right
 	ldose = 'Gy' in left 
@@ -158,7 +157,7 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 	
 	if rdose:
 		tokens = ['mean', 'Mean', 'min', 'Min', 'max', 'Max', 'D', 'd']
-		if not any(map(t in left, tokens)):
+		if not any(map(lambda t : t in left, tokens)):
 			ValueError("If dose specified on right side "
 				"of inequality, left side must contain one "
 				" of the following strings: \n.\ninput={}".format(
@@ -318,7 +317,7 @@ class Prescription(object):
 
 	def digest(self, prescription_data):
 		""" TODO: docstring """
-
+		
 		err = None
 		data_valid = False
 		rx_list = []
@@ -326,8 +325,8 @@ class Prescription(object):
 			rx_list = prescription_data
 			data_valid = True
 
-		if isinstance(data_valid, str):
-			if path.isfile(prescription_data):
+		if isinstance(prescription_data, str):
+			if path.exists(prescription_data):
 				try:
 					f = open(prescription_data)
 					if '.json' in prescription_data:
@@ -336,7 +335,6 @@ class Prescription(object):
 						rx_list = yaml.safe_load(f)
 					f.close
 					data_valid = True
-
 				except:
 					err = format_exc()
 
@@ -344,7 +342,7 @@ class Prescription(object):
 			if err is not None: print err
 			raise TypeError("input prescription_data expected to be "
 							"a list or the path to a valid JSON or YAML file.")
-
+							
 		try:
 			for item in rx_list:
 				label = item['label']
@@ -352,7 +350,7 @@ class Prescription(object):
 					label = item['label'],
 					name = item['name'],
 					is_target = bool(item['is_target']), 
-					dose = float(item['dose']))
+					dose = float(item['dose']) if item['dose'] is not None else 0.)
 				self.constraint_dict[label] = []
 
 				if item['constraints'] is not None:

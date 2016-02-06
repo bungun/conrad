@@ -13,7 +13,7 @@
   constraints :
   - D50 < 0.6 Gy
   - D100 < 0.8 Gy
-	
+
 - name : OAR_SENSITIVE
   label : 7
   is_target : No

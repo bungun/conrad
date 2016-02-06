@@ -17,7 +17,7 @@
 
 
 - display dose distribution slices
- 
+- warn user and stop plan execution if infeasible status returned
 
 ## Version 0.0.1 (alpha)
 

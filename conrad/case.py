@@ -45,10 +45,10 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 
 	for label in label_order:
 		# obtain structure size
-		size = reduce(add, map(lambda v : v == label, voxel_labels))
+		size = reduce(add, map(lambda v : int(v == label), voxel_labels))
 		structures[label].size = size
 		ptr2 += size
-
+		
 		# assess sorting of label blocks:
 		if not all(map(lambda v: v == label, voxel_labels[ptr1:ptr2])):
 			raise ValueError("inputs voxel_labels and dose_matrix are expected "
