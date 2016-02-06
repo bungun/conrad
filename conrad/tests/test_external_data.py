@@ -6,7 +6,7 @@ from os import path
 
 from conrad import Case
 
-class TestYaml(unittest.TestCase):
+class TestExternalData(unittest.TestCase):
 	""" Unit tests using external data import. """
 	def setUp(self):
 		# beams
@@ -30,7 +30,6 @@ class TestYaml(unittest.TestCase):
 
 	def test_rx_from_JSON(self):
 	 	"""TODO: docstring"""
-	 	self.setup_yaml_json()
 	 	input_file = path.abspath('json_rx.json')
 	 	cs = Case(self.A, self.voxel_labels, self.label_order, input_file)
 
@@ -38,9 +37,8 @@ class TestYaml(unittest.TestCase):
 
 	 	cs.plan("ECOS", verbose = 1)
 
-	 def test_rx_from_YAML(self):
+	def test_rx_from_YAML(self):
 	 	"""TODO: docstring"""
-	 	self.setup_yaml_json()
 	 	input_file = path.abspath('yaml_rx.yml')
 	 	cs = Case(self.A, self.voxel_labels, self.label_order, input_file)
 

@@ -33,17 +33,17 @@ class TestExamples(unittest.TestCase):
 		cs.plan("ECOS", verbose = 1)
 		
 		# Add DVH constraints and re-solve
-		cs.add_dvh_constraint(lab_tum, 1.05, 30., '<')
-		cs.add_dvh_constraint(lab_tum, 0.8, 20., '>')
-		cs.add_dvh_constraint(lab_oar, 0.5, 50, '<')
-		cs.add_dvh_constraint(lab_oar, 0.55, 10, '>')
+		cs.add_dvh_constraint(lab_tum, 1.05, 0.3, '<')
+		cs.add_dvh_constraint(lab_tum, 0.8, 0.2, '>')
+		cs.add_dvh_constraint(lab_oar, 0.5, 0.5, '<')
+		cs.add_dvh_constraint(lab_oar, 0.55, 0.1, '>')
 		cs.plan("ECOS", verbose = 1)
-
+		
 		# try plotting:
 		cs.plan("ECOS", plot = True)
 		
 		# try plotting + save:
-		cs.plan("ECOS", plot = True, plotfile = "test_basic_plot.pdf")
+		# cs.plan("ECOS", plot = True, plotfile = "test_basic_plot.pdf")
 	
 	def test_plotting(self):
 	 	"""TODO: docstring"""

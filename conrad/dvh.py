@@ -152,7 +152,7 @@ class DVHCurve(object):
 		self.doses = None
 		self.percentiles = None
 
-	def make(y, maxlength = MAX_LENGTH):
+	def make(self, y, maxlength = MAX_LENGTH):
 		""" TODO: docstring """
 		if len(y) <= maxlength:
 			doses = y[:]

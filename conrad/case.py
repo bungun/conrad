@@ -115,7 +115,7 @@ class Case(object):
 		panels_by_structure = {}
 		names_by_structure = {}
 		for idx, label in enumerate(label_order):
-			panels_by_structure[label] = idx
+			panels_by_structure[label] = idx+1
 			names_by_structure[label] = self.structures[label].name
 		self.plot = DVHPlot(panels_by_structure, names_by_structure)
 

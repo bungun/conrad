@@ -81,21 +81,23 @@ class DVHPlot(object):
 		max_dose = max([data['curve']['dose'].max() for data in plot_data.itervalues()])
 
 
-		for label, data in plot_data:
+		for label, data in plot_data.iteritems():
 			plt.subplot(self.rows, self.cols, self.panels_by_structure[label])
 			
 			color = self.colors_by_structure[label]
 			name = self.names_by_structure[label]
-			plt.plot(data['curve']['percentile'], data['curve']['dose'],
+			plt.plot(data['curve']['dose'], data['curve']['percentile'],
 				color = color, label = name, **options)
-			plt.xlim(0, 1.1 * maxdose)
+			plt.xlim(0, 1.1 * max_dose)
 			plt.ylim(0, 100)
 
 			for constraint in data['constraints']:
-				plt.plot(constraint['percentile'][0], 
-					constraint['symbol'][0], **options)
-				plt.plot(constraint['percentile'][0], 
-					constraint['symbol'][0], alpha  = 0.7, **options)
+				plt.plot(constraint['dose'][0], constraint['percentile'][0], 
+					constraint['symbol'], color = color, **options)
+				plt.plot(constraint['dose'][1], constraint['percentile'][1], 
+					constraint['symbol'], alpha  = 0.7, color = color, **options)
+				plt.plot(constraint['dose'], constraint['percentile'], 
+					'-', color = color, **options)
 
 		SHOW()
 
