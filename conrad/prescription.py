@@ -321,6 +321,7 @@ class Prescription(object):
 
 		err = None
 		data_valid = False
+		rx_list = []
 		if isinstance(prescription_data, list):
 			rx_list = prescription_data
 			data_valid = True
@@ -340,9 +341,9 @@ class Prescription(object):
 					err = format_exc()
 
 		if not data_valid:
-			if err is not None: print err 
-			TypeError("input prescription_data expected to be "
-				"a list or the path to a valid JSON or YAML file.")
+			if err is not None: print err
+			raise TypeError("input prescription_data expected to be "
+							"a list or the path to a valid JSON or YAML file.")
 
 		try:
 			for item in rx_list:

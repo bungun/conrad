@@ -43,27 +43,8 @@ class TestExamples(unittest.TestCase):
 		cs.plan("ECOS", plot = True)
 		
 		# try plotting + save:
-
-	 def test_rx_from_JSON(self):
-	 	"""TODO: docstring"""
-	 	self.setup_yaml_json()
-	 	input_file = path.abspath('json_rx.json')
-	 	cs = Case(self.A, self.voxel_labels, self.label_order, input_file)
-
-	 	print "prescription loaded from JSON:\n", cs.prescription 
-
-	 	cs.plan("ECOS", verbose = 1)
-
-	 def test_rx_from_YAML(self):
-	 	"""TODO: docstring"""
-	 	self.setup_yaml_json()
-	 	input_file = path.abspath('yaml_rx.yml')
-	 	cs = Case(self.A, self.voxel_labels, self.label_order, input_file)
-
-	 	print "prescription loaded from YAML:\n", cs.prescription 
-
-	 	cs.plan("ECOS", verbose = 1)
-
-	 def test_plotting(self, case):
+		cs.plan("ECOS", plot = True, plotfile = "test_basic_plot.pdf")
+	
+	def test_plotting(self):
 	 	"""TODO: docstring"""
 	 	pass	 

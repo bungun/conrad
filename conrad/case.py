@@ -51,9 +51,9 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 
 		# assess sorting of label blocks:
 		if not all(map(lambda v: v == label, voxel_labels[ptr1:ptr2])):
-			ValueError("inputs voxel_labels and dose_matrix are expected "
-				"to be (block) sorted in the order specified by argument "
-				"`label_order'. voxel_labels not block sorted.")
+			raise ValueError("inputs voxel_labels and dose_matrix are expected "
+							 "to be (block) sorted in the order specified by argument "
+							 "`label_order'. voxel_labels not block sorted.")
 		
 		# partition dose matrix	into blocks
 		structures[label].A_full = structures[label].A = dose_matrix[ptr1:ptr2, :]
