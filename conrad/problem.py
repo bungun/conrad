@@ -115,11 +115,11 @@ class SolverCVXPY(object):
 		# slack to self.objective and slack >= 0 to constraints
 		for cid in structure.dose_constraints:
 
-			if exact and self.use_2pass and structure.y is not None:
+			if exact and self.use_2pass and structure._y is not None:
 				
 				# build exact constraint
 				dvh_constr = self.__dvh_constraint_exact(structure.A,
-					self._x, structure.y, 
+					self._x, structure._y, 
 					structure.dose_constraints[cid],
 					had_slack = self.use_slack)
 
@@ -217,7 +217,8 @@ class PlanningProblem(object):
 	def __update_dvh_constraint(self, structure):
 		""" TODO: docstring """
 		for cid in structure.dose_constraints:
-			slack = self.solver.slack_vars[cid].value
+			slack_var = self.solver.slack_vars[cid]
+			slack = 0 if slack_var is None else slack_var.value
 			structure.dose_constraints[cid].set_actual_dose(slack)
 
 	def __update_structure(self, structure, exact = False):
@@ -281,7 +282,7 @@ class PlanningProblem(object):
 
 			for st in structure_dict.itervalues():
 				self.solver.add_term(st)
-				self.solver.add_dvh_constraint(st, exact = True)	
+				self.solver.add_dvh_constraint(st, exact = True)
 
 			self.solver.solve(*options, **kwargs)
 

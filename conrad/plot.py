@@ -15,8 +15,6 @@ else:
 from matplotlib.pyplot import get_cmap
 from matplotlib.colors import LinearSegmentedColormap
 
-# TODO: unit test
-
 """
 TODO: plot.py docstring
 """
