@@ -40,10 +40,13 @@ class TestExamples(unittest.TestCase):
 		cs.plan("ECOS", "dvh_2pass", verbose = 1)
 		
 		# try plotting:
-		cs.plan("ECOS", plot = True)
+		cs.plan("ECOS", plot = True, plotfile = 'basic_test_plot.pdf')
 		
 		# try plotting + save:
 		# cs.plan("ECOS", plot = True, plotfile = "test_basic_plot.pdf")
+	
+	 	print "complete"
+
 	
 	def test_plotting(self):
 	 	"""TODO: docstring"""

@@ -99,10 +99,11 @@ class DVHPlot(object):
 				plt.plot(constraint['dose'], constraint['percentile'], 
 					'-', color = color, **options)
 
-		SHOW()
+		# SHOW()
 
 	def save(self, filepath):
 		try:
+			print "SAVING TO ", filepath
 			plt.savefig(filepath, bbox_inches = 'tight')
 		except:
 			print str('could not save plot to file: {}'.format(filepath))

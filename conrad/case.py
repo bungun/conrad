@@ -202,7 +202,9 @@ class Case(object):
 		if draw_plot:
 			self.plot.plot(self.plotting_data)
 			if 'plotfile' in kwargs:
+				print "SAVING"
 				self.plot.save(kwargs['plotfile'])
+				print "COMPLETE"
 
 
 	def calc_doses(self, x):

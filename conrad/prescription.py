@@ -18,9 +18,8 @@ YAML:
   is_target: Yes
   dose : 35.
   constraints:
-  - "D99 <= 1.1rx"
-  - "D20 >= 10.1Gy"
   - "D90 >= 32.3Gy"
+  - "D1 <= 1.1rx"
 
 - name : OAR1
   label : 2
@@ -39,7 +38,7 @@ Python list of dictionaries (JSON approximately same)
 		'label' : 1,
 		'is_target' : True,
 		'dose' : 35.,
-		'constraints' : ['D99 <= 1.1rx', 'D20 >= 10.1Gy', 'D90 >= 32.3Gy']
+		'constraints' : ['D1 <= 1.1rx', 'D90 >= 32.3Gy']
 	},
 
 	{
@@ -98,7 +97,7 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 	- "D__ > x Gy"
 	
 		variants: "D__%", "d__%", "D__", "d__"
-		meaning: dose at __th percentile less than (greater than) x Gy
+		meaning: dose to __ percent of volume less than (greater than) x Gy
 	
 
 	- "x Gy to < p %"
@@ -122,7 +121,7 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 	 - "D__ > {frac} rx"
 
 		variants: "D__%", "d__%", "D__", "d__"
-		meaning: dose at __th percentile less than (greater than)
+		meaning: dose at to __ percent of volume less than (greater than)
 			frac * rx 
 
 
@@ -211,9 +210,9 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 			if 'mean' in left or 'Mean' in left:
 				percentile = 50.
 			elif 'min' in left or 'Min' in left:
-				percentile = 0.
-			elif 'max' in left or 'Max' in left:
 				percentile = 100.
+			elif 'max' in left or 'Max' in left:
+				percentile = 0.
 			else:
 				percentile = float(left.strip('%').strip('d').strip('D'))
 
