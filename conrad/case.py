@@ -193,7 +193,7 @@ class Case(object):
 		self.run_records[self.run_count] = rr
 
 		# update doses
-		if self.problem.solver.feasible:
+		if self.run_records[self.run_count].output.feasible:
 			x_key = 'x_exact' if use_2pass else 'x'
 			self.calc_doses(rr.output.optimal_variables[x_key])
 

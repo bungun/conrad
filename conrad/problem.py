@@ -203,8 +203,7 @@ class SolverCVXPY(object):
 		PRINT("status: {}".format(self.problem.status))
 		PRINT("optimal value: {}".format(self.problem.value))
 
-		self.feasible = ret != inf and not isinstance(ret, str)
-		return self.feasible
+		return ret != inf and not isinstance(ret, str)
 
 
 class PlanningProblem(object):
@@ -253,9 +252,9 @@ class PlanningProblem(object):
 
 		# solve
 		# -----
-		feasible = self.solver.solve(*options, **kwargs)
+		run_output.feasible = self.solver.solve(*options, **kwargs)
 
-		if not feasible:
+		if not run_output.feasible:
 			return
 
 		# relay output to structures
@@ -278,7 +277,7 @@ class PlanningProblem(object):
 
 		# second pass, if applicable
 		# --------------------------
-		if self.use_2pass and feasible:
+		if self.use_2pass and run_output.feasible:
 
 			self.solver.clear_dvh_constraints()
 

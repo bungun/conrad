@@ -68,6 +68,7 @@ class RunOutput(object):
 		# lambda (dual variable for x>= 0)
 		self.optimal_variables = {}
 		self.optimal_dvh_slopes = {}
+		self.feasible = False
 
 class RunRecord(object):
 	""" TODO: docstring """
@@ -75,6 +76,7 @@ class RunRecord(object):
 		use_slack = True, 
 		use_2pass = False, 
 		gamma = 'default'):
+			
 		""" TODO: docstring """
 		self.profile = RunProfile(structures = structures,
 			use_slack = use_slack, use_2pass = use_2pass,
