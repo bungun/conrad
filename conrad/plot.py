@@ -72,7 +72,7 @@ class DVHPlot(object):
 				self.colors_by_structure[label] = colors[idx]
 
 
-	def plot(self, plot_data, **options):
+	def plot(self, plot_data, show = False, **options):
 		""" TODO: docstring """
 		self.fig.clf()
 
@@ -97,7 +97,7 @@ class DVHPlot(object):
 				plt.plot(constraint['dose'], constraint['percentile'], 
 					'-', color = color, **options)
 
-		# SHOW()
+		if show: SHOW()
 
 	def save(self, filepath):
 		try:

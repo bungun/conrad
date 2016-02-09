@@ -200,10 +200,10 @@ class Case(object):
 		draw_plot = kwargs['plot'] if 'plot' in kwargs else False
 		plotfile = kwargs['plotfile'] if 'plotfile' in kwargs else None
 		if draw_plot:
-			self.plot(plotfile)
+			self.plot(plotfile, show = False)
 	
-	def plot(self, plotfile = None):
-		self.dvh_plot.plot(self.plotting_data)
+	def plot(self, show = True, plotfile = None):
+		self.dvh_plot.plot(self.plotting_data, show)
 		if plotfile is not None:
 			print "SAVING"
 			self.dvh_plot.save(plotfile)

@@ -91,7 +91,7 @@ class TestExamples(unittest.TestCase):
 		res_obj = cs.problem.solver.objective.value
 		
 		# Check objective from 2nd pass <= 1st pass (since 1st constraints more restrictive)
-		cs.plan("ECOS", "dvh_2pass", "dvh_no_slack")
+		cs.plan("ECOS", "dvh_no_slack", "dvh_2pass")
 		res_obj_2pass = cs.problem.solver.objective.value
 		self.assertTrue(res_obj_2pass <= res_obj)
 	
