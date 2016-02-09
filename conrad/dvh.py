@@ -70,6 +70,9 @@ class DoseConstraint(object):
 
 	def __init__(self, dose, fraction, direction):
 		""" TODO: docstring """
+		if fraction < 0. or fraction > 1.:
+			raise ValueError("fraction %f must be in [0,1]" % (fraction))
+		
 		self.dose_requested = dose
 		self.fraction = fraction
 		self.direction = direction
@@ -125,7 +128,7 @@ class DoseConstraint(object):
 
 		"""
 
-		non_viol = self.fraction if not self.upper else (1 - self.fraction)		
+		non_viol = self.fraction if not self.upper else (1 - self.fraction)
 		
 		# int() conversion truncates
 		n_returned = int(non_viol * len(y))
@@ -136,7 +139,6 @@ class DoseConstraint(object):
 			dose = self.dose_actual
 		else:
 			dose = self.dose_requested
-
 		return (y - dose).argsort()[start:end]
 
 	def __str__(self):

@@ -7,7 +7,6 @@ from conrad.plot import DVHPlot
 from operator import add 
 from numpy import cumsum
 
-# TODO: unit test
 """
 TODO: case.py docstring
 """
@@ -37,7 +36,7 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 	"""
 
 	if not dose_matrix.shape[0] == len(voxel_labels):
-		ValueError("length of vector voxel_labels and "
+		raise ValueError("length of vector voxel_labels and "
 			"number of rows in dose_matrix must be equal.")
 
 	structures = prescription.structure_dict
@@ -194,13 +193,17 @@ class Case(object):
 		self.run_records[self.run_count] = rr
 
 		# update doses
-		x_key = 'x_exact' if use_2pass else 'x'
-		self.calc_doses(rr.output.optimal_variables[x_key])
+		if self.problem.solver.feasible:
+			x_key = 'x_exact' if use_2pass else 'x'
+			self.calc_doses(rr.output.optimal_variables[x_key])
 
-		draw_plot = kwargs['plot'] if 'plot' in kwargs else False
-		plotfile = kwargs['plotfile'] if 'plotfile' in kwargs else None
-		if draw_plot:
-			self.plot(False, plotfile)
+			draw_plot = kwargs['plot'] if 'plot' in kwargs else False
+			show_plot = kwargs['show'] if 'show' in kwargs else draw_plot	# Used to suppress plot during unit testing
+			plotfile = kwargs['plotfile'] if 'plotfile' in kwargs else None
+			if draw_plot:
+				self.plot(show_plot, plotfile)
+		else:
+			print "Problem infeasible as formulated"
 	
 	def plot(self, show = True, plotfile = None):
 		self.dvh_plot.plot(self.plotting_data, show)

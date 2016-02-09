@@ -38,6 +38,7 @@ class SolverCVXPY(object):
 		self.dvh_vars = {}
 		self.slack_vars = {}
 		self.dvh_indices = {}
+		self.feasible = False
 
 
 	# methods:
@@ -202,7 +203,8 @@ class SolverCVXPY(object):
 		PRINT("status: {}".format(self.problem.status))
 		PRINT("optimal value: {}".format(self.problem.value))
 
-		return ret != inf and not isinstance(ret, str)
+		self.feasible = ret != inf and not isinstance(ret, str)
+		return self.feasible
 
 
 class PlanningProblem(object):
@@ -254,7 +256,7 @@ class PlanningProblem(object):
 		feasible = self.solver.solve(*options, **kwargs)
 
 		if not feasible:
-			print "problem infeasible as formulated"
+			return
 
 		# relay output to structures
 		# --------------------------

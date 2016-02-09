@@ -110,5 +110,5 @@ class TestExamples(unittest.TestCase):
 		cs.add_dvh_constraint(self.lab_oar, 0.55, 0.1, '>')   # This constraint makes no-slack problem infeasible
 		
 		# Solve and plot resulting DVH curves
-		cs.plan("ECOS", plot = True)
-		cs.plan("ECOS", plot = True, plotfile = "test_plotting.pdf")
+		cs.plan("ECOS", plot = True, show = False)
+		cs.plan("ECOS", plot = True, show = False, plotfile = "test_plotting.pdf")
