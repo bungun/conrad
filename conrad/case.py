@@ -122,7 +122,7 @@ class Case(object):
 		for idx, label in enumerate(label_order):
 			panels_by_structure[label] = idx+1
 			names_by_structure[label] = self.structures[label].name
-		self.plot = DVHPlot(panels_by_structure, names_by_structure)
+		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
 
 	def add_dvh_constraint(self, label, dose, fraction, direction):
 		""" TODO: docstring """
@@ -164,7 +164,6 @@ class Case(object):
 	def plan(self, *args, **kwargs):
 		""" TODO: docstring """
 
-
 		# check for targets
 		if not self.has_targets:
 			print str("Warning: plan has no targets."
@@ -199,13 +198,16 @@ class Case(object):
 		self.calc_doses(rr.output.optimal_variables[x_key])
 
 		draw_plot = kwargs['plot'] if 'plot' in kwargs else False
+		plotfile = kwargs['plotfile'] if 'plotfile' in kwargs else None
 		if draw_plot:
-			self.plot.plot(self.plotting_data)
-			if 'plotfile' in kwargs:
-				print "SAVING"
-				self.plot.save(kwargs['plotfile'])
-				print "COMPLETE"
-
+			self.plot(plotfile)
+	
+	def plot(self, plotfile = None):
+		self.dvh_plot.plot(self.plotting_data)
+		if plotfile is not None:
+			print "SAVING"
+			self.dvh_plot.save(plotfile)
+			print "COMPLETE"
 
 	def calc_doses(self, x):
 		""" TODO: docstring """

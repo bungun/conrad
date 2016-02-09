@@ -2,7 +2,7 @@ import conrad
 import numpy as np
 import unittest
 import cvxpy
-from os import path
+from os import path, remove as os_remove
 from numpy import ones
 from conrad import Case
 
@@ -35,6 +35,15 @@ class TestExternalData(unittest.TestCase):
 			idx2 += size_by_label[l]
 			self.voxel_labels[idx1 : idx2] = l
 			idx1 = idx2
+	
+	# Runs once after all unit tests
+	def tearDownClass(self):
+		files_to_delete = ['yaml_test_plot.pdf']
+		for fname in files_to_delete:
+			fpath = path.join(path.abspath(path.dirname(__file__)), fname)
+			if path.isfile(fpath): os_remove(fpath)
+	
+	tearDownClass = classmethod(tearDownClass)
 
 	def test_rx_from_JSON(self):
 	 	"""TODO: docstring"""
