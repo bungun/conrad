@@ -1,5 +1,6 @@
 from numpy import copy as np_copy, sort as np_sort, linspace, insert
 # TODO: unit test
+import numpy as np
 
 """
 TODO: dvh.py docstring
@@ -114,26 +115,28 @@ class DoseConstraint(object):
 		procedure:
 		- get margins: (y - self.dose_requested)
 		- sort margin indices by margin values 
-		- if lower bound, return indices of p most negative entries 
-			(first p of sorted indices)
-		- if upper bound, return indices p most positive entries 
-			(last p of sorted indices)
+		- if upper bound, return indices of p most negative entries 
+			(first p of sorted indices; numpy.sort sorts small to large)
+		- if lower bound, return indices p most positive entries 
+			(last p of sorted indices; numpy.sort sorts small to large)
 		
 		p = percent non-violating * structure size
 			= percent non-violating * len(y)
 
 		"""
+
 		non_viol = self.fraction if not self.upper else (1 - self.fraction)		
 		
 		# int() conversion truncates
 		n_returned = int(non_viol * len(y))
 
-		start = -n_returned if self.upper else None
-		end = None if self.upper else n_returned
+		start = 0 if self.upper else -n_returned
+		end = n_returned if self.upper else -1
 		if had_slack and self.dose_actual is not None:
 			dose = self.dose_actual
 		else:
 			dose = self.dose_requested
+
 		return (y - dose).argsort()[start:end]
 
 	def __str__(self):
