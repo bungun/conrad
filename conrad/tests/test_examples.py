@@ -38,8 +38,8 @@ class TestExamples(unittest.TestCase):
 		cs.add_dvh_constraint(self.lab_tum, 0.8, 0.2, '>')
 		cs.add_dvh_constraint(self.lab_oar, 0.5, 0.5, '<')
 		cs.add_dvh_constraint(self.lab_oar, 0.55, 0.1, '>')   # This constraint makes no-slack problem infeasible
-		cs.plan("ECOS", verbose = 1)
-		# cs.plan("ECOS", "dvh_2pass", verbose = 1)
+		# cs.plan("ECOS", verbose = 1)
+		cs.plan("ECOS", "dvh_2pass", verbose = 1)
 	
 	def test_2pass_no_constr(self):
 		# Prescription for each structure

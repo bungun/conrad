@@ -99,7 +99,7 @@ class DoseConstraint(object):
 			'symbol' : self.direction}
 
 
-	def get_maxmargin_fulfillers(self, y):
+	def get_maxmargin_fulfillers(self, y, had_slack = False):
 		""" 
 		given dose vector y, get the indices of the voxels that
 		fulfill this dose constraint (self) with maximum margin
@@ -130,7 +130,11 @@ class DoseConstraint(object):
 
 		start = -n_returned if self.upper else None
 		end = None if self.upper else n_returned
-		return (y - self.dose_requested).argsort()[start:end]
+		if had_slack and self.dose_actual is not None:
+			dose = self.dose_actual
+		else:
+			dose = self.dose_requested
+		return (y - dose).argsort()[start:end]
 
 	def __str__(self):
 		return 'D{} {}= {}Gy\n'.format(

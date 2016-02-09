@@ -104,7 +104,7 @@ class SolverCVXPY(object):
 			b = constr.dose_actual
 		else:
 			b = constr.dose_requested
-		idx_exact = constr.get_maxmargin_fulfillers(y)
+		idx_exact = constr.get_maxmargin_fulfillers(y, had_slack)
 		A_exact = np_copy(A[idx_exact, :])
 		return sign * (A_exact * x - b) <= 0
 
