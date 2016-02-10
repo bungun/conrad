@@ -130,7 +130,7 @@ class Structure(object):
 			self.A = self.A_clu
 			repstring = 'mean'
 		else:
-			if self.A_full == None: repstring = 'none'
+			if self.A_full is None: repstring = 'none'
 			self.A = self.A_full
 
 		CONRAD_DEBUG_PRINT( str('switched representation of structure {} ({}) '
