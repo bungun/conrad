@@ -1,6 +1,7 @@
 from numpy import ndarray, array, squeeze
 from scipy.sparse import csr_matrix, csc_matrix
-from conrad.dvh import DVHCurve
+from conrad.dvh import DVHCurve, DoseSummary
+from tabulate import tabulate
 
 # TODO: unit test
 """
@@ -41,6 +42,9 @@ class Structure(object):
 
 		# dvh curve and constraints data for plotting
 		self.dvh_curve = DVHCurve()
+		
+		# summary statistics of dose on structure
+		self.dose_summary = DoseSummary()
 
 		# (pointer to) subsection of dose matrix corresponding to structure
 		self.A_full = options['A'] if 'A' in options else None
@@ -130,6 +134,7 @@ class Structure(object):
 
 		# make DVH curve from calculated dose
 		self.dvh_curve.make(self._y)
+		self.dose_summary.make(self._y)
 
 	def get_y(self, x):
 		""" TODO: docstring """
@@ -166,7 +171,9 @@ class Structure(object):
 		d['curve'] = self.dvh_curve.plotting_data
 		d['constraints'] = [dc.plotting_data for dc in self.dose_constraints.itervalues()]
 		return d
-
+	
+	def summary(self):
+		print tabulate([self.dose_summary.table_data], headers = "keys", tablefmt = "pipe")
 
 	def __header_string(self):
 		""" TODO: docstring """

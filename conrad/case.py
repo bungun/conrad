@@ -6,6 +6,8 @@ from conrad.run_data import RunRecord
 from conrad.plot import DVHPlot
 from operator import add 
 from numpy import cumsum
+from tabulate import tabulate
+from collections import OrderedDict
 
 """
 TODO: case.py docstring
@@ -216,6 +218,17 @@ class Case(object):
 		""" TODO: docstring """
 		for s in self.structures.itervalues():
 			s.calc_y(x)
+			
+	def summary(self):
+		""" TODO: docstring """
+		table = OrderedDict({'name': []})
+		for s in self.structures.itervalues():
+			table['name'] += [s.name]
+			for key, val in s.dose_summary.table_data.iteritems():
+				if key not in table:
+					table[key] = []
+				table[key] += [val]
+		print tabulate(table, headers = "keys", tablefmt = "pipe")
 
 	@property
 	def plotting_data(self):
