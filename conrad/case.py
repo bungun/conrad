@@ -55,7 +55,7 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 							 "`label_order'. voxel_labels not block sorted.")
 		
 		# partition dose matrix	into blocks
-		structures[label].A_full = structures[label].A = dose_matrix[ptr1:ptr2, :]
+		structures[label].set_A_full_and_mean(dose_matrix[ptr1:ptr2, :])
 		structures[label].set_block_indices(ptr1, ptr2)
 		ptr1 = ptr2
 

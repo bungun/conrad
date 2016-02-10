@@ -1,6 +1,7 @@
-from numpy import ndarray, array, squeeze
+from numpy import ndarray, array, squeeze, zeros
 from scipy.sparse import csr_matrix, csc_matrix
 from conrad.dvh import DVHCurve
+from conrad.defs import CONRAD_DEBUG_PRINT
 
 # TODO: unit test
 """
@@ -42,30 +43,19 @@ class Structure(object):
 		# dvh curve and constraints data for plotting
 		self.dvh_curve = DVHCurve()
 
-		# (pointer to) subsection of dose matrix corresponding to structure
-		self.A_full = options['A'] if 'A' in options else None
-		if not isinstance(self.A_full, (ndarray, csr_matrix, csc_matrix)):
-			TypeError("input A must by a numpy or "
-				"scipy csr/csc sparse matrix")
+		# set (pointer to) subsection of dose matrix corresponding to structure
+		self.set_A_full(options.pop('A', None))
 
-		# TODO:
-		# clustered version of same dose matrix, voxels
-		# voxel->cluster mapping vector
-		# voxel counts per cluster
-		# self.A_clu = None
-		# self.v2c = None
-		# self.voxel_per_cluster = None
+		# set (pointer to) clustered version of same dose matrix
+		self.set_A_clustered(options.pop('A_clustered', None), 
+			options.pop('vox2cluster', None), options.pop('vox_per_cluster', None))
 
-		# fully compressed version of same dose matrix
-		# TODO: add option to provide this if A is large and averaging is slow
-		self.A_mean = self.A_full.sum(0) / self.A_full.size[0]
-		if not isinstance(self.A_full, ndarray):
-			# (handling for sparse matrices)
-			squeeze(array(self.A_full))
+		# set (pointer to) fully compressed version of same dose matrix
+		self.set_A_mean(options.pop('A_mean', None))
 
-		self.A = self.A_full
-		# TODO: switching to clustered / fully compressed
-		# representation of matrix based on **options keyword args
+		# use full matrix by default
+		self.switch_A(options.pop('representation', 'full'))
+
 
 		# dose vector
 		self._y = None
@@ -83,6 +73,65 @@ class Structure(object):
 			else:
 				if self._w_over is None:
 					self._w_over = W_NONTARG_DEFAULT
+
+
+	def set_A_full(self, A_full):
+		self.A_full = A_full
+
+		# verify type of A_full
+		if A_full is not None and not isinstance(
+			self.A_full, (ndarray, csr_matrix, csc_matrix)):
+			TypeError("input A must by a numpy or "
+				"scipy csr/csc sparse matrix")
+
+		# if A_full is a matrix, and self.A is not set, switch self.A to A_full
+		if self.A_full is not None and self.A is None:
+			self.switch_A()
+		
+	def set_A_mean(self, A_mean = None):
+		if A_mean is not None:
+			self.A_mean = A_mean
+		elif self.A_full is not None:
+			self.A_mean = self.A_full.sum(0) / self.A_full.shape[0]
+			if not isinstance(self.A_full, ndarray):
+				# (handling for sparse matrices)
+				squeeze(array(self.A_full)) 
+
+	def set_A_full_and_mean(self, A_full, A_mean = None):
+		self.set_A_full(A_full)
+		self.set_A_mean(A_mean)
+
+	def set_A_clustered(self, A_clu, vox2cluster, vox_per_cluster):
+		self.A_clu = A_clu
+		self.v2c = vox2cluster
+		if vox_per_cluster is not None:
+			self.vpc = vox_per_cluster
+		elif vox2cluster is not None:
+			self.vpc = zeros(A_clu.shape[0])
+			for cluster in enumerate(self.v2c):
+				self.vpc[cluster] += 1
+		else:
+			self.vpc = None
+
+	@property
+	def __clustered_representation_exists(self):
+		return self.A_clu is not None and self.v2c is not None and self.vpc is not None
+
+	def switch_A(self, mat = 'full'):
+		repstring = 'full'
+		if mat == 'mean' and self.A_mean is not None:
+			self.A = self.A_mean
+			repstring = 'mean'
+		elif mat == 'clustered' and self.__clustered_representation_exists:
+			self.A = self.A_clu
+			repstring = 'mean'
+		else:
+			if self.A_full == None: repstring = 'none'
+			self.A = self.A_full
+
+		CONRAD_DEBUG_PRINT( str('switched representation of structure {} ({}) '
+			'to {}.\n'.format(self.label, self.name, repstring)) )
+
 
 	def set_block_indices(self, idx_start, idx_stop):
 		self.start_index = idx_start
