@@ -58,12 +58,11 @@ class Structure(object):
 
 		# fully compressed version of same dose matrix
 		# TODO: add option to provide this if A is large and averaging is slow
-		if isinstance(self.A_full, ndarray):
-			self.A_mean = self.A_full.sum(0) / self.A_full.size[0]
-		else:
-			Warning("MATRIX AVERAGING FOR SPARSE MATRICES NOT IMPLEMENTED")
-			#TODO: implement averaging for sparse matrices
-		
+		self.A_mean = self.A_full.sum(0) / self.A_full.size[0]
+		if not isinstance(self.A_full, ndarray):
+			# (handling for sparse matrices)
+			squeeze(array(self.A_full))
+
 		self.A = self.A_full
 		# TODO: switching to clustered / fully compressed
 		# representation of matrix based on **options keyword args
