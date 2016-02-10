@@ -1,6 +1,6 @@
-from numpy import copy as np_copy, sort as np_sort, linspace, insert
-# TODO: unit test
 import numpy as np
+from numpy import copy as np_copy, sort as np_sort, linspace, insert
+from collections import OrderedDict
 
 """
 TODO: dvh.py docstring
@@ -146,7 +146,44 @@ class DoseConstraint(object):
 			100 * self.fraction,
 			self.direction, 
 			self.dose_requested)
-
+			
+class DoseSummary(object):
+	"""
+	TODO: DoseSummary docstring
+	"""
+	
+	def __init__(self, percentiles = [0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99]):
+		""" TODO: docstring """
+		self.percentiles = percentiles
+		self.scores = None
+		self.mean = None
+		self.stdev = None
+		self.minimum = None
+		self.maximum = None
+	
+	def make(self, y):
+		self.mean = np.mean(y)
+		self.stdev = np.std(y)
+		self.minimum = np.amin(y)
+		self.maximum = np.amax(y)
+		self.scores = np.percentile(y, self.percentiles)
+	
+	@property
+	def table_data(self):
+		""" TODO: docstring """
+		table = OrderedDict({'mean': self.mean})
+		table['stdev'] = self.stdev
+		table['min'] = self.minimum
+		table['max'] = self.maximum
+		# TODO: Append percentiles in summary table
+		# for idx in xrange(1, len(self.scores)):
+		#	plabel = 'p' + str(self.percentiles[idx])
+		#	table[plabel] = self.scores[idx]
+		return table
+	
+	@property
+	def header(self):
+		return self.table_data.keys()
 
 class DVHCurve(object):
 	""" 
