@@ -48,6 +48,9 @@ class Structure(object):
 
 		# (pointer to) subsection of dose matrix corresponding to structure
 		self.A_full = options['A'] if 'A' in options else None
+		if not isinstance(self.A_full, (ndarray, csr_matrix, csc_matrix)):
+			TypeError("input A must by a numpy or "
+				"scipy csr/csc sparse matrix")
 
 		# TODO:
 		# clustered version of same dose matrix, voxels
@@ -58,8 +61,11 @@ class Structure(object):
 		# self.voxel_per_cluster = None
 
 		# fully compressed version of same dose matrix
-		# self.A_lin = None
-
+		# TODO: add option to provide this if A is large and averaging is slow
+		self.A_mean = self.A_full.sum(0) / self.A_full.size[0]
+		if not isinstance(self.A_full, ndarray):
+			# (handling for sparse matrices)
+			squeeze(array(self.A_full))
 
 		self.A = self.A_full
 		# TODO: switching to clustered / fully compressed
@@ -67,6 +73,7 @@ class Structure(object):
 
 		# dose vector
 		self._y = None
+		self._y_mean = None
 
 		# objective weights (set to defaults if not provided)
 		self._w_under = options['w_under'] if 'w_under' in options else None
@@ -128,9 +135,10 @@ class Structure(object):
 			self._y = squeeze(self.A * x)
 		elif isinstance(self.A, ndarray):
 			self._y = self.A.dot(x)
-		else:
-			TypeError("input A must by a numpy or "
-				"scipy sparse matrix")
+
+		self._y_mean = self.A_mean.dot(x)
+
+
 
 		# make DVH curve from calculated dose
 		self.dvh_curve.make(self._y)
@@ -146,6 +154,12 @@ class Structure(object):
 		""" TODO: docstring """
 		return self._y
 	
+	@property
+	def mean_dose(self):
+		""" TODO: docstring """
+		return self._y_mean
+
+
 	def has_constraint(self, constr_id):
 		""" TODO: docstring """
 		return constr_id in self.dose_constraints
