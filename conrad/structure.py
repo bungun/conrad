@@ -150,6 +150,11 @@ class Structure(object):
 		if w_over is not None:
 			self.w_over = w_over
 
+	def set_constraint(self, constr_id, dose, fraction, direction):
+		if self.has_constraint(constr_id):
+			self.dose_constraints[constr_id].change(dose, fraction, direction)
+
+
 	@property
 	def w_under(self):
 		""" TODO: docstring """

@@ -157,6 +157,10 @@ class Case(object):
 		self.drop_all_dvh_constraints()
 		self.add_all_rx_constraints()
 
+	def change_dvh_constraint(self, constr_id, dose = None, fraction = None, direction = None):
+		label = constraint2label(constr_id)
+		self.structures[label].set_constraint(constr_id, dose, fraction, direction)
+
 	def change_objective(self, label, dose = None, 
 		w_under = None, w_over = None):
 		""" TODO: docstring """

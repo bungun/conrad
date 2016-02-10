@@ -70,9 +70,12 @@ class DoseConstraint(object):
 
 	def __init__(self, dose, fraction, direction):
 		""" TODO: docstring """
+		self.change(dose, fraction, direction)
+
+	def change(self, dose, fraction, direction):
+		""" TODO: docstring """
 		if fraction < 0. or fraction > 1.:
 			raise ValueError("fraction %f must be in [0,1]" % (fraction))
-		
 		self.dose_requested = dose
 		self.fraction = fraction
 		self.direction = direction
