@@ -1,12 +1,12 @@
-from conrad.dvh import DoseConstraint
+from conrad.dvh import DoseConstraint, tuple_to_canonical_string
 from conrad.structure import Structure
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
 from conrad.run_data import RunRecord
-from conrad.plot import DVHPlot
+from conrad.plot import DensityPlot, DVHPlot
 from operator import add 
-from numpy import cumsum
-from tabulate import tabulate
+from numpy import cumsum, ndarray, squeeze
+# from tabulate import tabulate
 from collections import OrderedDict
 
 """
@@ -65,10 +65,30 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 
 
 
-def transfer_prescription(prescription, structures):
+def build_prescription_report(prescription, structures):
 	"""TODO: docstring"""
-	pass
+	rx_constraints = prescription.constraints_by_label
+	report = {}
+	for label, s in structures.iteritems():
+		sat = []
+		for constr in rx_constraints[label]:
+			status, dose_achieved = s.check_constraint(constr)
+			sat.append({'constraint': constr, 
+				'status': status, 'dose_achieved': dose_achieved})
+		report[label] = sat
+	return report
 
+def stringify_prescription_report(report, structures):
+	out = ''
+	for k, replist in report.iteritems():
+		out += 'Structure {}'.format(k)
+		if structures[k].name is not None:
+			out += '({})'.format(structures[k].name)
+		out += ':\n'
+		for item in replist:
+			out += tuple_to_canonical_string(item['constraint'])
+			out += '\tachieved? ' + string(item['status'])
+			out += '\tdose at level: ' + string(item['status']) + '\n'
 
 class Case(object):
 	"""TODO: docstring
@@ -91,7 +111,6 @@ class Case(object):
 		self.voxel_labels = voxel_labels
 		
 		# digest clinical specification
-
 		self.prescription = Prescription(prescription_raw)
 
 		# parse full mat + data into Structure objects
@@ -106,6 +125,7 @@ class Case(object):
 		# even if, e.g., all constraints removed from a run
 		self.constraint_count = 0
 		self.run_count = 0
+		self.run_tags = {}
 
 		# append prescription constraints unless suppressed:
 		if not suppress_rx_constraints:
@@ -115,6 +135,7 @@ class Case(object):
 		self.A = A
 		# self.shape = (self.voxels, self.beams) = A.shape
 
+		self.__DOSES_CALCULATED__ = False
 		self.run_records = {}
 
 		# plot setup
@@ -124,6 +145,7 @@ class Case(object):
 			panels_by_structure[label] = idx+1
 			names_by_structure[label] = self.structures[label].name
 		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
+		self.density_plot = DensityPlot(panels_by_structure, names_by_structure)
 
 	def add_dvh_constraint(self, label, dose, fraction, direction):
 		""" TODO: docstring """
@@ -199,9 +221,9 @@ class Case(object):
 		self.run_records[self.run_count] = rr
 
 		# update doses
-		if self.run_records[self.run_count].output.feasible:
+		if self.feasible:
 			x_key = 'x_exact' if use_2pass else 'x'
-			self.calc_doses(rr.output.optimal_variables[x_key])
+			self.calc_doses(self.solution_data[x_key])
 
 			draw_plot = kwargs['plot'] if 'plot' in kwargs else False
 			show_plot = kwargs['show'] if 'show' in kwargs else draw_plot	# Used to suppress plot during unit testing
@@ -217,12 +239,66 @@ class Case(object):
 			print "SAVING"
 			self.dvh_plot.save(plotfile)
 			print "COMPLETE"
+			
+	def plot_density(self, show = True, plotfile = None):
+		self.density_plot.plot(self.plotting_data, show)
+		if plotfile is not None:
+			print "SAVING"
+			self.density_plot.save(plotfile)
+			print "COMPLETE"
 
 	def calc_doses(self, x):
 		""" TODO: docstring """
+		self.__DOSES_CALCULATED__ = True
+
 		for s in self.structures.itervalues():
 			s.calc_y(x)
-			
+	
+	@property
+	def solver_info(self):
+		if self.run_count == 0:
+			return None
+		return self.run_records[self.run_count].output.solver_info
+
+	@property
+	def solution_data(self):
+		if self.run_count == 0:
+			return None
+		else:
+			return self.run_records[self.run_count].output.optimal_variables
+
+	@property
+	def feasible(self):
+		if self.run_count == 0:
+			return None
+		else:
+			return self.run_records[self.run_count].output.feasible
+
+	def __lookup_runrecord(runID):
+		if self.run_count == 0:
+			return None
+		if runID in self.run_tags:
+			return self.run_records[self.run_tags[runID]]
+		elif runID > 0 and runID <= self.run_count:
+			return self.run_records[runID]				
+
+	def get_run(runID = None):
+		if runID is None: runID = self.run_count
+		return __lookup_runrecord(runID)
+
+	def get_run_profile(runID = None):
+		if runID is None: runID = self.run_count
+		rr = __lookup_runrecord(runID)
+		if rr is not None:
+			return rr.profile
+
+	def get_run_output(runID = None):
+		if runID is None: runID = self.run_count
+		rr = __lookup_runrecord(runID)
+		if rr is not None:
+			return rr.output
+
+
 	def summary(self):
 		""" TODO: docstring """
 		table = OrderedDict({'name': []})
@@ -232,15 +308,59 @@ class Case(object):
 				if key not in table:
 					table[key] = []
 				table[key] += [val]
-		print tabulate(table, headers = "keys", tablefmt = "pipe")
+		print table
+		# print tabulate(table, headers = "keys", tablefmt = "pipe")
+
+	def dose_summary_data(self, percentiles = [2, 98], stdev = False):
+		d = {}
+		for label, s in self.structures.iteritems():
+			d[label] = s.get_dose_summary(percentiles = percentiles, stdev = stdev)
+		return d
+
+	@property
+	def dose_summary_string(self):
+		out = ''
+		for s in self.structures.itervalues():
+			out += s.summary_string
+		return out
+
+	@property
+	def prescription_report(self):
+		""" TODO: docstring """
+		if self.run_count == 0 or not self.__DOSES_CALCULATED__:
+			return None
+
+		return build_prescription_report(self.prescription, self.structures)
+
+	@property
+	def prescription_report_string(self):
+		return stringify_prescription_report(self.prescription_report, self.structures)
 
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
-		d = {}
+		if self.run_count == 0:
+			return None
+ 
+ 		d = {}
 		for label, s in self.structures.iteritems():
 			d[label] = s.plotting_data
 		return d
+
+	def get_plotting_data(self, calc = False, firstpass = False, x = None):
+		""" TODO: docstring """
+		if self.run_count == 0:
+			return None
+ 
+		if calc and isinstance(x, ndarray):
+			if x.size == self.n_beams:
+				self.calc_doses(squeeze(x))
+		elif calc and not firstpass and 'x_exact' in self.solution_data:
+			self.calc_doses(self.solution_data['x_exact'])
+		elif calc:
+			self.calc_doses(self.solution_data['x'])
+
+		return self.plotting_data
 		
 	@property
 	def n_structures(self):
