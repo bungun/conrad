@@ -9,3 +9,6 @@ def assertln(test):
 CONRAD_DEBUG = getenv('CONRAD_DEBUG', False)
 CONRAD_DEBUG_PRINT = println if CONRAD_DEBUG else lambda x : None
 CONRAD_DEBUG_ASSERT = assertln if CONRAD_DEBUG else lambda x : None
+
+SOLVER_OPTIONS = ['ECOS', 'SCS']
+MAX_VERBOSITY = 1
