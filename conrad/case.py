@@ -346,8 +346,8 @@ class Case(object):
 			return None
  
 		if calc and isinstance(x, ndarray):
-			if x.size == self.A.shape[1]:
-			self.calc_doses(squeeze(x))
+			if x.size == self.n_beams:
+				self.calc_doses(squeeze(x))
 		elif calc and not firstpass and 'x_exact' in self.solution_data:
 			self.calc_doses(self.solution_data['x_exact'])
 		elif calc:
