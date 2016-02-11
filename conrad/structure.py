@@ -29,12 +29,12 @@ class Structure(object):
 		self.stop_index = None
 
 		# prescribed dose
-		self.dose = options['dose'] if 'dose' in options else 0.
-		if self.dose is not None:
-			self.is_target = self.dose > 0 
+		self._dose = options['dose'] if 'dose' in options else 0.
+		if self._dose is not None:
+			self.is_target = self._dose > 0 
 		if self.is_target is not None:
-			if self.is_target and self.dose is None:
-				self.dose = DOSE_DEFAULT
+			if self.is_target and self._dose is None:
+				self._dose = DOSE_DEFAULT
 
 		# dictionary of DoseConstraint objects attached to 
 		# structure, keyed by constraint id (which is passed 
@@ -71,6 +71,7 @@ class Structure(object):
 		# objective weights (set to defaults if not provided)
 		self._w_under = options['w_under'] if 'w_under' in options else None
 		self._w_over = options['w_over'] if 'w_over' in options else None
+		self._boost = 1.
 		if self.is_target is not None:
 			if self.is_target:
 				if self._w_under is None: 
@@ -147,7 +148,7 @@ class Structure(object):
 	def set_objective(self, dose, w_under, w_over):
 		if self.is_target:
 			if dose is not None:
-				self.dose = dose
+				self.set_dose(dose)
 			if w_under is not None:
 				self.w_under = w_under
 		if w_over is not None:
@@ -181,6 +182,23 @@ class Structure(object):
 	@property
 	def w_over_raw(self):
 	    return self._w_under
+
+	@property
+	def dose(self):
+		return self._dose * self._boost
+
+	@property
+	def dose_raw(self):
+		return self._dose
+
+	def set_dose(self, dose):
+		if self.is_target:
+			self._boost = dose / self._dose
+
+	@property
+	def objective_data(self):
+		return {'dose_rx': self.dose_raw, 'dose_solver': self.dose,
+			'w_under': self.w_under, 'w_over': self.w_over}
 
 	def calc_y(self, x):
 		""" TODO: docstring """
@@ -248,7 +266,24 @@ class Structure(object):
 		d['curve'] = self.dvh_curve.plotting_data
 		d['constraints'] = [dc.plotting_data for dc in self.dose_constraints.itervalues()]
 		return d
-	
+
+	@property
+	def plotting_data_json_serializable(self):
+		""" TODO: docstring """
+		d = {}
+		d['curve'] = self.dvh_curve.plotting_data_json_serializable
+		d['constraints'] = self.plotting_data_constraints_only
+		return d
+
+	@property
+	def plotting_data_constraints_only(self):
+		constr = []
+		for cid, dc in self.dose_constraints.iteritems():
+			pd = dc.plotting_data
+			pd['constraintID'] = cid
+			constr.append(pd)
+		return constr
+
 	def summary(self):
 		print self.dose_summary.table_data
 		# print tabulate([self.dose_summary.table_data], headers = "keys", tablefmt = "pipe")
@@ -279,7 +314,8 @@ class Structure(object):
 	def __obj_string(self):
 		""" TODO: docstring """
 		out = 'target? {}\n'.format(self.is_target)
-		out += 'rx dose: {}\n'.format(self.dose)
+		out += 'rx dose: {}\n'.format(self.dose_raw)
+		out += 'solver dose: {}\n'.format(self.dose)
 		if self.is_target:
 			out += 'weight_under: {}\n'.format(self._w_under)
 			out += 'weight_over: {}\n'.format(self._w_over)			

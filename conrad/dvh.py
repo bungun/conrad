@@ -107,7 +107,6 @@ class DoseConstraint(object):
 			'dose' :[self.dose_requested, self.dose_actual], 
 			'symbol' : self.direction}
 
-
 	def get_maxmargin_fulfillers(self, y, had_slack = False):
 		""" 
 		given dose vector y, get the indices of the voxels that
@@ -221,12 +220,14 @@ class DoseDensity(object):
 		""" TODO: docstring """
 		return {'probability' : self.probabilities, 'dose' : self.doses}
 
+
 class DVHCurve(object):
 	""" 
 	TODO: DVHCurve docstring
 	"""
 
 	MAX_LENGTH = 1000
+	WEB_DIGITS = 4
 
 	def __init__(self):
 		""" TODO: docstring """
@@ -349,8 +350,13 @@ class DVHCurve(object):
 
 		return (status, dose_achieved)
 
-
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
 		return {'percentile' : self.percentiles, 'dose' : self.doses}
+
+	@property
+	def plotting_data_json_serializable(self):
+		""" TODO: docstring """
+		return {'percentile' : self.percentiles.round(self.WEB_DIGITS).tolist(),
+			'dose' : self.doses.round(self.WEB_DIGITS).tolist()}

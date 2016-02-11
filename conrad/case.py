@@ -19,7 +19,7 @@ def gen_constraint_id(label, constraint_count):
 
 def constraint2label(constr_id):
 	""" TODO: docstring """
-	return constr_id.split(':')[1]
+	return int(constr_id.split(':')[1])
 
 def default_weights(is_target = False):
 	""" TODO: docstring """
@@ -337,6 +337,18 @@ class Case(object):
 		return stringify_prescription_report(self.prescription_report, self.structures)
 
 	@property
+	def objective_data(self):
+		o = {}
+		for label, s in self.structures.iteritems():
+			o[label] = s.objective_data
+		return o
+
+	def get_objective_by_label(self, label):
+		if label not in self.structures: return None
+		return self.structures[label].objective_data
+
+
+	@property
 	def plotting_data(self):
 		""" TODO: docstring """
 		if self.run_count == 0:
@@ -347,7 +359,27 @@ class Case(object):
 			d[label] = s.plotting_data
 		return d
 
-	def get_plotting_data(self, calc = False, firstpass = False, x = None):
+	@property
+	def plotting_data_json_serializable(self):
+		""" TODO: docstring """
+		if self.run_count == 0:
+			return None
+ 
+ 		d = {}
+		for label, s in self.structures.iteritems():
+			d[label] = s.plotting_data_json_serializable
+		return d
+
+	@property
+	def plotting_data_constraints_only(self):
+		""" TODO: docstring """
+ 		d = {}
+		for label, s in self.structures.iteritems():
+			d[label] = s.plotting_data_constraints_only
+		return d	
+
+	def get_plotting_data(self, serializable = False, 
+		calc = False, firstpass = False, x = None):
 		""" TODO: docstring """
 		if self.run_count == 0:
 			return None
@@ -360,7 +392,10 @@ class Case(object):
 		elif calc:
 			self.calc_doses(self.solution_data['x'])
 
-		return self.plotting_data
+		if serializable:
+			return self.plotting_data_json_serializable
+		else:
+			return self.plotting_data
 		
 	@property
 	def n_structures(self):
