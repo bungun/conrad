@@ -315,7 +315,14 @@ class Case(object):
 		d = {}
 		for label, s in self.structures.iteritems():
 			d[label] = s.get_dose_summary(percentiles = percentiles, stdev = stdev)
+		return d
 
+	@property
+	def dose_summary_string(self):
+		out = ''
+		for s in self.structures.itervalues():
+			out += s.summary_string
+		return out
 
 	@property
 	def prescription_report(self):
