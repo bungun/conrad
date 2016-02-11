@@ -5,7 +5,7 @@ from conrad.problem import PlanningProblem
 from conrad.run_data import RunRecord
 from conrad.plot import DensityPlot, DVHPlot
 from operator import add 
-from numpy import cumsum
+from numpy import cumsum, ndarray, squeeze
 # from tabulate import tabulate
 from collections import OrderedDict
 
@@ -330,24 +330,30 @@ class Case(object):
 		return stringify_prescription_report(self.prescription_report, self.structures)
 
 	@property
-	def plotting_data(self, calc = False, exact = False, x = None):
+	def plotting_data(self):
 		""" TODO: docstring """
 		if self.run_count == 0:
 			return None
-
-
-		if calc and x is not None:
-			self.calc_doses(x)
-		if calc and not exact:
-			self.calc_doses(self.solution_data['x'])
-		elif calc and exact:
-			self.calc_doses(self.solution_data['x_exact'])
-
-
-		d = {}
+ 
+ 		d = {}
 		for label, s in self.structures.iteritems():
 			d[label] = s.plotting_data
 		return d
+
+	def get_plotting_data(self, calc = False, firstpass = False, x = None):
+		""" TODO: docstring """
+		if self.run_count == 0:
+			return None
+ 
+		if calc and isinstance(x, ndarray):
+			if x.size == self.A.shape[1]:
+			self.calc_doses(squeeze(x))
+		elif calc and not firstpass and 'x_exact' in self.solution_data:
+			self.calc_doses(self.solution_data['x_exact'])
+		elif calc:
+			self.calc_doses(self.solution_data['x'])
+
+		return self.plotting_data
 		
 	@property
 	def n_structures(self):
