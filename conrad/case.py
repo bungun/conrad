@@ -233,15 +233,22 @@ class Case(object):
 		else:
 			print "Problem infeasible as formulated"
 	
-	def plot(self, show = True, plotfile = None):
-		self.dvh_plot.plot(self.plotting_data, show)
+	def plot(self, show = True, plotfile = None, plot_2pass = False, **options):
+		""" TODO: docstring """
+		# plot 1st pass DVH curves on same figure as 2nd pass for comparison
+		if plot_2pass and self.run_records[self.run_count].profile.use_2pass:
+			plotting_data_first = self.get_plotting_data(calc = True, firstpass = True)
+			self.dvh_plot.plot(plotting_data_first, show = False, linestyle = '--', **options)
+		
+		self.dvh_plot.plot(self.plotting_data, show = show, **options)
 		if plotfile is not None:
 			print "SAVING"
 			self.dvh_plot.save(plotfile)
 			print "COMPLETE"
 			
-	def plot_density(self, show = True, plotfile = None):
-		self.density_plot.plot(self.plotting_data_density, show)
+	def plot_density(self, show = True, plotfile = None, **options):
+		""" TODO: docstring """
+		self.density_plot.plot(self.plotting_data_density, show = show, **options)
 		if plotfile is not None:
 			print "SAVING"
 			self.density_plot.save(plotfile)
@@ -297,7 +304,6 @@ class Case(object):
 		rr = __lookup_runrecord(runID)
 		if rr is not None:
 			return rr.output
-
 
 	def summary(self):
 		""" TODO: docstring """
