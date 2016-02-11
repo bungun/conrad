@@ -3,10 +3,10 @@ from conrad.structure import Structure
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
 from conrad.run_data import RunRecord
-from conrad.plot import DVHPlot
+from conrad.plot import DensityPlot, DVHPlot
 from operator import add 
 from numpy import cumsum
-from tabulate import tabulate
+# from tabulate import tabulate
 from collections import OrderedDict
 
 """
@@ -145,6 +145,7 @@ class Case(object):
 			panels_by_structure[label] = idx+1
 			names_by_structure[label] = self.structures[label].name
 		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
+		self.density_plot = DensityPlot(panels_by_structure, names_by_structure)
 
 	def add_dvh_constraint(self, label, dose, fraction, direction):
 		""" TODO: docstring """
@@ -238,6 +239,13 @@ class Case(object):
 			print "SAVING"
 			self.dvh_plot.save(plotfile)
 			print "COMPLETE"
+			
+	def plot_density(self, show = True, plotfile = None):
+		self.density_plot.plot(self.plotting_data, show)
+		if plotfile is not None:
+			print "SAVING"
+			self.density_plot.save(plotfile)
+			print "COMPLETE"
 
 	def calc_doses(self, x):
 		""" TODO: docstring """
@@ -300,7 +308,8 @@ class Case(object):
 				if key not in table:
 					table[key] = []
 				table[key] += [val]
-		print tabulate(table, headers = "keys", tablefmt = "pipe")
+		print table
+		# print tabulate(table, headers = "keys", tablefmt = "pipe")
 
 	def dose_summary_data(self, percentiles = [2, 98], stdev = False):
 		d = {}
