@@ -150,9 +150,9 @@ class Structure(object):
 			if dose is not None:
 				self.set_dose(dose)
 			if w_under is not None:
-				self.w_under = w_under
+				self._w_under = w_under
 		if w_over is not None:
-			self.w_over = w_over
+			self._w_over = w_over
 
 	def set_constraint(self, constr_id, dose, fraction, direction):
 		if self.has_constraint(constr_id):
@@ -175,7 +175,7 @@ class Structure(object):
 	def w_over(self):
 		""" TODO: docstring """
 		if isinstance(self._w_over, (float, int)):
-		    return self._w_over / float(self.size)
+			return self._w_over / float(self.size)
 		else:
 			return None
 	
@@ -198,7 +198,7 @@ class Structure(object):
 	@property
 	def objective_data(self):
 		return {'dose_rx': self.dose_raw, 'dose_solver': self.dose,
-			'w_under': self.w_under, 'w_over': self.w_over}
+			'w_under': self.w_under_raw, 'w_over': self.w_over_raw}
 
 	def calc_y(self, x):
 		""" TODO: docstring """
@@ -317,10 +317,10 @@ class Structure(object):
 		out += 'rx dose: {}\n'.format(self.dose_raw)
 		out += 'solver dose: {}\n'.format(self.dose)
 		if self.is_target:
-			out += 'weight_under: {}\n'.format(self._w_under)
-			out += 'weight_over: {}\n'.format(self._w_over)			
+			out += 'weight_under: {}\n'.format(self.w_under_raw)
+			out += 'weight_over: {}\n'.format(self.w_over_raw)			
 		else:
-			out += 'weight: {}\n'.format(self._w_over)
+			out += 'weight: {}\n'.format(self.w_over_raw)
 		out += "\n"		
 		return out
 
