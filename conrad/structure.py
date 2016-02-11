@@ -1,6 +1,6 @@
 from numpy import ndarray, array, squeeze, zeros
 from scipy.sparse import csr_matrix, csc_matrix
-from conrad.dvh import DVHCurve, DoseSummary
+from conrad.dvh import DoseDensity, DVHCurve, DoseSummary
 from conrad.defs import CONRAD_DEBUG_PRINT
 # from tabulate import tabulate
 
@@ -40,6 +40,9 @@ class Structure(object):
 		# structure, keyed by constraint id (which is passed 
 		# in by owner of Structure object).
 		self.dose_constraints = {}
+		
+		# dose distribution using gaussian kernel
+		self.dose_density = DoseDensity()
 
 		# dvh curve and constraints data for plotting
 		self.dvh_curve = DVHCurve()
@@ -196,6 +199,7 @@ class Structure(object):
 
 		# make DVH curve from calculated dose
 		self.dvh_curve.make(self._y)
+		self.dose_density.make(self._y)
 		self.dose_summary.make(self._y)
 
 	def get_y(self, x):
@@ -236,6 +240,7 @@ class Structure(object):
 	def plotting_data(self):
 		""" TODO: docstring """
 		d = {}
+		d['density'] = self.dose_density.plotting_data
 		d['curve'] = self.dvh_curve.plotting_data
 		d['constraints'] = [dc.plotting_data for dc in self.dose_constraints.itervalues()]
 		return d

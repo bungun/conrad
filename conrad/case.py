@@ -3,7 +3,7 @@ from conrad.structure import Structure
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
 from conrad.run_data import RunRecord
-from conrad.plot import DVHPlot
+from conrad.plot import DensityPlot, DVHPlot
 from operator import add 
 from numpy import cumsum
 # from tabulate import tabulate
@@ -124,6 +124,7 @@ class Case(object):
 			panels_by_structure[label] = idx+1
 			names_by_structure[label] = self.structures[label].name
 		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
+		self.density_plot = DensityPlot(panels_by_structure, names_by_structure)
 
 	def add_dvh_constraint(self, label, dose, fraction, direction):
 		""" TODO: docstring """
@@ -216,6 +217,13 @@ class Case(object):
 		if plotfile is not None:
 			print "SAVING"
 			self.dvh_plot.save(plotfile)
+			print "COMPLETE"
+			
+	def plot_density(self, show = True, plotfile = None):
+		self.density_plot.plot(self.plotting_data, show)
+		if plotfile is not None:
+			print "SAVING"
+			self.density_plot.save(plotfile)
 			print "COMPLETE"
 
 	def calc_doses(self, x):

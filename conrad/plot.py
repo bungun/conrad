@@ -109,3 +109,26 @@ class DVHPlot(object):
 	def __del__(self):
 		""" TODO: docstring """
 		plt.close(self.fig)
+
+class DensityPlot(DVHPlot):
+	""" TODO: docstring """
+	
+	def plot(self, plot_data, show = False, **options):
+		""" TODO: docstring """
+		self.fig.clf()
+
+		max_dose = max([data['density']['dose'].max() for data in plot_data.itervalues()])
+		max_prob = max([data['density']['probability'].max() for data in plot_data.itervalues()])
+
+		for label, data in plot_data.iteritems():
+			plt.subplot(self.rows, self.cols, self.panels_by_structure[label])
+			
+			color = self.colors_by_structure[label]
+			name = self.names_by_structure[label]
+			plt.plot(data['density']['dose'], data['density']['probability'],
+				color = color, label = name, **options)
+			plt.xlim(0, 1.1 * max_dose)
+			plt.ylim(0, 1.1 * max_prob)
+
+		if show: SHOW()
+	

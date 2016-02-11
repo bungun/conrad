@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import copy as np_copy, sort as np_sort, linspace, insert
+from scipy import stats
 from collections import OrderedDict
 
 """
@@ -187,6 +188,36 @@ class DoseSummary(object):
 	@property
 	def header(self):
 		return self.table_data.keys()
+
+class DoseDensity(object):
+	"""
+	TODO: DoseDistribution doctstring
+	"""
+	
+	MAX_LENGTH = 1000
+	
+	def __init__(self):
+		""" TODO: docstring """
+		self.doses = None
+		self.probabilities = None
+	
+	def make(self, y, maxlength = MAX_LENGTH, bw_method = None):
+		""" TODO: docstring """
+		if len(y) <= maxlength:
+			doses = y[:]
+		elif len(y) <= 2 * maxlength:
+			doses = y[::2]
+		else:
+			doses = y[::len(y) / maxlength]
+		
+		density = stats.kde.gaussian_kde(doses, bw_method)
+		self.doses = linspace(0, max(doses), len(doses))
+		self.probabilities = density(self.doses)
+	
+	@property
+	def plotting_data(self):
+		""" TODO: docstring """
+		return {'probability' : self.probabilities, 'dose' : self.doses}
 
 class DVHCurve(object):
 	""" 

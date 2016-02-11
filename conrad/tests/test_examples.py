@@ -31,7 +31,7 @@ class TestExamples(unittest.TestCase):
 	
 	# Runs once after all unit tests
 	def tearDownClass(self):
-		files_to_delete = ['test_plotting.pdf']
+		files_to_delete = ['test_plotting.pdf', 'test_plotting_density.pdf']
 		for fname in files_to_delete:
 			fpath = path.join(path.abspath(path.dirname(__file__)), fname)
 			if path.isfile(fpath): os_remove(fpath)
@@ -113,3 +113,4 @@ class TestExamples(unittest.TestCase):
 		# Solve and plot resulting DVH curves
 		cs.plan("ECOS", plot = True, show = False)
 		cs.plan("ECOS", plot = True, show = False, plotfile = "test_plotting.pdf")
+		cs.plot_density(show = False, plotfile = "test_plotting_density.pdf")
