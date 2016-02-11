@@ -241,7 +241,7 @@ class Case(object):
 			print "COMPLETE"
 			
 	def plot_density(self, show = True, plotfile = None):
-		self.density_plot.plot(self.plotting_data, show)
+		self.density_plot.plot(self.plotting_data_density, show)
 		if plotfile is not None:
 			print "SAVING"
 			self.density_plot.save(plotfile)
@@ -368,6 +368,28 @@ class Case(object):
  		d = {}
 		for label, s in self.structures.iteritems():
 			d[label] = s.plotting_data_json_serializable
+		return d
+	
+	@property
+	def plotting_data_density(self):
+		""" TODO: docstring """
+		if self.run_count == 0:
+			return None
+		
+		d = {}
+		for label, s in self.structures.iteritems():
+			d[label] = s.plotting_data_density
+		return d
+		
+	@property
+	def plotting_data_density_json_serializable(self):
+		""" TODO: docstring """
+		if self.run_count == 0:
+			return None
+			
+		d = {}
+		for label, s in self.structures.iteritems():
+			d[label] = s.plotting_data_density_json_serializable
 		return d
 
 	@property

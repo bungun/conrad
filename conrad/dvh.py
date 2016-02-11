@@ -219,6 +219,12 @@ class DoseDensity(object):
 	def plotting_data(self):
 		""" TODO: docstring """
 		return {'probability' : self.probabilities, 'dose' : self.doses}
+		
+	@property
+	def plotting_data_json_serializable(self):
+		""" TODO: docstring """
+		return {'probability' : self.probabilities.round(self.WEB_DIGITS).tolist(),
+				'dose' : self.doses.round(self.WEB_DIGITS).tolist()}
 
 
 class DVHCurve(object):

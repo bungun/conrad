@@ -262,7 +262,6 @@ class Structure(object):
 	def plotting_data(self):
 		""" TODO: docstring """
 		d = {}
-		d['density'] = self.dose_density.plotting_data
 		d['curve'] = self.dvh_curve.plotting_data
 		d['constraints'] = [dc.plotting_data for dc in self.dose_constraints.itervalues()]
 		return d
@@ -273,6 +272,19 @@ class Structure(object):
 		d = {}
 		d['curve'] = self.dvh_curve.plotting_data_json_serializable
 		d['constraints'] = self.plotting_data_constraints_only
+		return d
+		
+	@property
+	def plotting_data_density(self):
+		d = {}
+		d['density'] = self.dose_density.plotting_data
+		return d
+	
+	@property
+	def plotting_data_density_json_serializable(self):
+		""" TODO: docstring """
+		d = {}
+		d['density'] = self.dose_density.plotting_data_json_serializable
 		return d
 
 	@property
