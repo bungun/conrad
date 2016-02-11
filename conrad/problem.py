@@ -156,7 +156,7 @@ class SolverCVXPY(object):
 		return self.slack_vars[constr_id].value if constr_id in self.slack_vars else None
 
 	def get_dvh_slope(self, constr_id):
-		return 1. / self.dvh_vars[constr_id].value if constr_id in self.slack_vars else None
+		return 1. / self.dvh_vars[constr_id].value if (constr_id in self.slack_vars and self.dvh_vars[constr_id].value is not None) else None
 
 	@property
 	def x(self):
