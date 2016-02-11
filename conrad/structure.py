@@ -2,7 +2,7 @@ from numpy import ndarray, array, squeeze, zeros
 from scipy.sparse import csr_matrix, csc_matrix
 from conrad.dvh import DVHCurve, DoseSummary
 from conrad.defs import CONRAD_DEBUG_PRINT
-from tabulate import tabulate
+# from tabulate import tabulate
 
 # TODO: unit test
 """
@@ -241,7 +241,8 @@ class Structure(object):
 		return d
 	
 	def summary(self):
-		print tabulate([self.dose_summary.table_data], headers = "keys", tablefmt = "pipe")
+		print self.dose_summary.table_data
+		# print tabulate([self.dose_summary.table_data], headers = "keys", tablefmt = "pipe")
 
 	def __header_string(self):
 		""" TODO: docstring """

@@ -6,7 +6,7 @@ from conrad.run_data import RunRecord
 from conrad.plot import DVHPlot
 from operator import add 
 from numpy import cumsum
-from tabulate import tabulate
+# from tabulate import tabulate
 from collections import OrderedDict
 
 """
@@ -232,7 +232,8 @@ class Case(object):
 				if key not in table:
 					table[key] = []
 				table[key] += [val]
-		print tabulate(table, headers = "keys", tablefmt = "pipe")
+		print table
+		# print tabulate(table, headers = "keys", tablefmt = "pipe")
 
 	@property
 	def plotting_data(self):
