@@ -1,4 +1,4 @@
-from numpy import ndarray, array, squeeze, zeros
+from numpy import ndarray, array, squeeze, zeros, nan
 from scipy.sparse import csr_matrix, csc_matrix
 from conrad.dvh import DVHCurve, DoseSummary
 from conrad.defs import CONRAD_DEBUG_PRINT
@@ -63,7 +63,7 @@ class Structure(object):
 
 		# dose vector
 		self._y = None
-		self._y_mean = None
+		self._y_mean = nan
 
 		# objective weights (set to defaults if not provided)
 		self._w_under = options['w_under'] if 'w_under' in options else None
@@ -232,6 +232,10 @@ class Structure(object):
 		for cid in self.dose_constraints:
 			del self.dose_constraints[cid]
 
+	def check_constraint(self, constraint_tuple):
+		""" TODO: docstring """
+		return self.dvh_curve.check_constraint(constraint_tuple)
+
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
@@ -243,33 +247,57 @@ class Structure(object):
 	def summary(self):
 		print tabulate([self.dose_summary.table_data], headers = "keys", tablefmt = "pipe")
 
+
+	def get_dose_summary(self, percentiles = [1, 5, 25, 50, 75, 95, 99], stdev = False):
+		summary = {}
+		summary['mean'] = self.mean_dose
+		summary['stdev'] = self.dvh_curve.stdev if stdev else nan
+		summary['max'] = self.dvh_curve.maxdose
+		summary['min'] = self.dvh_curve.mindose
+		if percentiles is not None:
+			for p in percentiles:
+				if p < 1: p *= 100
+				p = min(100, int(p))
+				key = 'D' + str(p)
+				summary[key] = self.dvh_curve.dose_at_percentile(p)
+		return summary 
+
 	def __header_string(self):
 		""" TODO: docstring """
 		out = 'Structure: {}'.format(self.label)
 		if self.name != '':
-			out += " ({})".format(self.name)
-			out += "\n"
+			out += ' ({})'.format(self.name)
+			out += '\n'
 		return out		
 
 	def __obj_string(self):
 		""" TODO: docstring """
-		out = "target? {}\n".format(self.is_target)
-		out += "rx dose: {}\n".format(self.dose)
+		out = 'target? {}\n'.format(self.is_target)
+		out += 'rx dose: {}\n'.format(self.dose)
 		if self.is_target:
-			out += "weight_under: {}\n".format(self._w_under)
-			out += "weight_over: {}\n".format(self._w_over)			
+			out += 'weight_under: {}\n'.format(self._w_under)
+			out += 'weight_over: {}\n'.format(self._w_over)			
 		else:
-			out += "weight: {}\n".format(self._w_over)
+			out += 'weight: {}\n'.format(self._w_over)
 		out += "\n"		
 		return out
 
 	def __constr_string(self):
 		""" TODO: docstring """
-		out = ""
+		out = ''
 		for dc in self.dose_constraints.itervalues():
 			out += dc.__str__()
-		out += "\n"
+		out += '\n'
 		return out
+
+
+	def __summary_string(self):
+		summary = self.get_dose_summary(percentiles = [2, 25, 75, 98], stdev = True)
+		hdr = 'mean | stdev | min  | max  | D98  | D75  | D25  | D2   '
+		vals = str('{:0.2f} | {:0.2f} | {:0.2f} | {:0.2f} '
+			'| {:0.2f} | {:0.2f} | {:0.2f} | {:0.2f}'.format(
+			summary['mean'], summary['stdev'], summary['min'], summary['max'],
+			summary['D98'], summary['D75'], summary['D25'], summary['D2']))
 
 	@property
 	def objective_string(self):
@@ -280,6 +308,12 @@ class Structure(object):
 	def constraints_string(self):
 		""" TODO: docstring """
 		return self.__header_string + self.__constr_string
+
+	@property
+	def summary_string(self):
+		""" TODO: docstring """
+		return self.__header_string + self.__summary_string
+
 
 	def __str__(self):
 		return self.__header_string + self.__obj_string + self.__constr_string

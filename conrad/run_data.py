@@ -68,6 +68,7 @@ class RunOutput(object):
 		# lambda (dual variable for x>= 0)
 		self.optimal_variables = {}
 		self.optimal_dvh_slopes = {}
+		self.solver_info = {}
 		self.feasible = False
 
 class RunRecord(object):

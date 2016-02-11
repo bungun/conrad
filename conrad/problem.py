@@ -169,6 +169,24 @@ class SolverCVXPY(object):
 		except:
 			return None
 
+	@property
+	def solvetime(self):
+		# TODO: time run
+	    return 'n/a'
+	
+	@property
+	def status(self):
+		return self.problem.status
+
+	@property
+	def objective_value(self):
+		return self.problem.value
+
+	@property
+	def solveiters(self):
+		# TODO: get solver iters
+		return 'n/a'
+
 	def solve(self, *options, **kwargs):
 		""" TODO: docstring """
 
@@ -228,6 +246,25 @@ class PlanningProblem(object):
 		if not exact:
 			self.__update_dvh_constraint(structure)
 
+	def __gather_solver_info(self, run_output, exact = False):
+		keymod = '_exact' if exact else ''
+		run_output.solver_info['status' + keymod] = self.solver.status
+		run_output.solver_info['time' + keymod] = self.solver.solvetime
+		run_output.solver_info['objective' + keymod] = self.solver.objective_value
+		run_output.solver_info['iters' + keymod] = self.solver.solveiters
+
+	def __gather_solver_vars(self, run_output, exact = False):
+		keymod = '_exact' if exact else ''
+		run_output.optimal_variables['x' + keymod] = self.solver.x
+		run_output.optimal_variables['lambda' + keymod] = self.solver.x_dual
+
+	def __gather_dvh_slopes(self, run_output, structure_dict):
+		# recover dvh constraint slope variables
+		for st in structure_dict.itervalues():
+			for cid in st.dose_constraints.keys():
+				run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(cid)
+
+
 	def solve(self, structure_dict, run_output, *options, **kwargs):
 		""" TODO: docstring """
 
@@ -254,6 +291,13 @@ class PlanningProblem(object):
 		# -----
 		run_output.feasible = self.solver.solve(*options, **kwargs)
 
+
+		# relay output to run_output object
+		# ---------------------------------
+		self.__gather_solver_info(run_output)
+		self.__gather_solver_vars(run_output)
+		self.__gather_dvh_slopes(run_output, structure_dict)
+
 		if not run_output.feasible:
 			return
 
@@ -262,18 +306,6 @@ class PlanningProblem(object):
 		for st in structure_dict.itervalues():
 			self.__update_structure(st)
 
-		# relay output to run_output object
-		# ---------------------------------
-
-		# recover primal variable x and
-		# dual variable lambda associated with ineq. Ax >= 0
-		run_output.optimal_variables['x'] = self.solver.x
-		run_output.optimal_variables['lambda'] = self.solver.x_dual
-
-		# recover dvh constraint slope variables
-		for st in structure_dict.itervalues():
-			for cid in st.dose_constraints.keys():
-				run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(cid)
 
 		# second pass, if applicable
 		# --------------------------
@@ -286,9 +318,8 @@ class PlanningProblem(object):
 				self.solver.add_dvh_constraint(st, exact = True)
 
 			self.solver.solve(*options, **kwargs)
+			self.__gather_solver_info(run_output, exact = True)
+			self.__gather_solver_vars(run_output, exact = True)
 
 			for st in structure_dict.itervalues():
 				self.__update_structure(st, exact = True)
-
-			run_output.optimal_variables['x_exact'] = self.solver.x
-			run_output.optimal_variables['lambda_exact'] = self.solver.x_dual

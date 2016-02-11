@@ -1,5 +1,6 @@
 import numpy as np
-from numpy import copy as np_copy, sort as np_sort, linspace, insert
+from numpy import copy as np_copy, sort as np_sort, \
+	linspace, insert, std as stdev, zeros, nan
 from collections import OrderedDict
 
 """
@@ -171,6 +172,7 @@ class DoseSummary(object):
 		self.maximum = np.amax(y)
 		self.scores = np.percentile(y, self.percentiles)
 	
+
 	@property
 	def table_data(self):
 		""" TODO: docstring """
@@ -198,19 +200,124 @@ class DVHCurve(object):
 	def __init__(self):
 		""" TODO: docstring """
 		self.doses = None
+		self.dose_buffer = []
 		self.percentiles = None
+		self.length = None
 
 	def make(self, y, maxlength = MAX_LENGTH):
 		""" TODO: docstring """
 		if len(y) <= maxlength:
-			doses = y[:]
+			stride = 1
 		elif len(y) <= 2 * maxlength:
-			doses = y[::2]
+			stride = 2
 		else:
-			doses = y[::len(y) / maxlength]
+			stride = len(y) / maxlength
 
-		self.doses = insert(np_sort(np_copy(doses)), 0, 0.)
-		self.percentiles = insert(linspace(100, 0, len(self.doses) - 1), 0, 100.)
+		length = len(y[::stride]) + 1
+
+		if self.length != length:
+			self.length = length
+			self.doses = zeros(length)
+			self.percentiles = zeros(length)
+			self.doses[0] = 0.
+			self.percentiles[0] = 100.
+			self.percentiles[1:] = linspace(100, 0, length - 1)
+
+		if len(self.dose_buffer) != len(y):
+			self.dose_buffer = zeros(len(y))
+
+		self.dose_buffer[:] = y[:]
+		self.dose_buffer.sort()
+		self.doses[1:] = self.dose_buffer[::stride]
+
+
+	@staticmethod
+	def __interpolate_percentile(p1, p2, p_des):
+		""" TODO: docstring """
+		# alpha * p1 + (1 - alpha) * p2 = p_des
+		# (p1 - p2) * alpha = p_des - p2
+		# alpha = (p_des - p2) / (p1 - p2)
+		return (p_des - p2) / (p1 - p2)
+
+	def dose_at_percentile(self, percentile):
+		""" TODO: docstring """
+		if self.doses is None: return nan
+
+		print "REQUESTED:", percentile
+
+		if percentile < 1.: percentile *= 100
+		if percentile == 100: return self.mindose
+		if percentile == 0: return self.maxdose
+
+		for idx, p in enumerate(self.percentiles):
+			print "percentile: ", p, "dose:", self.doses[idx]
+
+		# bisection retrieval of dose @ percentile
+ 		u = len(self.percentiles) - 1
+		l = 1
+		i = l + (u - l) / 2
+
+		# set tolerance based on bucket width
+		tol = (self.percentiles[-2] - self.percentiles[-1]) / 2
+
+		# get to within 0.5 of a percentile if possible
+		abstol = 1 
+
+		while (u - l > 5):
+			# percentile sorted descending
+			if self.percentiles[i] > percentile:
+				l = i				
+			else:
+				u = i
+			i = l + (u - l) / 2
+
+		# break to iterative search
+		idx = None
+		for i in xrange(l, u):
+			if abs(self.percentiles[i] - percentile) < tol:
+				idx = i
+				break
+
+		if idx is None: idx = u
+		if tol <= abstol or abs(self.percentiles[idx] - percentile) <= abstol:
+			# return dose if available percentile bucket is close enough
+			return self.doses[idx]
+		else:
+			# interpolate dose by interpolating percentiles if not close enough
+			alpha = self.__interpolate_percentile(self.percentiles[i], 
+				self.percentiles[i + 1], percentile)
+			return alpha * self.doses[i] + (1 - alpha) * self.doses[i + 1]
+
+	@property
+	def mindose(self):
+		""" TODO: docstring """
+		if self.doses is None: return nan
+		return self.doses[1]
+
+	@property
+	def maxdose(self):
+		""" TODO: docstring """
+		if self.doses is None: return nan
+		return self.doses[-1]
+
+	@property
+	def stdev(self):
+		""" TODO: docstring """
+		if self.doses is None: return nan
+		return stdev(self.doses[1:])
+	
+	def check_constraint(constraint_tuple):
+		dose = constraint_tuple[0]
+		direction = constraint_tuple[2]
+		dose_achieved = self.dose_at_percentile(constraint_tuple[1])
+
+		if direction == '<':
+			status = dose_achieved <= dose
+		else:
+			status = dose_achieved >= dose
+
+		return (status, dose_achieved)
+
 
 	@property
 	def plotting_data(self):
