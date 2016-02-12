@@ -37,6 +37,27 @@ def tuple_to_canonical_string(tuple_constraint):
 	return "D{} {}= {}Gy".format(f * 100, ineq, d)
 
 	return (dose, fraction, direction)
+	
+class DosePercent(object):
+	""" TODO: docstring """
+	
+	def __init__(self, percent):
+		""" TODO: docstring """
+		if percent < 0. or percent > 100.:
+			raise ValueError("percent %f must be in [0,100]" % (percent))
+		self.fraction = percent / 100.
+	
+	def __lt__(self, other):
+		return DoseConstraint(other, self.fraction, '<')
+	
+	def __le__(self, other):
+		return DoseConstraint(other, self.fraction, '<')
+	
+	def __gt__(self, other):
+		return DoseConstraint(other, self.fraction, '>')
+	
+	def __ge__(self, other):
+		return DoseConstraint(other, self.fraction, '>')
 
 class DoseConstraint(object):
 	"""

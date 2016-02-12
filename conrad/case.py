@@ -147,10 +147,18 @@ class Case(object):
 		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
 		self.density_plot = DensityPlot(panels_by_structure, names_by_structure)
 
-	def add_dvh_constraint(self, label, dose, fraction, direction):
+	# def add_dvh_constraint(self, label, dose, fraction, direction):
+	#	""" TODO: docstring """
+	#	self.constraint_count += 1
+	#	constr = DoseConstraint(dose, fraction, direction)
+	#	cid = gen_constraint_id(label, self.constraint_count)
+	#	self.structures[label].add_constraint(cid, constr)
+	#	self.active_constraint_IDs.add(cid)
+	#	return cid
+	
+	def add_dvh_constraint(self, label, constr):
 		""" TODO: docstring """
 		self.constraint_count += 1
-		constr = DoseConstraint(dose, fraction, direction)
 		cid = gen_constraint_id(label, self.constraint_count)
 		self.structures[label].add_constraint(cid, constr)
 		self.active_constraint_IDs.add(cid)

@@ -4,7 +4,7 @@ import unittest
 import cvxpy
 
 from os import path, remove as os_remove
-from conrad import Case
+from conrad import Case, DosePercent
 
 class TestExamples(unittest.TestCase):
 	""" Unit tests using example problems. """
@@ -48,10 +48,10 @@ class TestExamples(unittest.TestCase):
 		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
 				
 		# Add DVH constraints and solve
-		cs.add_dvh_constraint(self.lab_tum, 1.05, 0.3, '<')
-		cs.add_dvh_constraint(self.lab_tum, 0.8, 0.2, '>')
-		cs.add_dvh_constraint(self.lab_oar, 0.5, 0.5, '<')
-		cs.add_dvh_constraint(self.lab_oar, 0.55, 0.1, '>')   # This constraint makes no-slack problem infeasible
+		cs.add_dvh_constraint(self.lab_tum, DosePercent(30) < 1.05)
+		cs.add_dvh_constraint(self.lab_tum, DosePercent(20) > 0.8)
+		cs.add_dvh_constraint(self.lab_oar, DosePercent(50) < 0.5)
+		cs.add_dvh_constraint(self.lab_oar, DosePercent(10) > 0.55)   # This constraint makes no-slack problem infeasible
 		# cs.plan(solver = "ECOS", verbose = 1)
 		cs.plan(solver = "ECOS", use_2pass = True, verbose = 1)
 		cs.summary()
@@ -85,9 +85,9 @@ class TestExamples(unittest.TestCase):
 		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
 		
 		# Add DVH constraints and solve
-		cs.add_dvh_constraint(self.lab_tum, 1.05, 0.3, '<')
-		cs.add_dvh_constraint(self.lab_tum, 0.8, 0.2, '>')
-		cs.add_dvh_constraint(self.lab_oar, 0.5, 0.5, '<')
+		cs.add_dvh_constraint(self.lab_tum, DosePercent(30) < 1.05)
+		cs.add_dvh_constraint(self.lab_tum, DosePercent(20) > 0.8)
+		cs.add_dvh_constraint(self.lab_oar, DosePercent(50) < 50)
 		cs.plan(solver = "ECOS", use_slack = False)
 		res_obj = cs.problem.solver.objective.value
 		
@@ -105,10 +105,10 @@ class TestExamples(unittest.TestCase):
 		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
 		
 		# Add DVH constraints and solve
-		cs.add_dvh_constraint(self.lab_tum, 1.05, 0.3, '<')
-		cs.add_dvh_constraint(self.lab_tum, 0.8, 0.2, '>')
-		cs.add_dvh_constraint(self.lab_oar, 0.5, 0.5, '<')
-		cs.add_dvh_constraint(self.lab_oar, 0.55, 0.1, '>')   # This constraint makes no-slack problem infeasible
+		cs.add_dvh_constraint(self.lab_tum, DosePercent(30) < 1.05)
+		cs.add_dvh_constraint(self.lab_tum, DosePercent(20) > 0.8)
+		cs.add_dvh_constraint(self.lab_oar, DosePercent(50) < 0.5)
+		cs.add_dvh_constraint(self.lab_oar, DosePercent(10) > 0.55)   # This constraint makes no-slack problem infeasible
 		
 		# Solve and plot resulting DVH curves
 		cs.plan(solver = "ECOS", plot = True, show = False)
