@@ -99,6 +99,10 @@ class DoseConstraint(object):
 		""" TODO: docstring """
 		if fraction < 0. or fraction > 1.:
 			raise ValueError("fraction %f must be in [0,1]" % (fraction))
+		if dose < 0:
+			raise ValueError("dose %f must be non-negative" % (dose))
+		if direction not in ['<', '>']:
+			raise ValueError("direction must be either '<' or '>'")
 		self.dose_requested = dose
 		self.fraction = fraction
 		self.direction = direction
