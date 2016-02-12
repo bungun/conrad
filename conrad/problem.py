@@ -42,10 +42,10 @@ class SolverCVXPY(object):
 
 
 	# methods:
-	def init_problem(self, n_beams, *options, **kwargs):
+	def init_problem(self, n_beams, use_slack = True, use_2pass = False, *options, **kwargs):
 		""" TODO: docstring """
-		self.use_slack = not 'dvh_no_slack' in options
-		self.use_2pass = 'dvh_2pass' in options
+		self.use_slack = use_slack
+		self.use_2pass = use_2pass
 		self._x = Variable(n_beams)
 		self.objective = Minimize(0)
 		self.constraints = [self._x >= 0]
@@ -265,7 +265,7 @@ class PlanningProblem(object):
 				run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(cid)
 
 
-	def solve(self, structure_dict, run_output, *options, **kwargs):
+	def solve(self, structure_dict, run_output, use_slack, use_2pass, *options, **kwargs):
 		""" TODO: docstring """
 
 		# get number of beams from dose matrix 
@@ -277,9 +277,9 @@ class PlanningProblem(object):
 
 		# initialize problem with size and options
 		# ----------------------------------------
-		self.use_slack = not 'dvh_no_slack' in options
-		self.use_2pass = 'dvh_2pass' in options
-		self.solver.init_problem(n_beams, *options, **kwargs)
+		self.use_slack = use_slack
+		self.use_2pass = use_2pass
+		self.solver.init_problem(n_beams, use_slack, use_2pass, *options, **kwargs)
 
 		# add terms and constraints
 		# -------------------------

@@ -188,7 +188,7 @@ class Case(object):
 		""" TODO: docstring """
 		self.structures[label].set_objective(dose, w_under, w_over)
 
-	def plan(self, *args, **kwargs):
+	def plan(self, use_slack = True, use_2pass = False, *args, **kwargs):
 		""" TODO: docstring """
 
 		# check for targets
@@ -196,12 +196,6 @@ class Case(object):
 			print str("Warning: plan has no targets."
 				"Not running optimization.\n\n")
 			return
-
-		# use 2 pass OFF by default
-		use_2pass = 'dvh_2pass' in args
-
-		# dvh slack ON by default
-		use_slack = not 'dvh_no_slack' in args
 
 		# objective weight for slack minimization
 		gamma = kwargs['dvh_wt_slack'] if 'dvh_wt_slack' in kwargs else None
@@ -212,9 +206,8 @@ class Case(object):
 			use_slack = use_slack, 
 			gamma = gamma)
 
-
 		# solve problem
-		self.problem.solve(self.structures, rr.output, *args, **kwargs)
+		self.problem.solve(self.structures, rr.output, use_slack, use_2pass, *args, **kwargs)
 
 		# save output
 		self.run_count += 1

@@ -52,8 +52,8 @@ class TestExamples(unittest.TestCase):
 		cs.add_dvh_constraint(self.lab_tum, 0.8, 0.2, '>')
 		cs.add_dvh_constraint(self.lab_oar, 0.5, 0.5, '<')
 		cs.add_dvh_constraint(self.lab_oar, 0.55, 0.1, '>')   # This constraint makes no-slack problem infeasible
-		# cs.plan("ECOS", verbose = 1)
-		cs.plan("ECOS", "dvh_2pass", verbose = 1)
+		# cs.plan(solver = "ECOS", verbose = 1)
+		cs.plan(solver = "ECOS", use_2pass = True, verbose = 1)
 		cs.summary()
 	
 	def test_2pass_no_constr(self):
@@ -65,12 +65,12 @@ class TestExamples(unittest.TestCase):
 		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
 		
 		# Solve with slack in single pass
-		cs.plan("ECOS")
+		cs.plan(solver = "ECOS")
 		res_x = cs.problem.solver._x.value
 		res_obj = cs.problem.solver.objective.value
 		
 		# Check results from 2-pass identical if no DVH constraints
-		cs.plan("ECOS", "dvh_2pass")
+		cs.plan(solver = "ECOS", use_2pass = True)
 		res_x_2pass = cs.problem.solver._x.value
 		res_obj_2pass = cs.problem.solver.objective.value
 		self.assertItemsEqual(res_x, res_x_2pass)
@@ -88,11 +88,11 @@ class TestExamples(unittest.TestCase):
 		cs.add_dvh_constraint(self.lab_tum, 1.05, 0.3, '<')
 		cs.add_dvh_constraint(self.lab_tum, 0.8, 0.2, '>')
 		cs.add_dvh_constraint(self.lab_oar, 0.5, 0.5, '<')
-		cs.plan("ECOS", "dvh_no_slack")
+		cs.plan(solver = "ECOS", use_slack = False)
 		res_obj = cs.problem.solver.objective.value
 		
 		# Check objective from 2nd pass <= 1st pass (since 1st constraints more restrictive)
-		cs.plan("ECOS", "dvh_no_slack", "dvh_2pass")
+		cs.plan(solver = "ECOS", use_slack = False, use_2pass = True)
 		res_obj_2pass = cs.problem.solver.objective.value
 		self.assertTrue(res_obj_2pass <= res_obj)
 	
@@ -111,10 +111,10 @@ class TestExamples(unittest.TestCase):
 		cs.add_dvh_constraint(self.lab_oar, 0.55, 0.1, '>')   # This constraint makes no-slack problem infeasible
 		
 		# Solve and plot resulting DVH curves
-		cs.plan("ECOS", plot = True, show = False)
-		cs.plan("ECOS", plot = True, show = False, plotfile = "test_plotting.pdf")
+		cs.plan(solver = "ECOS", plot = True, show = False)
+		cs.plan(solver = "ECOS", plot = True, show = False, plotfile = "test_plotting.pdf")
 		cs.plot_density(show = False, plotfile = "test_plotting_density.pdf")
 		
 		# Solve with 2-pass and plot DVH curves for both passes
-		cs.plan("ECOS", "dvh_2pass", plot = False)
+		cs.plan(solver = "ECOS", use_2pass = True, plot = False)
 		cs.plot(show = False, plot_2pass = True, plotfile = "test_plotting_2pass.pdf")
