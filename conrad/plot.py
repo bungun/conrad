@@ -90,12 +90,15 @@ class DVHPlot(object):
 			plt.ylim(0, 103)
 
 			for constraint in data['constraints']:
-				plt.plot(constraint['dose'][0], constraint['percentile'][0], 
-					constraint['symbol'], color = color, **options)
-				plt.plot(constraint['dose'][1], constraint['percentile'][1], 
-					constraint['symbol'], alpha  = 0.7, color = color, **options)
-				plt.plot(constraint['dose'], constraint['percentile'], 
-					'-', color = color, **options)
+				if constraint['type'] is 'percentile':
+					plt.plot(constraint['dose'][0], constraint['percentile'][0], 
+						constraint['symbol'], color = color, **options)
+					plt.plot(constraint['dose'][1], constraint['percentile'][1], 
+						constraint['symbol'], alpha  = 0.7, color = color, **options)
+					plt.plot(constraint['dose'], constraint['percentile'], 
+						'-', color = color, **options)
+				elif constraint['type'] is 'mean':
+					plt.axvline(constraint['dose'][0], color = color, linestyle = '--')
 
 		if show: SHOW()
 

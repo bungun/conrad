@@ -38,6 +38,18 @@ def tuple_to_canonical_string(tuple_constraint):
 
 	return (dose, fraction, direction)
 	
+def DoseMin():
+	""" TODO: docstring """
+	return DosePercent(0.)
+
+def DoseMedian():
+	""" TODO: docstring """
+	return DosePercent(0.5)
+
+def DoseMax():
+	""" TODO: docstring """
+	return DosePercent(1.)
+
 class DosePercent(object):
 	""" TODO: docstring """
 	
@@ -58,6 +70,21 @@ class DosePercent(object):
 	
 	def __ge__(self, other):
 		return DoseConstraint(other, self.fraction, '>')
+
+class DoseMean(object):
+	""" TODO: docstring """
+	
+	def __lt__(self, other):
+		return DoseMeanConstraint(other, '<')
+	
+	def __le__(self, other):
+		return DoseMeanConstraint(other, '<')
+	
+	def __gt__(self, other):
+		return DoseMeanConstraint(other, '>')
+	
+	def __ge__(self, other):
+		return DoseMeanConstraint(other, '>')
 
 class DoseConstraint(object):
 	"""
@@ -130,7 +157,7 @@ class DoseConstraint(object):
 		""" TODO: docstring """
 		return {'percentile' : 2 * [100 * self.fraction], 
 			'dose' :[self.dose_requested, self.dose_actual], 
-			'symbol' : self.direction}
+			'symbol' : self.direction, 'type': 'percentile'}
 
 	def get_maxmargin_fulfillers(self, y, had_slack = False):
 		""" 
@@ -174,6 +201,68 @@ class DoseConstraint(object):
 		return 'D{} {}= {}Gy\n'.format(
 			100 * self.fraction,
 			self.direction, 
+			self.dose_requested)
+
+class DoseMeanConstraint(object):
+	"""
+		Dose mean constraint is specified as a tuple:
+		(dose, direction)
+
+		`dose' must be a float in [0, +infty)
+		`direction' is a character in {'<', '>'}
+		
+		For instance,
+
+		(30, '<')
+
+		is interpreted as the (upper) mean dose constraint:
+
+			Mean Dose <= 30 Gy, i.e.,
+
+		"the mean dose over the structure voxels 
+		 may not receive over 30Gy"
+	
+	"""
+	
+	def __init__(self, dose, direction):
+		""" TODO: docstring """
+		self.change(dose, direction)
+
+	def change(self, dose, direction):
+		""" TODO: docstring """
+		if dose < 0:
+			raise ValueError("dose %f must be non-negative" % (dose))
+		if direction not in ['<', '>']:
+			raise ValueError("direction must be either '<' or '>'")
+		self.dose_requested = dose
+		self.direction = direction
+		self.dose_actual = None
+
+	def set_actual_dose(self, slack):
+		""" TODO: docstring """
+		if slack is None:
+			self.dose_actual = self.dose_requested
+			return
+
+		if self.direction == '<':
+			self.dose_actual = self.dose_requested + slack
+		else:
+			self.dose_actual = self.dose_requested - slack
+	
+	@property
+	def plotting_data(self):
+		""" TODO: docstring """
+		return {'dose' :[self.dose_requested, self.dose_actual], 
+				'symbol' : self.direction, 'type': 'mean'}
+
+	@property
+	def upper(self):
+		""" TODO: docstring """
+		return self.direction == '<'
+	
+	def __str__(self):
+		return 'Mean Dose {}= {}Gy\n'.format(
+			self.direction,
 			self.dose_requested)
 			
 class DoseSummary(object):

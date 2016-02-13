@@ -1,6 +1,6 @@
 from numpy import ndarray, array, squeeze, zeros, nan
 from scipy.sparse import csr_matrix, csc_matrix
-from conrad.dvh import DoseDensity, DVHCurve, DoseSummary
+from conrad.dvh import *
 from conrad.defs import CONRAD_DEBUG_PRINT
 # from tabulate import tabulate
 
@@ -154,10 +154,15 @@ class Structure(object):
 		if w_over is not None:
 			self._w_over = w_over
 
-	def set_constraint(self, constr_id, dose, fraction, direction):
+	def set_constraint(self, constr_id, constr):
 		if self.has_constraint(constr_id):
-			self.dose_constraints[constr_id].change(dose, fraction, direction)
-
+			if isinstance(constr, DoseConstraint):
+				self.dose_constraints[constr_id].change(constr.dose, constr.fraction, constr.direction)
+			elif isinstance(constr, DoseMeanConstraint):
+				self.dose_constraints[constr_id].change(constr.dose, constr.direction)
+			else:
+				raise TypeError("parameter constr must be of type "
+					"conrad.DoseConstraint or conrad.DoseMeanConstraint. Provided: {}".format(type(constr)))
 
 	@property
 	def w_under(self):
@@ -211,9 +216,12 @@ class Structure(object):
 		elif isinstance(self.A, ndarray):
 			self._y = self.A.dot(x)
 
-		self._y_mean = self.A_mean.dot(x)
-
-
+		# calculate mean dose from input vector x:
+		#	mean(y) = (1/n) * 1'(Ax) = (1'A/n) * x = mean_rowwise(A) * x
+		if isinstance(self.A_mean, (csr_matrix, csc_matrix)):
+			self._y_mean = squeeze(self.A_mean * x)
+		elif isinstance(self.A_mean, ndarray):
+			self._y_mean = self.A_mean.dot(x)
 
 		# make DVH curve from calculated dose
 		self.dvh_curve.make(self._y)
@@ -224,6 +232,11 @@ class Structure(object):
 		""" TODO: docstring """
 		self.calc_y(x)
 		return self._y
+	
+	def get_mean_dose(self, x):
+		""" TODO: docstring """
+		self.calc_y(x)
+		return self._y_mean
 
 	@property
 	def y(self):
@@ -234,7 +247,6 @@ class Structure(object):
 	def mean_dose(self):
 		""" TODO: docstring """
 		return self._y_mean
-
 
 	def has_constraint(self, constr_id):
 		""" TODO: docstring """
@@ -247,7 +259,7 @@ class Structure(object):
 
 	def add_constraint(self, constr_id, constr):
 		""" TODO: docstring """
-		self.dose_constraints[constr_id] = constr	
+		self.dose_constraints[constr_id] = constr
 
 	def remove_all_constraints(self):
 		""" TODO: docstring """

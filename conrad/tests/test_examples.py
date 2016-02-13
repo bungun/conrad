@@ -4,7 +4,7 @@ import unittest
 import cvxpy
 
 from os import path, remove as os_remove
-from conrad import Case, DosePercent
+from conrad import Case, DosePercent, DoseMean
 
 class TestExamples(unittest.TestCase):
 	""" Unit tests using example problems. """
@@ -55,6 +55,21 @@ class TestExamples(unittest.TestCase):
 		# cs.plan(solver = "ECOS", verbose = 1)
 		cs.plan(solver = "ECOS", use_2pass = True, verbose = 1)
 		cs.summary()
+		
+	def test_mean_constr(self):
+		# Prescription for each structure
+		rx = [{'label': self.lab_tum, 'name': 'tumor', 'is_target': True,  'dose': 1., 'constraints': None},
+			  {'label': self.lab_oar, 'name': 'oar',   'is_target': False, 'dose': 0., 'constraints': None}]
+		
+		# Construct unconstrained case
+		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
+		
+		# Add mean dose constraint and solve
+		cs.add_dvh_constraint(self.lab_oar, DoseMean() < 0.5)
+		cs.add_dvh_constraint(self.lab_oar, DosePercent(10) > 0.55)
+		cs.plan(solver = "ECOS", plot = True, show = False)
+		res_x = cs.problem.solver._x.value
+		self.assertTrue(np.mean(res_x) <= 0.5)
 	
 	def test_2pass_no_constr(self):
 		# Prescription for each structure

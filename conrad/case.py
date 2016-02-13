@@ -63,8 +63,6 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 
 	return structures
 
-
-
 def build_prescription_report(prescription, structures):
 	"""TODO: docstring"""
 	rx_constraints = prescription.constraints_by_label
@@ -171,7 +169,9 @@ class Case(object):
 		constraint_dict = self.prescription.constraints_by_label
 		for label, constr_list in constraint_dict.iteritems():
 			for constr in constr_list:
-				self.add_dvh_constraint(label, *constr)
+				# TODO: Modify prescription object to support mean dose digest
+				# self.add_dvh_constraint(label, *constr)
+				self.add_dvh_constraint(label, DoseConstraint(*constr))
 
 	def drop_all_but_rx_constraints(self):
 		""" TODO: docstring """
@@ -180,7 +180,7 @@ class Case(object):
 	
 	def change_dvh_constraint(self, constr_id, constr):
 		label = constraint2label(constr_id)
-		self.structures[label].set_constraint(constr_id, constr.dose, constr.fraction, constr.direction)
+		self.structures[label].set_constraint(constr_id, constr)
 
 	def change_objective(self, label, dose = None, 
 		w_under = None, w_over = None):

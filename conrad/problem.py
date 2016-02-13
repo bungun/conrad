@@ -1,6 +1,6 @@
 from cvxpy import *
 from numpy import inf, array, squeeze, ones, copy as np_copy
-from conrad.dvh import DVHCurve, DoseConstraint
+from conrad.dvh import DVHCurve, DoseConstraint, DoseMeanConstraint
 
 GAMMA_DEFAULT = 1e-2
 RELTOL_DEFAULT = 1e-3
@@ -108,6 +108,19 @@ class SolverCVXPY(object):
 		idx_exact = constr.get_maxmargin_fulfillers(y, had_slack)
 		A_exact = np_copy(A[idx_exact, :])
 		return sign * (A_exact * x - b) <= 0
+	
+	@staticmethod
+	def __mean_dose_constraint(A_mean, x, constr, slack = None):
+		if not isinstance(constr, DoseMeanConstraint):
+			TypeError("parameter constr must be of type"
+				"conrad.DoseMeanConstraint. Provided: {}".format(type(constr)))
+		
+		sign = 1 if constr.upper else -1
+		b = constr.dose_requested
+		if slack is not None:
+			return sign * (A_mean * x - (b + sign * slack)) <= 0
+		else:
+			return sign * (A_mean * x - b) <= 0
 
 	def add_dvh_constraint(self, structure, exact = False):
 		""" TODO: docstring """
@@ -115,8 +128,27 @@ class SolverCVXPY(object):
 		# make slack variable (if self.use_slack), add
 		# slack to self.objective and slack >= 0 to constraints
 		for cid in structure.dose_constraints:
+			
+			if isinstance(structure.dose_constraints[cid], DoseMeanConstraint):
+				
+				if self.use_slack:
+					# s = slack in dose for mean dose constraint
+					s = Variable(1)
+					self.problem.objective += Minimize(self.gamma * s)
+					self.problem.constraints += [s >= 0]
+				else:
+					s = None
+				
+				# s is cvxpy.Variable, or None
+				self.slack_vars[cid] = s
+				
+				# add mean dose constraint
+				dose_constr = self.__mean_dose_constraint(structure.A_mean,
+					self._x, structure.dose_constraints[cid], s)
+				
+				self.problem.constraints += [ dose_constr ]
 
-			if exact and self.use_2pass and structure._y is not None:
+			elif exact and self.use_2pass and structure._y is not None:
 				
 				# build exact constraint
 				dvh_constr = self.__dvh_constraint_exact(structure.A,
@@ -149,7 +181,7 @@ class SolverCVXPY(object):
 					self._x, structure.dose_constraints[cid], beta, s)
 
 				# add it to problem
-				self.problem.constraints += [ dvh_constr ] 
+				self.problem.constraints += [ dvh_constr ]
 
 	
 	def get_slack_value(self, constr_id):
@@ -262,7 +294,8 @@ class PlanningProblem(object):
 		# recover dvh constraint slope variables
 		for st in structure_dict.itervalues():
 			for cid in st.dose_constraints.keys():
-				run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(cid)
+				if isinstance(st.dose_constraints[cid], DoseConstraint):
+					run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(cid)
 
 
 	def solve(self, structure_dict, run_output, use_slack, use_2pass, *options, **kwargs):
