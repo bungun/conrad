@@ -1,13 +1,9 @@
-from conrad.dvh import DoseConstraint, tuple_to_canonical_string
-from conrad.structure import Structure
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
 from conrad.run_data import RunRecord, PlanningHistory
-from conrad.plot import DensityPlot, DVHPlot
 from operator import add 
-from numpy import cumsum, ndarray, squeeze, zeros
-# from tabulate import tabulate
-from collections import OrderedDict
+from numpy import ndarray, array, squeeze, zeros
+from warning import warn
 
 """
 TODO: case.py docstring
@@ -49,38 +45,13 @@ def build_structures(prescription, voxel_labels, label_order, dose_matrix):
 							 "`label_order'. voxel_labels not block sorted.")
 		
 		# partition dose matrix	into blocks
-		structures[label].set_A_full_and_mean(dose_matrix[ptr1:ptr2, :])
-		structures[label].set_block_indices(ptr1, ptr2)
+		structures[label].A_full = dose_matrix[ptr1:ptr2, :]
+		structures[label].A_mean = squeeze(array(
+			csum(dose_matrix[ptr1:ptr2, :], 0))) / size
 		ptr1 = ptr2
 
 	return structures
 
-
-
-def build_prescription_report(prescription, structures):
-	"""TODO: docstring"""
-	rx_constraints = prescription.constraints_by_label
-	report = {}
-	for label, s in structures.iteritems():
-		sat = []
-		for constr in rx_constraints[label]:
-			status, dose_achieved = s.check_constraint(constr)
-			sat.append({'constraint': constr, 
-				'status': status, 'dose_achieved': dose_achieved})
-		report[label] = sat
-	return report
-
-def stringify_prescription_report(report, structures):
-	out = ''
-	for k, replist in report.iteritems():
-		out += 'Structure {}'.format(k)
-		if structures[k].name is not None:
-			out += '({})'.format(structures[k].name)
-		out += ':\n'
-		for item in replist:
-			out += tuple_to_canonical_string(item['constraint'])
-			out += '\tachieved? ' + string(item['status'])
-			out += '\tdose at level: ' + string(item['status']) + '\n'
 
 class Case(object):
 	"""TODO: docstring
@@ -101,7 +72,8 @@ class Case(object):
 		"""TODO: Case.__init__() docstring"""
 		self.problem = PlanningProblem()
 		self.voxel_labels = voxel_labels
-		
+		self.label_order = label_order
+
 		# digest clinical specification
 		self.prescription = Prescription(prescription_raw)
 
@@ -115,16 +87,8 @@ class Case(object):
 
 		# dose matrix
 		self.A = A
-		self.__DOSES_CALCULATED__ = False
 
-		# plot setup
-		panels_by_structure = {}
-		names_by_structure = {}
-		for idx, label in enumerate(label_order):
-			panels_by_structure[label] = idx+1
-			names_by_structure[label] = self.structures[label].name
-		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
-
+		# planning history
 		self.history = PlanningHistory()
 
 
@@ -160,7 +124,7 @@ class Case(object):
 		self.drop_all_dvh_constraints()
 		self.add_all_rx_constraints()
 
-	def change_dvh_constraint(self, constr_id, threshold, direction, dose):
+	def change_constraint(self, constr_id, threshold, direction, dose):
 		for s in self.structures.itervalues():
 			s.set_constraint(constr_id, threshold, direction, dose)
 
@@ -169,20 +133,13 @@ class Case(object):
 		""" TODO: docstring """
 		self.structures[label].set_objective(dose, w_under, w_over)
 
-	def plan(self, **kwargs):
+	def plan(self, **options):
 		""" TODO: docstring """
-
-		# check for targets
-		if not self.has_targets:
-			print str("Warning: plan has no targets."
-				"Not running optimization.\n\n")
-			return
-
 		# use 2 pass OFF by default
-		use_2pass = kwargs['dvh_2pass'] if 'dvh_2pass' in kwargs else False
+		pass = options['dvh_2pass'] = options.pop('dvh_2pass', False)
 
 		# dvh slack ON by default
-		use_slack = not kwargs['dvh_no_slack'] if 'dvh_no_slack' in kwargs else False
+		use_slack = ['dvh_no_slack'] if 'dvh_no_slack' in kwargs else False
 
 		# objective weight for slack minimization
 		gamma = kwargs['dvh_wt_slack'] if 'dvh_wt_slack' in kwargs else None
@@ -195,7 +152,7 @@ class Case(object):
 
 
 		# solve problem
-		self.problem.solve(self.structures, rr.output, *args, **kwargs)
+		self.problem.solve(self.structures, rr.output, **options)
 
 		# save output
 		self.history += rr
@@ -203,22 +160,10 @@ class Case(object):
 		# update doses
 		if self.feasible:
 			self.calc_doses()
-
-
-			draw_plot = kwargs['plot'] if 'plot' in kwargs else False
-			show_plot = kwargs['show'] if 'show' in kwargs else draw_plot	# Used to suppress plot during unit testing
-			plotfile = kwargs['plotfile'] if 'plotfile' in kwargs else None
-			if draw_plot:
-				self.plot(show_plot, plotfile)
+			return True
 		else:
-			print "Problem infeasible as formulated"
-	
-	def plot(self, show = True, plotfile = None):
-		self.dvh_plot.plot(self.plotting_data, show)
-		if plotfile is not None:
-			print "SAVING"
-			self.dvh_plot.save(plotfile)
-			print "COMPLETE"
+			warn(Warning('Problem infeasible as formulated'))
+			return False
 
 	def calc_doses(self, x = None):
 		""" TODO: docstring """
@@ -230,9 +175,6 @@ class Case(object):
 		for s in self.structures.itervalues():
 			s.calc_y(x)
 
-		self.__DOSES_CALCULATED__ = True
-
-	
 	@property
 	def solver_info(self):
 		return self.history.last_info
@@ -273,14 +215,11 @@ class Case(object):
 	@property
 	def prescription_report(self):
 		""" TODO: docstring """
-		if self.run_count == 0 or not self.__DOSES_CALCULATED__:
-			return None
-
-		return build_prescription_report(self.prescription, self.structures)
+		return self.prescription.report(self.structures)
 
 	@property
 	def prescription_report_string(self):
-		return stringify_prescription_report(self.prescription_report, self.structures)
+		return self.prescription.report_string(self.structures)
 
 	@property
 	def plotting_data(self):
@@ -290,11 +229,18 @@ class Case(object):
 			d[label] = s.plotting_data
 		return d
 
-	def get_plotting_data(self, calc = False, firstpass = False, x = None):
+	def get_plotting_data(self, **options):
 		""" TODO: docstring """
+		calc = options.pop('calc', False)
+		firstpass = options.pop('firstpass', False)
+		x = options.pop('x', None)
+
  		if calc and isinstance(x, ndarray):
 			if x.size == self.n_beams:
 				self.calc_doses(squeeze(x))
+			else:
+				warn(Warning('argument "x" must be a numpy.ndarray'
+					'of length {}, ignoring argument'.format(self.n_beams)))
 		elif calc and firstpass:
 			self.calc_doses(self.x_pass1)
 		elif calc:
@@ -315,13 +261,3 @@ class Case(object):
 	def n_beams(self):
 		""" TODO: docstring """
 		return self.A.shape[1]
-
-	@property
-	def n_dvh_constraints(self):
-		""" TODO: docstring """
-		return sum([s.constraints.size for s in self.structures])
-	
-	@property
-	def has_targets(self):
-		""" TODO: docstring """
-		return any([s.is_target for is in self.structures.itervalues()])

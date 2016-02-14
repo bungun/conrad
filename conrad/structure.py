@@ -1,7 +1,6 @@
 from numpy import ndarray, array, squeeze, zeros, nan
 from scipy.sparse import csr_matrix, csc_matrix
-from conrad.dose import Constraint, ConstraintList
-from conrad.dvh import DoseDensity, DVHCurve, DoseSummary
+from conrad.dose import Constraint, ConstraintList,DVH
 from conrad.defs import CONRAD_DEBUG_PRINT
 from warning import warn
 
@@ -9,11 +8,11 @@ from warning import warn
 TODO: structure.py docstring
 """
 
-W_UNDER_DEFAULT = 1.
-W_OVER_DEFAULT = 0.05
-W_NONTARG_DEFAULT = 0.1
-
 class Structure(object):
+	W_UNDER_DEFAULT = 1.
+	W_OVER_DEFAULT = 0.05
+	W_NONTARG_DEFAULT = 0.1
+
 	""" TODO: docstring """
 	def __init__(self, label, name, is_target, dose, **options):
 		""" TODO: docstring """
@@ -35,17 +34,13 @@ class Structure(object):
 		self.__y_mean = nan
 
 		# number of voxels in structure
-		self.size = options['size'] if 'size' in options else None
-		self.start_index = None
-		self.stop_index = None
+		self.size = options.pop('size', None)
 
-		# dictionary of dose.Constraint objects attached to 
-		# structure, keyed by constraint id (which is passed 
-		# in by owner of Structure object).
+		# dose constraints
 		self.constraints = ConstraintList()
 		
-		# dvh curve and constraints data for plotting
-		self.dvh = DVH()
+		# dvh curve
+		self.dvh = DVH(self.size) if self.size is not None else None
 
 		# set (pointer to) subsection of dose matrix corresponding to structure
 		self.A_full = options.pop('A', None)
@@ -58,15 +53,26 @@ class Structure(object):
 		# set (pointer to) fully compressed version of same dose matrix
 		self.A_mean = options.pop('A_mean', None)
 
-		# use full matrix by default
-		self.matrix_representation = options.pop('representation', 'full')
-
 		# objective weights (set to defaults if not provided)
 		w_under_default = W_UNDER_DEFAULT if self.is_target else 0.
 		w_over_default = W_OVER_DEFAULT if self.is_target else W_NONTARG_DEFAULT
 		self.w_under = options.pop('w_under', w_under_default)
 		self.w_over = options.pop('w_over', w_over_default)
 
+	@property
+	def size(self):
+		return self.size
+
+	@size.setter
+	def size(self, size):
+		if isinstance(size, (int, float)):
+			if size <= 0:
+				ValueError('argument "size" must be a positive int')
+			else:
+				self.__size = int(size)
+				self.dvh = DVH(self.size)
+		else:
+			TypeError('argument "size" must be a positive int')
 
 	@property
 	def collapsable(self):
@@ -86,9 +92,6 @@ class Structure(object):
 
 		self.A_full = A_full
 
-		# if A_full is a matrix, and self.A is not set, switch self.A to A_full
-		if self.A_full is not None and self.A is None:
-			self.switch_A()
 
 	@property
 	def A_mean(self):
@@ -136,40 +139,9 @@ class Structure(object):
 				self.vpc[cluster] += 1
 
 	@property
-	def __clustered_representation_exists(self):
-		return all([item is not None for item in self.A_clustered])
-
-
-	@property
 	def A(self):
-		if self.__representation == 'full':
-			return self.__A_full
-		elif self.__representation == 'mean':
-			return self.__A_mean
-		elif self.__representation == 'clustered':
-			return self.__A_clustered
-		else:
-			return None
+		return self.__A_full
 	
-
-	@property 
-	def matrix_representation(self):
-		return self.__representation
-
-	@matrix_representation.setter
-	def matrix_representation(self, mat_type = 'full'):
-		if mat_type == 'mean' and self.A_mean is not None:
-			repstring = 'mean'
-		elif mat_type == 'clustered' and self.__clustered_representation_exists:
-			repstring = 'clustered'
-		else:
-			if self.__A_full is None: repstring = 'none'
-		self.__representation = repstring
-
-		CONRAD_DEBUG_PRINT( str('switched representation of structure {} ({}) '
-			'to {}.\n'.format(self.label, self.name, repstring)) )
-
-
 	def set_objective(self, dose, w_under, w_over):
 		if self.is_target:
 			self.dose = dose
@@ -184,7 +156,6 @@ class Structure(object):
 			c.direction = direction
 			c.dose = dose
 			self.constraints.items[constr_id] = c
-
 
 	@property
 	def dose_rx(self):
@@ -205,7 +176,6 @@ class Structure(object):
 		else:
 			TypeError('argument "weight" must be a float '
 				'with value >= 0')
-
 
 	@property
 	def w_under(self):
@@ -231,7 +201,7 @@ class Structure(object):
 				'with value >= 0')
 
 	@property
-	def w_over_normalized(self):
+	def w_over(self):
 		""" TODO: docstring """
 		if isinstance(self.__w_over, (float, int)):
 		    return self.__w_over / float(self.size)
@@ -239,7 +209,7 @@ class Structure(object):
 			return None
 	
 	@property
-	def w_over(self):
+	def w_over_raw(self):
 	    return self.__w_under
 
 	@w_over.setter
@@ -267,12 +237,7 @@ class Structure(object):
 		self.__y_mean = self.A_mean.dot(x)
 
 		# make DVH curve from calculated dose
-		self.dvh_curve.data = self._y
-
-	def get_y(self, x):
-		""" TODO: docstring """
-		self.calc_y(x)
-		return self.y
+		self.dvh.data = self.__y
 
 	@property
 	def y(self):

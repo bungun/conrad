@@ -14,6 +14,7 @@ else:
 
 from matplotlib.pyplot import get_cmap
 from matplotlib.colors import LinearSegmentedColormap
+from conrad.case import Case
 
 """
 TODO: plot.py docstring
@@ -110,25 +111,22 @@ class DVHPlot(object):
 		""" TODO: docstring """
 		plt.close(self.fig)
 
-class DensityPlot(DVHPlot):
-	""" TODO: docstring """
-	
-	def plot(self, plot_data, show = False, **options):
-		""" TODO: docstring """
-		self.fig.clf()
+class CasePlotter(object):
+	def __init__(self, case):
+		if not isinstance(case, Case):
+			TypeError('argument "case" must be of type conrad.Case')
+		
+		# plot setup
+		panels_by_structure = {}
+		names_by_structure = {}
+		for idx, label in enumerate(case.label_order):
+			panels_by_structure[label] = idx + 1
+			names_by_structure[label] = self.structures[label].name
+		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
 
-		max_dose = max([data['density']['dose'].max() for data in plot_data.itervalues()])
-		max_prob = max([data['density']['probability'].max() for data in plot_data.itervalues()])
-
-		for label, data in plot_data.iteritems():
-			plt.subplot(self.rows, self.cols, self.panels_by_structure[label])
-			
-			color = self.colors_by_structure[label]
-			name = self.names_by_structure[label]
-			plt.plot(data['density']['dose'], data['density']['probability'],
-				color = color, label = name, **options)
-			plt.xlim(0, 1.1 * max_dose)
-			plt.ylim(0, 1.1 * max_prob)
-
-		if show: SHOW()
-	
+	def plot(self, case, **options):
+		plotfile = options.pop('file', None)
+		self.dvh_plot.plot(case.plotting_data, 
+			show = options.pop('show', False))
+		if plotfile is not None:
+			self.dvh_plot.save(plotfile)
