@@ -2,24 +2,16 @@ from conrad.dvh import DoseConstraint, tuple_to_canonical_string
 from conrad.structure import Structure
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
-from conrad.run_data import RunRecord
+from conrad.run_data import RunRecord, PlanningHistory
 from conrad.plot import DensityPlot, DVHPlot
 from operator import add 
-from numpy import cumsum, ndarray, squeeze
+from numpy import cumsum, ndarray, squeeze, zeros
 # from tabulate import tabulate
 from collections import OrderedDict
 
 """
 TODO: case.py docstring
 """
-
-def gen_constraint_id(label, constraint_count):
-	""" TODO: docstring """
-	return "sid:{}:cid:{}".format(label, constraint_count)
-
-def constraint2label(constr_id):
-	""" TODO: docstring """
-	return constr_id.split(':')[1]
 
 def default_weights(is_target = False):
 	""" TODO: docstring """
@@ -117,26 +109,13 @@ class Case(object):
 		self.structures = build_structures(self.prescription, 
 			voxel_labels, label_order, A)
 
-		# set of IDs active constraints 
-		# (maintained as DVH constraints added/removed)
-		self.active_constraint_IDs = set()
-
-		# counts go with life of Case object,
-		# even if, e.g., all constraints removed from a run
-		self.constraint_count = 0
-		self.run_count = 0
-		self.run_tags = {}
-
 		# append prescription constraints unless suppressed:
 		if not suppress_rx_constraints:
 			self.add_all_rx_constraints()
 
 		# dose matrix
 		self.A = A
-		# self.shape = (self.voxels, self.beams) = A.shape
-
 		self.__DOSES_CALCULATED__ = False
-		self.run_records = {}
 
 		# plot setup
 		panels_by_structure = {}
@@ -145,50 +124,52 @@ class Case(object):
 			panels_by_structure[label] = idx+1
 			names_by_structure[label] = self.structures[label].name
 		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
-		self.density_plot = DensityPlot(panels_by_structure, names_by_structure)
 
-	def add_dvh_constraint(self, label, dose, fraction, direction):
+		self.history = PlanningHistory()
+
+
+
+	def add_dvh_constraint(self, label, threshold, direction, dose):
 		""" TODO: docstring """
-		self.constraint_count += 1
-		constr = DoseConstraint(dose, fraction, direction)
-		cid = gen_constraint_id(label, self.constraint_count)
-		self.structures[label].add_constraint(cid, constr)
-		self.active_constraint_IDs.add(cid)
-		return cid
+		if '<' in direction:
+			self.structures[label].constraints += D(threshold) <= dose
+		else:
+			self.structures[label].constraints -= D(threshold) <= dose
+
+		return self.structures[label].constraints.last_key
 
 	def drop_dvh_constraint(self, constr_id):
 		""" TODO: docstring """
-		label = constraint2label(constr_id)
-		self.structures[label].remove_constraint(constr_id)
-		self.active_constraint_IDs.remove(constr_id)
+		for s in self.structures.itervalues():
+			s.constraints -= constr_id
 
 	def drop_all_dvh_constraints(self):
 		""" TODO: docstring """
-		for cid in self.active_constraint_IDs:
-			self.drop_dvh_constraint(cid)
+		for s in self.structures.itervalues():
+			s.constraints.clear()
 
 	def add_all_rx_constraints(self):
 		""" TODO: docstring """
 		constraint_dict = self.prescription.constraints_by_label
 		for label, constr_list in constraint_dict.iteritems():
 			for constr in constr_list:
-				self.add_dvh_constraint(label, *constr)
+				self.structures[label].constraints += constr
 
 	def drop_all_but_rx_constraints(self):
 		""" TODO: docstring """
 		self.drop_all_dvh_constraints()
 		self.add_all_rx_constraints()
 
-	def change_dvh_constraint(self, constr_id, dose = None, fraction = None, direction = None):
-		label = constraint2label(constr_id)
-		self.structures[label].set_constraint(constr_id, dose, fraction, direction)
+	def change_dvh_constraint(self, constr_id, threshold, direction, dose):
+		for s in self.structures.itervalues():
+			s.set_constraint(constr_id, threshold, direction, dose)
 
 	def change_objective(self, label, dose = None, 
 		w_under = None, w_over = None):
 		""" TODO: docstring """
 		self.structures[label].set_objective(dose, w_under, w_over)
 
-	def plan(self, *args, **kwargs):
+	def plan(self, **kwargs):
 		""" TODO: docstring """
 
 		# check for targets
@@ -198,10 +179,10 @@ class Case(object):
 			return
 
 		# use 2 pass OFF by default
-		use_2pass = 'dvh_2pass' in args
+		use_2pass = kwargs['dvh_2pass'] if 'dvh_2pass' in kwargs else False
 
 		# dvh slack ON by default
-		use_slack = not 'dvh_no_slack' in args
+		use_slack = not kwargs['dvh_no_slack'] if 'dvh_no_slack' in kwargs else False
 
 		# objective weight for slack minimization
 		gamma = kwargs['dvh_wt_slack'] if 'dvh_wt_slack' in kwargs else None
@@ -217,13 +198,12 @@ class Case(object):
 		self.problem.solve(self.structures, rr.output, *args, **kwargs)
 
 		# save output
-		self.run_count += 1
-		self.run_records[self.run_count] = rr
+		self.history += rr
 
 		# update doses
 		if self.feasible:
-			x_key = 'x_exact' if use_2pass else 'x'
-			self.calc_doses(self.solution_data[x_key])
+			self.calc_doses()
+
 
 			draw_plot = kwargs['plot'] if 'plot' in kwargs else False
 			show_plot = kwargs['show'] if 'show' in kwargs else draw_plot	# Used to suppress plot during unit testing
@@ -239,33 +219,36 @@ class Case(object):
 			print "SAVING"
 			self.dvh_plot.save(plotfile)
 			print "COMPLETE"
-			
-	def plot_density(self, show = True, plotfile = None):
-		self.density_plot.plot(self.plotting_data, show)
-		if plotfile is not None:
-			print "SAVING"
-			self.density_plot.save(plotfile)
-			print "COMPLETE"
 
-	def calc_doses(self, x):
+	def calc_doses(self, x = None):
 		""" TODO: docstring """
-		self.__DOSES_CALCULATED__ = True
+		if x is None: x = self.x
+		if x is None:
+			ValueError('optimization must be run at least once '
+				'to calculate doses')
 
 		for s in self.structures.itervalues():
 			s.calc_y(x)
+
+		self.__DOSES_CALCULATED__ = True
+
 	
 	@property
 	def solver_info(self):
-		if self.run_count == 0:
-			return None
-		return self.run_records[self.run_count].output.solver_info
+		return self.history.last_info
 
 	@property
-	def solution_data(self):
-		if self.run_count == 0:
-			return None
-		else:
-			return self.run_records[self.run_count].output.optimal_variables
+	def x(self):
+		return self.history.last_x_exact if self.history.last_x_exact is not None else self.history.last_x
+
+	@property
+	def x_pass1(self):
+		return self.history.last_x
+	
+	@property
+	def x_pass2(self):
+		return self.x
+
 
 	@property
 	def feasible(self):
@@ -273,43 +256,6 @@ class Case(object):
 			return None
 		else:
 			return self.run_records[self.run_count].output.feasible
-
-	def __lookup_runrecord(runID):
-		if self.run_count == 0:
-			return None
-		if runID in self.run_tags:
-			return self.run_records[self.run_tags[runID]]
-		elif runID > 0 and runID <= self.run_count:
-			return self.run_records[runID]				
-
-	def get_run(runID = None):
-		if runID is None: runID = self.run_count
-		return __lookup_runrecord(runID)
-
-	def get_run_profile(runID = None):
-		if runID is None: runID = self.run_count
-		rr = __lookup_runrecord(runID)
-		if rr is not None:
-			return rr.profile
-
-	def get_run_output(runID = None):
-		if runID is None: runID = self.run_count
-		rr = __lookup_runrecord(runID)
-		if rr is not None:
-			return rr.output
-
-
-	def summary(self):
-		""" TODO: docstring """
-		table = OrderedDict({'name': []})
-		for s in self.structures.itervalues():
-			table['name'] += [s.name]
-			for key, val in s.dose_summary.table_data.iteritems():
-				if key not in table:
-					table[key] = []
-				table[key] += [val]
-		print table
-		# print tabulate(table, headers = "keys", tablefmt = "pipe")
 
 	def dose_summary_data(self, percentiles = [2, 98], stdev = False):
 		d = {}
@@ -339,9 +285,6 @@ class Case(object):
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
-		if self.run_count == 0:
-			return None
- 
  		d = {}
 		for label, s in self.structures.iteritems():
 			d[label] = s.plotting_data
@@ -349,17 +292,13 @@ class Case(object):
 
 	def get_plotting_data(self, calc = False, firstpass = False, x = None):
 		""" TODO: docstring """
-		if self.run_count == 0:
-			return None
- 
-		if calc and isinstance(x, ndarray):
+ 		if calc and isinstance(x, ndarray):
 			if x.size == self.n_beams:
 				self.calc_doses(squeeze(x))
-		elif calc and not firstpass and 'x_exact' in self.solution_data:
-			self.calc_doses(self.solution_data['x_exact'])
+		elif calc and firstpass:
+			self.calc_doses(self.x_pass1)
 		elif calc:
-			self.calc_doses(self.solution_data['x'])
-
+			self.calc_doses(self.x)
 		return self.plotting_data
 		
 	@property
@@ -380,11 +319,9 @@ class Case(object):
 	@property
 	def n_dvh_constraints(self):
 		""" TODO: docstring """
-		return sum([dc.count for dc in self.dvh_constrs_by_struct])
+		return sum([s.constraints.size for s in self.structures])
 	
 	@property
 	def has_targets(self):
 		""" TODO: docstring """
-		for s in self.structures.itervalues():
-			if s.is_target: return True
-		return False
+		return any([s.is_target for is in self.structures.itervalues()])

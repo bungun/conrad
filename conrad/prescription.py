@@ -1,5 +1,5 @@
-from conrad.dvh import canonical_string_to_tuple
 from conrad.structure import Structure
+from conrad.dose import D
 from os import path
 import json, yaml
 from traceback import format_exc
@@ -57,11 +57,10 @@ Python list of dictionaries (JSON approximately same)
 """
 
 
-def canonicalize_dvhstring(string_constraint, rx_dose=None):
+def string2constraint(string_constraint, rx_dose=None):
 	""" TODO: docstring
 
-	convert input string to standard form dose constraint 
-	string:
+	convert input string to standard form dose constraint:
 
 		D{p} <= {d} Gy (dose @ pth percentile <= d Gy)
 
@@ -291,8 +290,10 @@ def canonicalize_dvhstring(string_constraint, rx_dose=None):
 				direction = '<' if lt else '>'
 
 
-		return 'D{} {}= {}Gy'.format(percentile,
-			direction, dose)
+		if '<' in direction:
+			return D(percentile) <= dose
+		else:
+			return D(percentile) >= dose
 
 	except:
 		print str("Unknown parsing error. Input = {}".format(
@@ -350,13 +351,11 @@ class Prescription(object):
 					name = item['name'],
 					is_target = bool(item['is_target']), 
 					dose = float(item['dose']) if item['dose'] is not None else 0.)
-				self.constraint_dict[label] = []
+				self.constraint_dict[label] = ConstraintList()
 
 				if item['constraints'] is not None:
-					for string in item['constraints']:
-						constr = canonicalize_dvhstring(string)
-						self.constraint_dict[label].append(
-							canonical_string_to_tuple(constr))
+					[self.constraint_dict[label] += string2constraint(s) for s in item['constraints']]
+
 
 			self.rx_list = rx_list
 

@@ -83,3 +83,61 @@ class RunRecord(object):
 			use_slack = use_slack, use_2pass = use_2pass,
 			gamma = gamma)
 		self.output = RunOutput()
+
+
+class PlanningHistory(object):
+	def __init__(self):
+		self.runs = []
+		self.run_tags = {}
+
+	def __iadd__(self, other):
+		if isinstance(other, RunRecord):
+			self.runs[runcount] = other
+		else:
+			TypeError('operator += only defined for '
+				'rvalues of type conrad.RunRecord')
+
+	@property
+	def last_info(self):
+		if len(self.runs) > 0:
+			return self.runs[-1].output.solver_info
+		else:
+			return None
+
+	@property
+	def last_x(self):
+		return self.runs[-1].output.optimal_variables['x']
+
+	@property
+	def last_x_exact(self):
+		optvar = self.runs[-1].output.optimal_variables
+		return optvar['x_exact'] if 'x_exact' in optvar else None
+
+
+	def tag_last(self, tag):
+		self.run_tags[tag] = len(self.runs) - 1
+
+	def __lookup_runrecord(runID):
+		if len(self.runs) == 0:
+			return None
+		if runID in self.run_tags:
+			return self.runs[self.run_tags[runID]]
+		elif runID > 0 and runID <= self.run_count:
+			return self.runs[runID]				
+
+	def get_run(runID = None):
+		if runID is None: runID = self.run_count
+		return __lookup_runrecord(runID)
+
+	def get_run_profile(runID = None):
+		if runID is None: runID = self.run_count
+		rr = __lookup_runrecord(runID)
+		if rr is not None:
+			return rr.profile
+
+	def get_run_output(runID = None):
+		if runID is None: runID = self.run_count
+		rr = __lookup_runrecord(runID)
+		if rr is not None:
+			return rr.output
+

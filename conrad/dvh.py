@@ -337,19 +337,6 @@ class DVHCurve(object):
 		if self.doses is None: return nan
 		return stdev(self.doses[1:])
 	
-	def check_constraint(constraint_tuple):
-		dose = constraint_tuple[0]
-		direction = constraint_tuple[2]
-		dose_achieved = self.dose_at_percentile(constraint_tuple[1])
-
-		if direction == '<':
-			status = dose_achieved <= dose
-		else:
-			status = dose_achieved >= dose
-
-		return (status, dose_achieved)
-
-
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
