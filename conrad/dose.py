@@ -326,6 +326,7 @@ class DVH(object):
 		length = len(self.__dose_buffer[::self.__stride]) + 1
 		self.__doses = zeros(length)
 		self.__percentiles = zeros(length)
+		self.__percentiles[0] = 100.
 		self.__percentiles[1:] = linspace(100, 0, length - 1)
 		self.__DATA_SET__ = False
 

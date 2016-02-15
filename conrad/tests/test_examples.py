@@ -54,6 +54,8 @@ class TestExamples(unittest.TestCase):
 		cs.structures[self.lab_oar].constraints += D(10) < 0.55
 		cs.plan()
 		print cs.dose_summary_string
+		print cs.x
+		print self.A.dot(cs.x)
 	
 	def test_2pass_no_constr(self):
 		# Prescription for each structure

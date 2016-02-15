@@ -53,8 +53,8 @@ class TestExternalData(unittest.TestCase):
 
 	 	print "prescription loaded from JSON:\n", cs.prescription 
 
-	 	cs.plan(solver = 'ECOS', verbose = 1)
-	 	p.plot(cs, show = False, file = 'json_test_plot.pdf')
+	 	if cs.plan(solver = 'ECOS', verbose = 1):
+		 	p.plot(cs, show = False, file = 'json_test_plot.pdf')
 
 	 	print "complete"
 
@@ -66,7 +66,7 @@ class TestExternalData(unittest.TestCase):
 
 	 	print "prescription loaded from YAML:\n", cs.prescription 
 
-	 	cs.plan(solver = 'ECOS', verbose = 1)
-	 	p.plot(cs, show = False, file = 'yaml_test_plot.pdf')
+	 	if cs.plan(solver = 'ECOS', verbose = 1):
+		 	p.plot(cs, show = False, file = 'yaml_test_plot.pdf')
 
 	 	print "complete"

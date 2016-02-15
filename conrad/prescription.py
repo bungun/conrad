@@ -351,7 +351,6 @@ class Prescription(object):
 
 				if item['constraints'] is not None:
 					for string in item['constraints']:
-						print string2constraint(string)
 						self.constraint_dict[label] += string2constraint(string)
 
 			self.rx_list = rx_list
