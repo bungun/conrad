@@ -1,3 +1,5 @@
+from warning import warn
+
 # TODO: unit test
 """
 TODO: run_data.py docstring
@@ -16,7 +18,7 @@ class RunProfile(object):
 		# dictionary of objective, keyed by structure label
 		self.objectives = {}
 
-		# list of constraints
+		# dictionary of constraints, keyed by ID
 		self.constraints = {}
 
 		# weight used for slack minimization objective
@@ -40,23 +42,7 @@ class RunProfile(object):
 		for label, s in structures.iteritems():
 			for cid, dc in s.dose_constraints.iteritems():
 				self.constraints[cid] = {'label' : label,
-				'constraint_id' : cid, 'dose' : dc.dose_requested,
-				'percentile' : 100 * dc.fraction,
-				'direction' : dc.direction }
-
-	def push_objectives(self, structures):
-		""" TODO: docstring """
-		for label in structures:
-			if not self.objectives.has_key(label):
-				print str('RunProfile.objectives dictionary '
-					'must have an entry for each key in '
-					'the dictionary structures. '
-					'Objectives not pushed')
-				return
-
-		for label, obj  in self.objectives.iteritems():
-			structures[label].set_objective(
-				obj['dose'], obj['w_under'], obj['w_over'])
+				'constraint_id' : cid, 'constraint' : str(dc) }
 
 
 class RunOutput(object):
@@ -66,10 +52,19 @@ class RunOutput(object):
 
 		# x (beams), y (dose)
 		# lambda (dual variable for x>= 0)
-		self.optimal_variables = {}
+		self.optimal_variables = {'x': None, 'x_exact': None}
 		self.optimal_dvh_slopes = {}
 		self.solver_info = {}
 		self.feasible = False
+
+	@property
+	def x(self):
+		return self.optimal_variables['x']
+
+	@property
+	def x_exact(self):
+		return self.optimal_variables['x_exact']
+
 
 class RunRecord(object):
 	""" TODO: docstring """
@@ -98,46 +93,44 @@ class PlanningHistory(object):
 				'rvalues of type conrad.RunRecord')
 
 	@property
+	def last_feasible(self):
+		if len(self.runs == 0): return False
+		return self.runs[-1].output.feasible
+
+	@property
 	def last_info(self):
-		if len(self.runs) > 0:
-			return self.runs[-1].output.solver_info
-		else:
-			return None
+		if len(self.runs == 0): return None
+		return self.runs[-1].output.solver_info
 
 	@property
 	def last_x(self):
-		return self.runs[-1].output.optimal_variables['x']
+		if len(self.runs == 0): return None
+		return self.runs[-1].output.x
+
 
 	@property
 	def last_x_exact(self):
-		optvar = self.runs[-1].output.optimal_variables
-		return optvar['x_exact'] if 'x_exact' in optvar else None
-
+		if len(self.runs == 0): return None
+		return self.runs[-1].output.x_exact
 
 	def tag_last(self, tag):
+		if len(slef.runs == 0):
+			warn(Warning('no runs to tag'))
+			return
 		self.run_tags[tag] = len(self.runs) - 1
 
-	def __lookup_runrecord(runID):
+		
+	def __getitem__(self, runID = None):
 		if len(self.runs) == 0:
+			warn(Warning('no runs exist in history, returning "None"'))
 			return None
 		if runID in self.run_tags:
 			return self.runs[self.run_tags[runID]]
 		elif runID > 0 and runID <= self.run_count:
 			return self.runs[runID]				
-
-	def get_run(runID = None):
-		if runID is None: runID = self.run_count
-		return __lookup_runrecord(runID)
-
-	def get_run_profile(runID = None):
-		if runID is None: runID = self.run_count
-		rr = __lookup_runrecord(runID)
-		if rr is not None:
-			return rr.profile
-
-	def get_run_output(runID = None):
-		if runID is None: runID = self.run_count
-		rr = __lookup_runrecord(runID)
-		if rr is not None:
-			return rr.output
-
+		elif run is None or run > self.run_count:
+			return self.runs[-1]
+		else:
+			warn(Warning('invalid run number / run tag used in request ',
+				'returning "None"'))
+			return None

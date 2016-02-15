@@ -1,6 +1,6 @@
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
-from conrad.run_data import RunRecord, PlanningHistory
+from conrad.history import RunRecord, PlanningHistory
 from operator import add 
 from numpy import ndarray, array, squeeze, zeros
 from warning import warn
@@ -8,50 +8,6 @@ from warning import warn
 """
 TODO: case.py docstring
 """
-
-def default_weights(is_target = False):
-	""" TODO: docstring """
-	if is_target:
-		# w_under = 1, w_over = 0.05
-		return 1., 0.05
-	else:
-		return None, 0.1
-
-def build_structures(prescription, voxel_labels, label_order, dose_matrix):
-	"""TODO: docstring
-
-	NB: ASSUMES dose_matrix IS SORTED IN SAME ORDER AS LABELS IN voxel_labels
-	
-	(fails if voxel_labels unsorted; TODO: sorting? pre-sort?)
-	"""
-
-	if not dose_matrix.shape[0] == len(voxel_labels):
-		raise ValueError("length of vector voxel_labels and "
-			"number of rows in dose_matrix must be equal.")
-
-	structures = prescription.structure_dict
-	ptr1 = ptr2 = 0
-
-	for label in label_order:
-		# obtain structure size
-		size = reduce(add, map(lambda v : int(v == label), voxel_labels))
-		structures[label].size = size
-		ptr2 += size
-		
-		# assess sorting of label blocks:
-		if not all(map(lambda v: v == label, voxel_labels[ptr1:ptr2])):
-			raise ValueError("inputs voxel_labels and dose_matrix are expected "
-							 "to be (block) sorted in the order specified by argument "
-							 "`label_order'. voxel_labels not block sorted.")
-		
-		# partition dose matrix	into blocks
-		structures[label].A_full = dose_matrix[ptr1:ptr2, :]
-		structures[label].A_mean = squeeze(array(
-			csum(dose_matrix[ptr1:ptr2, :], 0))) / size
-		ptr1 = ptr2
-
-	return structures
-
 
 class Case(object):
 	"""TODO: docstring
@@ -74,24 +30,56 @@ class Case(object):
 		self.voxel_labels = voxel_labels
 		self.label_order = label_order
 
+
 		# digest clinical specification
 		self.prescription = Prescription(prescription_raw)
 
-		# parse full mat + data into Structure objects
-		self.structures = build_structures(self.prescription, 
-			voxel_labels, label_order, A)
+		# dose matrix
+		self.A = A
+
+		if not (A.shape[0] = len(voxel_labels)):
+			ValueError('length of vector argument "voxel_labels" '
+				'must match number of rows in matrix argument "A"')
+
+		# parse matrix + data into Structure objects
+		self.structures = self.prescription.structure_dict
+		self.__build_structures()
 
 		# append prescription constraints unless suppressed:
 		if not suppress_rx_constraints:
 			self.add_all_rx_constraints()
 
-		# dose matrix
-		self.A = A
+
 
 		# planning history
-		self.history = PlanningHistory()
+		self.history = PlanningHistory(self.structures)
 
+	def __build_structures(self):
+		"""TODO: docstring
 
+		NB: ASSUMES dose_matrix IS SORTED IN SAME ORDER AS LABELS IN voxel_labels
+		
+		(fails if voxel_labels unsorted; TODO: sorting? pre-sort?)
+		"""
+		ptr1 = ptr2 = 0
+
+		for label in self.label_order:
+			# obtain structure size
+			size = reduce(add, map(lambda v : int(v == label), self.voxel_labels))
+			self.structures[label].size = size
+			ptr2 += size
+			
+			# assess sorting of label blocks:
+			if not all(map(lambda v: v == label, self.voxel_labels[ptr1:ptr2])):
+				raise ValueError("inputs voxel_labels and dose_matrix are expected "
+								 "to be (block) sorted in the order specified by argument "
+								 "`label_order'. voxel_labels not block sorted.")
+			
+			# partition dose matrix	into blocks
+			self.structures[label].A_full = self.A[ptr1:ptr2, :]
+			self.structures[label].A_mean = squeeze(array(
+				sum(self.A[ptr1:ptr2, :], 0))) / size
+			ptr1 = ptr2
 
 	def add_dvh_constraint(self, label, threshold, direction, dose):
 		""" TODO: docstring """
@@ -175,13 +163,16 @@ class Case(object):
 		for s in self.structures.itervalues():
 			s.calc_y(x)
 
+	def tag_plan(self, tag):
+		self.history.tag_last(tag)
+
 	@property
 	def solver_info(self):
 		return self.history.last_info
 
 	@property
 	def x(self):
-		return self.history.last_x_exact if self.history.last_x_exact is not None else self.history.last_x
+		return self.history.last_x_exact or self.history.last_x
 
 	@property
 	def x_pass1(self):
@@ -194,10 +185,7 @@ class Case(object):
 
 	@property
 	def feasible(self):
-		if self.run_count == 0:
-			return None
-		else:
-			return self.run_records[self.run_count].output.feasible
+		return self.history.last_feasible
 
 	def dose_summary_data(self, percentiles = [2, 98], stdev = False):
 		d = {}

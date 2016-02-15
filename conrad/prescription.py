@@ -139,11 +139,11 @@ def string2constraint(string_constraint, rx_dose=None):
 			"absolute volume units. Convert to percentage."
 			"\n(input = {})".format(string_constraint))
 
-	lt = '<' in string_constraint
-	if lt:
-		left, right = string_constraint.strip('=').split('<')
+	leq = '<' in string_constraint
+	if leq:
+		left, right = string_constraint.replace('=', '').split('<')
 	else:
-		left, right = string_constraint.strip('=').split('>')
+		left, right = string_constraint.replace('=', '').split('>')
 
 	rdose = 'Gy' in right
 	ldose = 'Gy' in left 
@@ -201,24 +201,22 @@ def string2constraint(string_constraint, rx_dose=None):
 
 			# parse dose
 			if 'cGy' in right:
-				dose = float(right.strip('cGy')) / 100.
+				dose = float(right.replace('cGy', '')) / 100.
 			else:
-				dose = float(right.strip('Gy'))
+				dose = float(right.replace('Gy', ''))
 		
-			# parse percentile
+			# parse threshold (min, mean, max or percentile)
 			if 'mean' in left or 'Mean' in left:
-				percentile = 50.
+				threshold = 'mean'
 			elif 'min' in left or 'Min' in left:
-				percentile = 100.
+				threshold = 'min'
 			elif 'max' in left or 'Max' in left:
-				percentile = 0.
+				threshold = 'max'
 			else:
-				percentile = float(left.strip('%').strip('d').strip('D'))
+				threshold = float(left.replace('%', '').replace('d', '').replace('D', ''))
 
 			# parse direction:
-			# dose on right-hand side of inequality is same as canonical
-			# form, so parsed inequality direction = input inequality direction
-			direction = '<' if lt else '>'
+			# (inequality direction preserved, nothing to do)
 
 		# cases: 
 		# - "x Gy to < p %"
@@ -235,15 +233,15 @@ def string2constraint(string_constraint, rx_dose=None):
 
 			# parse dose
 			if 'cGy' in left:
-				dose = float(left.strip('cGy')) / 100.
+				dose = float(left.replace('cGy', '')) / 100.
 			else:
-				dose = float(left.strip('Gy'))
+				dose = float(left.replace('Gy', ''))
 
 			# parse percentile
-			percentile = float(right.strip('%'))
+			threshold = float(right.replace('%', ''))
 
-			# parse direction
-			direction = '>' if lt else '<'
+			# parse direction: (inequality direction flips)
+			leq = not leq
 
 		# cases: 
 		# - "V__% < p %"
@@ -261,14 +259,14 @@ def string2constraint(string_constraint, rx_dose=None):
 			#-----------------------------------------------------#
 			if not 'rx' in right:
 				# parse dose
-				reldose = float(left.strip('%').strip('v').strip('V'))
+				reldose = float(left.replace('%', '').replace('v', '').replace('V', ''))
 				dose = reldose / 100. * rx_dose
 
 				# parse percentile
-				percentile = float(right.strip('%'))
+				threshold = float(right.replace('%', ''))
 
-				# parse direction:
-				direction = '>' if lt else '<'
+				# parse direction: (inequality direction flips)
+				leq = not leq
 
 			#-----------------------------------------------------#
 			# constraint in form "D__% <> {frac} rx"
@@ -280,20 +278,18 @@ def string2constraint(string_constraint, rx_dose=None):
 			#-----------------------------------------------------#
 			else:
 				# parse dose
-				dose = rx_dose * float(right.strip('rx'))
+				dose = rx_dose * float(right.replace('rx', ''))
 
 				# parse percentile
-				percentile = float(left.strip('%').strip('d').strip('D'))
+				threshold = float(left.replace('%', '').replace('d', '').replace('D', ''))
 
 				# parse direction:
-				# 
-				direction = '<' if lt else '>'
+				# (inequality direction preserved, nothing to do)
 
-
-		if '<' in direction:
-			return D(percentile) <= dose
+		if leq: 
+			return D(threshold) <= dose
 		else:
-			return D(percentile) >= dose
+			return D(threshold) >= dose
 
 	except:
 		print str("Unknown parsing error. Input = {}".format(
@@ -340,8 +336,8 @@ class Prescription(object):
 
 		if not data_valid:
 			if err is not None: print err
-			raise TypeError("input prescription_data expected to be "
-							"a list or the path to a valid JSON or YAML file.")
+			raise TypeError('input prescription_data expected to be '
+							'a list or the path to a valid JSON or YAML file.')
 							
 		try:
 			for item in rx_list:
@@ -360,8 +356,8 @@ class Prescription(object):
 			self.rx_list = rx_list
 
 		except:
-			print str("Unknown error: prescription_data could not be "
-				"converted to conrad.Prescription() datatype.") 
+			print str('Unknown error: prescription_data could not be '
+				'converted to conrad.Prescription() datatype.') 
 			raise
 
 	@property
