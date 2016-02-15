@@ -2,16 +2,16 @@ import conrad
 import numpy as np
 import unittest
 import cvxpy
-
 from os import path, remove as os_remove
-from conrad import Case
+from warnings import warn
+from conrad import *
 
 class TestExamples(unittest.TestCase):
 	""" Unit tests using example problems. """
 	def setUp(self):
 		# Construct dose matrix
-		A_targ = np.random.rand(self.m_targ, self.n)
-		A_oar = 0.5 * np.random.rand(self.m_oar, self.n)
+		A_targ = 1.2 * np.random.rand(self.m_targ, self.n)
+		A_oar = 0.3 * np.random.rand(self.m_oar, self.n)
 		self.A = np.vstack((A_targ, A_oar))
 	
 	# Runs once before all unit tests
@@ -31,7 +31,7 @@ class TestExamples(unittest.TestCase):
 	
 	# Runs once after all unit tests
 	def tearDownClass(self):
-		files_to_delete = ['test_plotting.pdf', 'test_plotting_density.pdf']
+		files_to_delete = ['test_plotting.pdf']
 		for fname in files_to_delete:
 			fpath = path.join(path.abspath(path.dirname(__file__)), fname)
 			if path.isfile(fpath): os_remove(fpath)
@@ -48,13 +48,12 @@ class TestExamples(unittest.TestCase):
 		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
 				
 		# Add DVH constraints and solve
-		cs.add_dvh_constraint(self.lab_tum, 1.05, 0.3, '<')
-		cs.add_dvh_constraint(self.lab_tum, 0.8, 0.2, '>')
-		cs.add_dvh_constraint(self.lab_oar, 0.5, 0.5, '<')
-		cs.add_dvh_constraint(self.lab_oar, 0.55, 0.1, '>')   # This constraint makes no-slack problem infeasible
-		# cs.plan("ECOS", verbose = 1)
-		cs.plan("ECOS", "dvh_2pass", verbose = 1)
-		cs.summary()
+		cs.structures[self.lab_tum].constraints += D(20) <= 1.15
+		cs.structures[self.lab_tum].constraints += D(80) >= 0.95
+		cs.structures[self.lab_oar].constraints += D(50) < 0.30
+		cs.structures[self.lab_oar].constraints += D(10) < 0.55
+		cs.plan()
+		print cs.dose_summary_string
 	
 	def test_2pass_no_constr(self):
 		# Prescription for each structure
@@ -65,14 +64,14 @@ class TestExamples(unittest.TestCase):
 		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
 		
 		# Solve with slack in single pass
-		cs.plan("ECOS")
-		res_x = cs.problem.solver._x.value
-		res_obj = cs.problem.solver.objective.value
+		cs.plan(solver = 'ECOS')
+		res_x = cs.x
+		res_obj = cs.solver_info['objective']
 		
 		# Check results from 2-pass identical if no DVH constraints
-		cs.plan("ECOS", "dvh_2pass")
-		res_x_2pass = cs.problem.solver._x.value
-		res_obj_2pass = cs.problem.solver.objective.value
+		cs.plan(solver = 'ECOS', dvh_exact = True)
+		res_x_2pass = cs.x
+		res_obj_2pass = cs.solver_info['objective']
 		self.assertItemsEqual(res_x, res_x_2pass)
 		self.assertEqual(res_obj, res_obj_2pass)
 	
@@ -85,14 +84,14 @@ class TestExamples(unittest.TestCase):
 		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
 		
 		# Add DVH constraints and solve
-		cs.add_dvh_constraint(self.lab_tum, 1.05, 0.3, '<')
-		cs.add_dvh_constraint(self.lab_tum, 0.8, 0.2, '>')
-		cs.add_dvh_constraint(self.lab_oar, 0.5, 0.5, '<')
-		cs.plan("ECOS", "dvh_no_slack")
+		cs.structures[self.lab_tum].constraints += D(20) <= 1.15
+		cs.structures[self.lab_tum].constraints += D(80) >= 0.95
+		cs.structures[self.lab_oar].constraints += D(50) < 0.30
+		cs.plan(solver = 'ECOS', dvh_slack = False)
 		res_obj = cs.problem.solver.objective.value
 		
 		# Check objective from 2nd pass <= 1st pass (since 1st constraints more restrictive)
-		cs.plan("ECOS", "dvh_no_slack", "dvh_2pass")
+		cs.plan(solver = 'ECOS', dvh_slack = False, dvh_exact = True)
 		res_obj_2pass = cs.problem.solver.objective.value
 		self.assertTrue(res_obj_2pass <= res_obj)
 	
@@ -103,14 +102,18 @@ class TestExamples(unittest.TestCase):
 		
 		# Construct unconstrained case
 		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
-		
-		# Add DVH constraints and solve
-		cs.add_dvh_constraint(self.lab_tum, 1.05, 0.3, '<')
-		cs.add_dvh_constraint(self.lab_tum, 0.8, 0.2, '>')
-		cs.add_dvh_constraint(self.lab_oar, 0.5, 0.5, '<')
-		cs.add_dvh_constraint(self.lab_oar, 0.55, 0.1, '>')   # This constraint makes no-slack problem infeasible
-		
+		p = CasePlotter(cs)
+
+		# Add DVH constraints
+		cs.structures[self.lab_tum].constraints += D(20) <= 1.15
+		cs.structures[self.lab_tum].constraints += D(80) >= 0.95
+		cs.structures[self.lab_oar].constraints += D(50) < 0.30
+
+		# This constraint makes no-slack problem infeasible
+		cs.structures[self.lab_oar].constraints += D(99) < 0.05
+
 		# Solve and plot resulting DVH curves
-		cs.plan("ECOS", plot = True, show = False)
-		cs.plan("ECOS", plot = True, show = False, plotfile = "test_plotting.pdf")
-		cs.plot_density(show = False, plotfile = "test_plotting_density.pdf")
+		if cs.plan(solver = 'ECOS'):
+			p.plot(cs, show = False, file = 'test_plotting.pdf')
+		else:
+			warn(Warning('plan infeasible, no plotting performed'))

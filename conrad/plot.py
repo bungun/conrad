@@ -77,6 +77,7 @@ class DVHPlot(object):
 		""" TODO: docstring """
 		self.fig.clf()
 
+
 		max_dose = max([data['curve']['dose'].max() for data in plot_data.itervalues()])
 
 
@@ -91,12 +92,12 @@ class DVHPlot(object):
 			plt.ylim(0, 103)
 
 			for constraint in data['constraints']:
-				plt.plot(constraint['dose'][0], constraint['percentile'][0], 
-					constraint['symbol'], color = color, **options)
-				plt.plot(constraint['dose'][1], constraint['percentile'][1], 
-					constraint['symbol'], alpha  = 0.7, color = color, **options)
-				plt.plot(constraint['dose'], constraint['percentile'], 
-					'-', color = color, **options)
+				plt.plot(constraint[1]['dose'][0], constraint[1]['percentile'][0], 
+					constraint[1]['symbol'], color = color, **options)
+				plt.plot(constraint[1]['dose'][1], constraint[1]['percentile'][1], 
+					constraint[1]['symbol'], alpha  = 0.7, color = color, **options)
+				plt.plot(constraint[1]['dose'], constraint[1]['percentile'], 
+					'.', color = color, **options)
 
 		if show: SHOW()
 
@@ -121,7 +122,7 @@ class CasePlotter(object):
 		names_by_structure = {}
 		for idx, label in enumerate(case.label_order):
 			panels_by_structure[label] = idx + 1
-			names_by_structure[label] = self.structures[label].name
+			names_by_structure[label] = case.structures[label].name
 		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
 
 	def plot(self, case, **options):

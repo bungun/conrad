@@ -4,7 +4,7 @@ import unittest
 import cvxpy
 from os import path, remove as os_remove
 from numpy import ones
-from conrad import Case
+from conrad import *
 
 class TestExternalData(unittest.TestCase):
 	""" Unit tests using external data import. """
@@ -38,7 +38,7 @@ class TestExternalData(unittest.TestCase):
 	
 	# Runs once after all unit tests
 	def tearDownClass(self):
-		files_to_delete = ['yaml_test_plot.pdf']
+		files_to_delete = ['yaml_test_plot.pdf', 'json_test_plot.pdf']
 		for fname in files_to_delete:
 			fpath = path.join(path.abspath(path.dirname(__file__)), fname)
 			if path.isfile(fpath): os_remove(fpath)
@@ -49,10 +49,12 @@ class TestExternalData(unittest.TestCase):
 	 	"""TODO: docstring"""
 	 	input_file = path.join(path.abspath(path.dirname(__file__)), 'json_rx.json')
 	 	cs = Case(self.A, self.voxel_labels, self.label_order, input_file)
+	 	p = CasePlotter(cs)
 
 	 	print "prescription loaded from JSON:\n", cs.prescription 
 
-	 	cs.plan("ECOS", verbose = 1)
+	 	cs.plan(solver = 'ECOS', verbose = 1)
+	 	p.plot(cs, show = False, file = 'json_test_plot.pdf')
 
 	 	print "complete"
 
@@ -60,9 +62,11 @@ class TestExternalData(unittest.TestCase):
 	 	"""TODO: docstring"""
 	 	input_file = path.join(path.abspath(path.dirname(__file__)), 'yaml_rx.yml')
 	 	cs = Case(self.A, self.voxel_labels, self.label_order, input_file)
+	 	p = CasePlotter(cs)
 
 	 	print "prescription loaded from YAML:\n", cs.prescription 
 
-	 	cs.plan("ECOS", verbose = 1, plot = True, show = False, plotfile = 'yaml_test_plot.pdf')
+	 	cs.plan(solver = 'ECOS', verbose = 1)
+	 	p.plot(cs, show = False, file = 'yaml_test_plot.pdf')
 
 	 	print "complete"

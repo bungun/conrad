@@ -1,8 +1,8 @@
 from numpy import ndarray, array, squeeze, zeros, nan
 from scipy.sparse import csr_matrix, csc_matrix
-from conrad.dose import Constraint, ConstraintList,DVH
+from conrad.dose import Constraint, MeanConstraint, ConstraintList, DVH
 from conrad.defs import CONRAD_DEBUG_PRINT
-from warning import warn
+from warnings import warn
 
 """
 TODO: structure.py docstring
@@ -20,6 +20,7 @@ class Structure(object):
 		self.label = label
 		self.name = name
 		self.is_target = is_target
+		self.__size = None
 		self.__dose = max(float(dose), 0.) if is_target else 0.
 		self.__boost = 1.
 		self.__w_under = 0.
@@ -54,14 +55,14 @@ class Structure(object):
 		self.A_mean = options.pop('A_mean', None)
 
 		# objective weights (set to defaults if not provided)
-		w_under_default = W_UNDER_DEFAULT if self.is_target else 0.
-		w_over_default = W_OVER_DEFAULT if self.is_target else W_NONTARG_DEFAULT
+		w_under_default = self.W_UNDER_DEFAULT if self.is_target else 0.
+		w_over_default = self.W_OVER_DEFAULT if self.is_target else self.W_NONTARG_DEFAULT
 		self.w_under = options.pop('w_under', w_under_default)
 		self.w_over = options.pop('w_over', w_over_default)
 
 	@property
 	def size(self):
-		return self.size
+		return self.__size
 
 	@size.setter
 	def size(self, size):
@@ -90,27 +91,22 @@ class Structure(object):
 			TypeError("input A must by a numpy or "
 				"scipy csr/csc sparse matrix")
 
-		self.A_full = A_full
+		self.__A_full = A_full
 
 
 	@property
 	def A_mean(self):
 		return self.__A_mean
 
-	@A_mean.setter:
+	@A_mean.setter
 	def A_mean(self, A_mean = None):
 		if A_mean is not None:
-			self.A_mean = A_mean
+			self.__A_mean = A_mean
 		elif self.A_full is not None:
-			self.A_mean = self.A_full.sum(0) / self.A_full.shape[0]
+			self.__A_mean = self.A_full.sum(0) / self.A_full.shape[0]
 			if not isinstance(self.A_full, ndarray):
 				# (handling for sparse matrices)
 				squeeze(array(self.A_full)) 
-
-	def set_A_full_and_mean(self, A_full, A_mean = None):
-		self.set_A_full(A_full)
-		self.set_A_mean(A_mean)
-
 
 	@property
 	def A_clustered(self):
@@ -118,15 +114,24 @@ class Structure(object):
 			self.__cluster_sizes)
 
 	@A_clustered.setter
-	def A_clustered(self, *args):
-		if len(args) < 2:
-			ValueError('must provide at least clustered matrix and '
-				'voxel->cluster mapping to add clustered matrix')
-		else:
-			A_clu = args[0]
-			vox2cluster = args[1]
-		if len(args) > 2:
-			cluster_sizes = args[2]
+	def A_clustered(self, input_tuple):
+		valid = True
+		input_len = len(input_tuple)
+
+		valid &= input_len >= 2
+		valid &= isinstance(input_tuple[0], (ndarray, csr_matrix, csc_matrix))
+		valid &= isinstance(input_tuple[1], (ndarray, list))
+		if input_len > 2:
+			valid &= isinstance(input_tuple[2], (ndarray, list))
+
+		if not valid:
+			ValueError('must provide at least (1) the clustered matrix and '
+				'(2) the voxel->cluster mapping to add clustered matrix; '
+				'optionally provide (3) the vector/list of cluster sizes')
+
+		A_clu = input_tuple[0]
+		vox2cluster = input_tuple[1]
+		cluster_sizes = input_tuple[2] if input_len > 2 else None
 
 		self.__A_clustered = A_clu
 		self.__voxels_2_clusters = vox2cluster
@@ -252,12 +257,12 @@ class Structure(object):
 	@property
 	def min_dose(self):
 		""" TODO: docstring """
-		return self.dvh.mindose
+		return self.dvh.min_dose
 
 	@property
 	def max_dose(self):
 		""" TODO: docstring """
-		return self.dvh.maxdose
+		return self.dvh.max_dose
 
 	def satisfies(self, constraint):
 		if not isinstance(constraint, Constraint):
@@ -290,7 +295,7 @@ class Structure(object):
 		return {'curve': self.dvh.plotting_data, 
 		'constraints': self.constraints.plotting_data}
 	
-
+	@property
 	def __header_string(self):
 		""" TODO: docstring """
 		out = 'Structure: {}'.format(self.label)
@@ -299,18 +304,20 @@ class Structure(object):
 			out += '\n'
 		return out		
 
+	@property
 	def __obj_string(self):
 		""" TODO: docstring """
 		out = 'target? {}\n'.format(self.is_target)
 		out += 'rx dose: {}\n'.format(self.dose)
 		if self.is_target:
-			out += 'weight_under: {}\n'.format(self._w_under)
-			out += 'weight_over: {}\n'.format(self._w_over)			
+			out += 'weight_under: {}\n'.format(self.__w_under)
+			out += 'weight_over: {}\n'.format(self.__w_over)			
 		else:
-			out += 'weight: {}\n'.format(self._w_over)
+			out += 'weight: {}\n'.format(self.__w_over)
 		out += "\n"		
 		return out
 
+	@property
 	def __constr_string(self):
 		""" TODO: docstring """
 		out = ''
@@ -319,14 +326,24 @@ class Structure(object):
 		out += '\n'
 		return out
 
+	def summary(self, percentiles = [2, 25, 75, 98]):
+		s = {}
+		s['mean'] = self.mean_dose
+		s['min'] = self.min_dose
+		s['max'] = self.max_dose
+		for p in percentiles:
+			s['D' + str(p)] = self.dvh.dose_at_percentile(p)
+		return s
 
+	@property
 	def __summary_string(self):
-		summary = self.get_dose_summary(percentiles = [2, 25, 75, 98], stdev = True)
-		hdr = 'mean | stdev | min  | max  | D98  | D75  | D25  | D2   '
-		vals = str('{:0.2f} | {:0.2f} | {:0.2f} | {:0.2f} '
-			'| {:0.2f} | {:0.2f} | {:0.2f} | {:0.2f}'.format(
-			summary['mean'], summary['stdev'], summary['min'], summary['max'],
+		summary = self.summary()
+		hdr = 'mean | min  | max  | D98  | D75  | D25  | D2   \n'
+		vals = str('{:0.2f} | {:0.2f} | {:0.2f} '
+			'| {:0.2f} | {:0.2f} | {:0.2f} | {:0.2f}\n'.format(
+			summary['mean'], summary['min'], summary['max'],
 			summary['D98'], summary['D75'], summary['D25'], summary['D2']))
+		return hdr + vals
 
 	@property
 	def objective_string(self):

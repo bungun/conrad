@@ -2,7 +2,7 @@ from cvxpy import *
 from numpy import inf, array, squeeze, ones, copy as np_copy
 from conrad.dvh import DVHCurve, DoseConstraint
 from conrad.dose import Constraint, PercentileConstraint, MinConstraint, MaxConstraint, MeanConstraint
-from warning import warn 
+from warnings import warn 
 
 GAMMA_DEFAULT = 1e-2
 RELTOL_DEFAULT = 1e-3
@@ -24,7 +24,7 @@ TODO: problem.py docstring
 """
 
 class Solver(object):
-	def __init__(Self):
+	def __init__(self):
 		self.use_2pass = False
 		self.use_slack = True
 		self.__x = None
@@ -78,7 +78,7 @@ class SolverCVXPY(Solver):
 
 	def __init__(self):
 		""" TODO: docstring """
-		Solver.init(self)
+		Solver.__init__(self)
 		self.objective = None
 		self.constraints = None
 		self.problem = None
@@ -94,9 +94,7 @@ class SolverCVXPY(Solver):
 		self.dvh_vars = {}
 		self.slack_vars = {}
 		self.problem = Problem(self.objective, self.constraints)
-		if 'gamma' in kwargs:
-			self.gamma = kwargs['gamma']
-
+		self.gamma = options.pop('gamma', GAMMA_DEFAULT)
 
 	def clear(self):
 		""" TODO: docstring """
@@ -110,7 +108,7 @@ class SolverCVXPY(Solver):
 		b = structure.dose
 		x = self.__x
 		if structure.is_target:
-			c, d = get_cd_from_wts(structure.w_over, structure.w_under)
+			c, d = self.get_cd_from_wts(structure.w_over, structure.w_under)
 			self.problem.objective += Minimize(c * sum_entries(abs(A * x - b)) + d * sum_entries((A * x - b)))
 		else:
 			if structure.collapsable: A = structure.A_mean
@@ -130,14 +128,11 @@ class SolverCVXPY(Solver):
 				'Provided: {}'.format(type(constr)))
 
 		sign = 1 if constr.upper else -1
-		fraction = constr.fraction if constr.upper else 1. - constr.fraction
+		fraction = constr.percentile / 100. if constr.upper else 1. - constr.percentile / 100.
 		p = fraction * A.shape[0]
-		b = constr.dose_requested
-
-		if slack is not Nonec:
-			return sum_entries(pos( beta + sign * (A * x - (b + sign * slack)) )) <= beta * p
-		else:
-			return sum_entries(pos( beta + sign * (A * x - b)) ) <= beta * p
+		b = constr.dose
+		if slack is None: slack = 0.
+		return sum_entries(pos( beta + sign * (A * x - (b + sign * slack)) )) <= beta * p
 
 	@staticmethod
 	def __percentile_constraint_exact(A, x, y, constr, had_slack = False):
@@ -195,7 +190,7 @@ class SolverCVXPY(Solver):
 				if exact:
 					# build exact constraint
 					dvh_constr = self.__percentile_constraint_exact(
-						A, self.x, structure.y, 
+						A, self.__x, structure.y, 
 						c, had_slack = self.use_slack)
 
 					# add it to problem
@@ -209,7 +204,7 @@ class SolverCVXPY(Solver):
 
 					# build convex restriction to constraint
 					dvh_constr = self.__percentile_constraint_restriction(
-						structure.A, self.x, c, beta, slack)
+						structure.A, self.__x, c, beta, slack)
 
 					# add it to problem
 					self.problem.constraints += [ dvh_constr ] 
@@ -219,7 +214,8 @@ class SolverCVXPY(Solver):
 		return self.slack_vars[constr_id].value if constr_id in self.slack_vars else None
 
 	def get_dvh_slope(self, constr_id):
-		return 1. / self.dvh_vars[constr_id].value if constr_id in self.dvh_vars else None
+		beta = self.dvh_vars[constr_id].value if constr_id in self.dvh_vars else None
+		return 1. / beta if beta is not None else None
 
 	@property
 	def x(self):
@@ -250,7 +246,7 @@ class SolverCVXPY(Solver):
 		# TODO: get solver iters
 		return 'n/a'
 
-	def solve(self, *options, **kwargs):
+	def solve(self, **options):
 		""" TODO: docstring """
 
 		# set verbosity level
@@ -259,8 +255,8 @@ class SolverCVXPY(Solver):
 		
 		# solver options
 		solver = options.pop('solver', ECOS)
-		reltol = kwargs['reltol'] if 'reltol' in kwargs else RELTOL_DEFAULT
-		maxiter = kwargs['maxiter'] if 'maxiter' in kwargs else MAXITER_DEFAULT
+		reltol = options.pop('reltol', RELTOL_DEFAULT)
+		maxiter = options.pop('maxiter', MAXITER_DEFAULT)
 
 		# solve
 		PRINT("running solver...")
@@ -302,10 +298,10 @@ class PlanningProblem(object):
 
 	def __update_dvh_constraint(self, structure):
 		""" TODO: docstring """
-		for cid in structure.dose_constraints:
+		for cid in structure.constraints:
 			slack_var = self.solver.slack_vars[cid]
 			slack = 0 if slack_var is None else slack_var.value
-			structure.dose_constraints[cid].slack = slack
+			structure.constraints[cid].slack = slack
 
 	def __update_structure(self, structure, exact = False):
 		""" TODO: docstring """
@@ -327,8 +323,8 @@ class PlanningProblem(object):
 
 	def __gather_dvh_slopes(self, run_output, structure_dict):
 		# recover dvh constraint slope variables
-		for t in structure_dict.itervalues():
-			for cid in s.dose_constraints.keys():
+		for s in structure_dict.itervalues():
+			for cid in s.constraints:
 				run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(cid)
 
 
@@ -344,15 +340,15 @@ class PlanningProblem(object):
 
 		# initialize problem with size and options
 		# ----------------------------------------
-		self.use_slack = options.pop('dvh_no_slack', True)
-		self.use_2pass = options.pop('dvh_2pass', False)
+		self.use_slack = options.pop('dvh_slack', True)
+		self.use_2pass = options.pop('dvh_exact', False)
 		self.solver.init_problem(n_beams, **options)
 
 		# add terms and constraints
 		# -------------------------
 		for s in structure_dict.itervalues():
 			self.solver.add_term(s)
-			self.solver.add_dvh_constraints(s)
+			self.solver.add_constraints(s)
 
 		# solve
 		# -----

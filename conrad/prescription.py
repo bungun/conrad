@@ -1,5 +1,5 @@
 from conrad.structure import Structure
-from conrad.dose import D
+from conrad.dose import D, ConstraintList
 from os import path
 import json, yaml
 from traceback import format_exc
@@ -350,8 +350,9 @@ class Prescription(object):
 				self.constraint_dict[label] = ConstraintList()
 
 				if item['constraints'] is not None:
-					[self.constraint_dict[label] += string2constraint(s) for s in item['constraints']]
-
+					for string in item['constraints']:
+						print string2constraint(string)
+						self.constraint_dict[label] += string2constraint(string)
 
 			self.rx_list = rx_list
 
@@ -407,6 +408,3 @@ def report_string(self, structures):
 				str(item['constraint']),
 				item['status'], 
 				item['dose_achieved'])
-
-
-

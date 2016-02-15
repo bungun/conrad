@@ -3,7 +3,7 @@ from conrad.problem import PlanningProblem
 from conrad.history import RunRecord, PlanningHistory
 from operator import add 
 from numpy import ndarray, array, squeeze, zeros
-from warning import warn
+from warnings import warn
 
 """
 TODO: case.py docstring
@@ -37,7 +37,7 @@ class Case(object):
 		# dose matrix
 		self.A = A
 
-		if not (A.shape[0] = len(voxel_labels)):
+		if not (A.shape[0] == len(voxel_labels)):
 			ValueError('length of vector argument "voxel_labels" '
 				'must match number of rows in matrix argument "A"')
 
@@ -52,7 +52,7 @@ class Case(object):
 
 
 		# planning history
-		self.history = PlanningHistory(self.structures)
+		self.history = PlanningHistory()
 
 	def __build_structures(self):
 		"""TODO: docstring
@@ -104,8 +104,7 @@ class Case(object):
 		""" TODO: docstring """
 		constraint_dict = self.prescription.constraints_by_label
 		for label, constr_list in constraint_dict.iteritems():
-			for constr in constr_list:
-				self.structures[label].constraints += constr
+			self.structures[label].constraints += constr_list
 
 	def drop_all_but_rx_constraints(self):
 		""" TODO: docstring """
@@ -124,14 +123,13 @@ class Case(object):
 	def plan(self, **options):
 		""" TODO: docstring """
 		# use 2 pass OFF by default
-		pass = options['dvh_2pass'] = options.pop('dvh_2pass', False)
+		use_2pass = options['dvh_exact'] = options.pop('dvh_exact', False)
 
 		# dvh slack ON by default
-		use_slack = ['dvh_no_slack'] if 'dvh_no_slack' in kwargs else False
+		use_slack = options['dvh_slack'] = options.pop('dvh_slack', False)
 
 		# objective weight for slack minimization
-		gamma = kwargs['dvh_wt_slack'] if 'dvh_wt_slack' in kwargs else None
-		if gamma is not None: kwargs['gamma'] = gamma
+		gamma = options['gamma'] = options.pop('slack_penalty', None)
 
 		rr = RunRecord(self.structures, 
 			use_2pass = use_2pass, 
@@ -172,7 +170,10 @@ class Case(object):
 
 	@property
 	def x(self):
-		return self.history.last_x_exact or self.history.last_x
+		if self.history.last_x_exact is None:
+			return self.history.last_x
+		else:
+			return self.history.last_x_exact
 
 	@property
 	def x_pass1(self):
@@ -187,10 +188,10 @@ class Case(object):
 	def feasible(self):
 		return self.history.last_feasible
 
-	def dose_summary_data(self, percentiles = [2, 98], stdev = False):
+	def dose_summary_data(self, percentiles = [2, 98]):
 		d = {}
 		for label, s in self.structures.iteritems():
-			d[label] = s.get_dose_summary(percentiles = percentiles, stdev = stdev)
+			d[label] = s.get_dose_summary(percentiles = percentiles)
 		return d
 
 	@property

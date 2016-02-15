@@ -1,4 +1,4 @@
-from warning import warn
+from warnings import warn
 
 # TODO: unit test
 """
@@ -40,7 +40,7 @@ class RunProfile(object):
 	def pull_constraints(self, structures):
 		""" TODO: docstring """
 		for label, s in structures.iteritems():
-			for cid, dc in s.dose_constraints.iteritems():
+			for cid, dc in s.constraints.iteritems():
 				self.constraints[cid] = {'label' : label,
 				'constraint_id' : cid, 'constraint' : str(dc) }
 
@@ -87,34 +87,36 @@ class PlanningHistory(object):
 
 	def __iadd__(self, other):
 		if isinstance(other, RunRecord):
-			self.runs[runcount] = other
+			self.runs.append(other)
+			return self
 		else:
 			TypeError('operator += only defined for '
 				'rvalues of type conrad.RunRecord')
 
+
 	@property
 	def last_feasible(self):
-		if len(self.runs == 0): return False
+		if len(self.runs) == 0: return False
 		return self.runs[-1].output.feasible
 
 	@property
 	def last_info(self):
-		if len(self.runs == 0): return None
+		if len(self.runs) == 0: return None
 		return self.runs[-1].output.solver_info
 
 	@property
 	def last_x(self):
-		if len(self.runs == 0): return None
+		if len(self.runs) == 0: return None
 		return self.runs[-1].output.x
 
 
 	@property
 	def last_x_exact(self):
-		if len(self.runs == 0): return None
+		if len(self.runs) == 0: return None
 		return self.runs[-1].output.x_exact
 
 	def tag_last(self, tag):
-		if len(slef.runs == 0):
+		if len(self.runs) == 0:
 			warn(Warning('no runs to tag'))
 			return
 		self.run_tags[tag] = len(self.runs) - 1

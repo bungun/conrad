@@ -1,7 +1,7 @@
 from time import time
 from hashlib import sha1
-from warnings import warn 
-from numpy import zeros 
+from warnings import warn
+from numpy import zeros, linspace
 
 class Constraint(object):
 	def __init__(self):
@@ -131,7 +131,7 @@ class PercentileConstraint(Constraint):
 
 	@property
 	def percentile(self):
-		return self.__threshold
+		return self.threshold
 
 	@percentile.setter
 	def percentile(self, percentile):
@@ -195,7 +195,6 @@ class MeanConstraint(Constraint):
 			'dose' :[self.dose, self.dose_achieved], 
 			'symbol' : self.direction}
 
-
 class MinConstraint(Constraint):
 	def __init__(self, direction = None, dose = None):
 		Constraint.__init__(self)
@@ -237,7 +236,7 @@ def D(threshold, direction = None, dose = None):
 class ConstraintList(object):
 	def __init__(self):
 		self.items = {}
-		self.last_key = None 
+		self.last_key = None
 
 	@staticmethod
 	def __keygen(constraint):
@@ -266,25 +265,26 @@ class ConstraintList(object):
 			key = self.__keygen(other)
 			self.items[key] =  other
 			self.last_key = key
-
+			return self
 		elif isinstance(other, ConstraintList):
 			for constr in other.items.itervalues():
 				self += constr
-
+			return self
 		else:
 			TypeError('argument must be of '
-				'type conrad.Dose.Constraint or '
-				'type conrad.Dose.ConstraintList')
+				'type {} or {}'.format(
+					Constraint, ConstraintList))
 
 	def __isub__(self, other):
 		if isinstance(other, Constraint):
 			for key, constr in self.items.iteritems():
 				if other == constr:
 					del self.items[key] 
-					return 
+					return self
 		else:
 			if other in self.items:
 				del self.items[other]
+				return self
 
 	@property
 	def size(self):
@@ -292,10 +292,12 @@ class ConstraintList(object):
 	
 	@property
 	def mean_only(self):
+		meantest = lambda c : isinstance(c, MeanConstraint)
+
 		if self.size == 0:
 			return True
 		else:
-			return all([isinstance(c, MeanConstrant) for c in self.items.itervalues()])
+			return all(map(meantest, self.itervalues()))
 
 	def clear(self):
 		self.items = {}
@@ -320,9 +322,8 @@ class DVH(object):
 	def __init__(self, n_voxels, maxlength = MAX_LENGTH):
 		""" TODO: docstring """
 		self.__dose_buffer = zeros(n_voxels)
-		self.__stride = 1 * (n_voxels <= maxlength) +
-			n_voxels / maxlength
-		length = len(self.__dose_buffer[::stride]) + 1
+		self.__stride = 1 * (n_voxels <= maxlength) + n_voxels / maxlength
+		length = len(self.__dose_buffer[::self.__stride]) + 1
 		self.__doses = zeros(length)
 		self.__percentiles = zeros(length)
 		self.__percentiles[1:] = linspace(100, 0, length - 1)
@@ -341,7 +342,7 @@ class DVH(object):
 
 		self.__dose_buffer[:] = y[:]
 		self.__dose_buffer.sort()
-		self.__doses[1:] = self.__dose_buffer[::stride]
+		self.__doses[1:] = self.__dose_buffer[::self.__stride]
 		self.__DATA_SET__ = True
 
 	@staticmethod
@@ -354,25 +355,25 @@ class DVH(object):
 
 	def dose_at_percentile(self, percentile):
 		""" TODO: docstring """
-		if self.doses is None: return nan
+		if self.__doses is None: return nan
 
-		if percentile == 100: return self.mindose
-		if percentile == 0: return self.maxdose
+		if percentile == 100: return self.min_dose
+		if percentile == 0: return self.max_dose
 
 		# bisection retrieval of dose @ percentile
- 		u = len(self.percentiles) - 1
+ 		u = len(self.__percentiles) - 1
 		l = 1
 		i = l + (u - l) / 2
 
 		# set tolerance based on bucket width
-		tol = (self.percentiles[-2] - self.percentiles[-1]) / 2
+		tol = (self.__percentiles[-2] - self.__percentiles[-1]) / 2
 
 		# get to within 0.5 of a percentile if possible
 		abstol = 0.5
 
 		while (u - l > 5):
 			# percentile sorted descending
-			if self.percentiles[i] > percentile:
+			if self.__percentiles[i] > percentile:
 				l = i				
 			else:
 				u = i
@@ -381,40 +382,34 @@ class DVH(object):
 		# break to iterative search
 		idx = None
 		for i in xrange(l, u):
-			if abs(self.percentiles[i] - percentile) < tol:
+			if abs(self.__percentiles[i] - percentile) < tol:
 				idx = i
 				break
 
 		if idx is None: idx = u
-		if tol <= abstol or abs(self.percentiles[idx] - percentile) <= abstol:
+		if tol <= abstol or abs(self.__percentiles[idx] - percentile) <= abstol:
 			# return dose if available percentile bucket is close enough
-			return self.doses[idx]
+			return self.__doses[idx]
 		else:
 			# interpolate dose by interpolating percentiles if not close enough
-			alpha = self.__interpolate_percentile(self.percentiles[i], 
-				self.percentiles[i + 1], percentile)
-			return alpha * self.doses[i] + (1 - alpha) * self.doses[i + 1]
+			alpha = self.__interpolate_percentile(self.__percentiles[i], 
+				self.__percentiles[i + 1], percentile)
+			return alpha * self.__doses[i] + (1 - alpha) * self.__doses[i + 1]
 
 	@property
-	def mindose(self):
+	def min_dose(self):
 		""" TODO: docstring """
-		if self.doses is None: return nan
-		return self.doses[1]
+		if self.__doses is None: return nan
+		return self.__doses[1]
 
 	@property
-	def maxdose(self):
+	def max_dose(self):
 		""" TODO: docstring """
-		if self.doses is None: return nan
-		return self.doses[-1]
-
-	@property
-	def stdev(self):
-		""" TODO: docstring """
-		if self.doses is None: return nan
-		return stdev(self.doses[1:])
+		if self.__doses is None: return nan
+		return self.__doses[-1]
 	
 
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
-		return {'percentile' : self.percentiles, 'dose' : self.doses}
+		return {'percentile' : self.__percentiles, 'dose' : self.__doses}
