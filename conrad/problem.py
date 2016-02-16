@@ -1,6 +1,6 @@
 from cvxpy import *
 from numpy import inf, array, squeeze, ones, copy as np_copy
-from conrad.dvh import DVHCurve, DoseConstraint, DoseMeanConstraint
+from conrad.dvh import DVHCurve, DosePctileConstraint, DoseMeanConstraint
 
 GAMMA_DEFAULT = 1e-2
 RELTOL_DEFAULT = 1e-3
@@ -79,9 +79,9 @@ class SolverCVXPY(object):
 			lower constraint: \sum (beta - (Ax - (b - slack)))_+ <= beta * vox_limit
 
 		"""
-		if not isinstance(constr, DoseConstraint):
+		if not isinstance(constr, DosePctileConstraint):
 			TypeError("parameter constr must be of type "
-				"conrad.DoseConstraint. Provided: {}".format(type(constr)))
+				"conrad.DosePctileConstraint. Provided: {}".format(type(constr)))
 
 		sign = 1 if constr.upper else -1
 		fraction = constr.fraction if constr.upper else 1. - constr.fraction
@@ -96,9 +96,9 @@ class SolverCVXPY(object):
 	@staticmethod
 	def __dvh_constraint_exact(A, x, y, constr, had_slack = False):
 		""" TODO: docstring """
-		if not isinstance(constr, DoseConstraint):
+		if not isinstance(constr, DosePctileConstraint):
 			TypeError("parameter constr must be of type "
-				"conrad.DoseConstraint. Provided: {}".format(type(constr)))
+				"conrad.DosePctileConstraint. Provided: {}".format(type(constr)))
 
 		sign = 1 if constr.upper else -1
 		if had_slack and constr.dose_actual is not None:
@@ -294,7 +294,7 @@ class PlanningProblem(object):
 		# recover dvh constraint slope variables
 		for st in structure_dict.itervalues():
 			for cid in st.dose_constraints.keys():
-				if isinstance(st.dose_constraints[cid], DoseConstraint):
+				if isinstance(st.dose_constraints[cid], DosePctileConstraint):
 					run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(cid)
 
 

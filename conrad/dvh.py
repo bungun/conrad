@@ -1,3 +1,4 @@
+import abc
 import numpy as np
 from numpy import copy as np_copy, sort as np_sort, \
 	linspace, insert, std as stdev, zeros, nan
@@ -60,16 +61,16 @@ class DosePercent(object):
 		self.fraction = percent / 100.
 	
 	def __lt__(self, other):
-		return DoseConstraint(other, self.fraction, '<')
+		return DosePctileConstraint(other, self.fraction, '<')
 	
 	def __le__(self, other):
-		return DoseConstraint(other, self.fraction, '<')
+		return DosePctileConstraint(other, self.fraction, '<')
 	
 	def __gt__(self, other):
-		return DoseConstraint(other, self.fraction, '>')
+		return DosePctileConstraint(other, self.fraction, '>')
 	
 	def __ge__(self, other):
-		return DoseConstraint(other, self.fraction, '>')
+		return DosePctileConstraint(other, self.fraction, '>')
 
 class DoseMean(object):
 	""" TODO: docstring """
@@ -85,8 +86,47 @@ class DoseMean(object):
 	
 	def __ge__(self, other):
 		return DoseMeanConstraint(other, '>')
-
+		
 class DoseConstraint(object):
+	
+	__metaclass__ = abc.ABCMeta
+	
+	def __init__(self, dose, direction):
+		""" TODO: docstring """
+		self.change(dose, direction)
+	
+	def change(self, dose, direction):
+		if dose < 0:
+			raise ValueError("dose %f must be non-negative" % (dose))
+		if direction not in ['<', '>']:
+			raise ValueError("direction must be either '<' or '>'")
+		self.dose_requested = dose
+		self.direction = direction
+		self.dose_actual = None
+	
+	def set_actual_dose(self, slack):
+		""" TODO: docstring """
+		if slack is None:
+			self.dose_actual = self.dose_requested
+			return
+
+		if self.direction == '<':
+			self.dose_actual = self.dose_requested + slack
+		else:
+			self.dose_actual = self.dose_requested - slack
+	
+	@property
+	def upper(self):
+		""" TODO: docstring """
+		return self.direction == '<'
+	
+	@property
+	def plotting_data(self):
+		""" TODO: docstring """
+		return {'dose': [self.dose_requested, self.dose_actual],
+				'symbol': self.direction}
+
+class DosePctileConstraint(DoseConstraint):
 	"""
 		Dose constraint is specified as a tuple:
 		(dose, fraction, direction)
@@ -126,38 +166,15 @@ class DoseConstraint(object):
 		""" TODO: docstring """
 		if fraction < 0. or fraction > 1.:
 			raise ValueError("fraction %f must be in [0,1]" % (fraction))
-		if dose < 0:
-			raise ValueError("dose %f must be non-negative" % (dose))
-		if direction not in ['<', '>']:
-			raise ValueError("direction must be either '<' or '>'")
-		self.dose_requested = dose
 		self.fraction = fraction
-		self.direction = direction
-		self.dose_actual = None
-
-
-	def set_actual_dose(self, slack):
-		""" TODO: docstring """
-		if slack is None:
-			self.dose_actual = self.dose_requested
-			return
-
-		if self.direction == '<':
-			self.dose_actual = self.dose_requested + slack
-		else:
-			self.dose_actual = self.dose_requested - slack
-
-	@property
-	def upper(self):
-		""" TODO: docstring """
-		return self.direction == '<'
+		super(DosePctileConstraint, self).change(dose, direction)
 
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
 		return {'percentile' : 2 * [100 * self.fraction], 
-			'dose' :[self.dose_requested, self.dose_actual], 
-			'symbol' : self.direction, 'type': 'percentile'}
+				'dose' :[self.dose_requested, self.dose_actual], 
+				'symbol' : self.direction, 'type': 'percentile'}
 
 	def get_maxmargin_fulfillers(self, y, had_slack = False):
 		""" 
@@ -203,7 +220,7 @@ class DoseConstraint(object):
 			self.direction, 
 			self.dose_requested)
 
-class DoseMeanConstraint(object):
+class DoseMeanConstraint(DoseConstraint):
 	"""
 		Dose mean constraint is specified as a tuple:
 		(dose, direction)
@@ -224,41 +241,11 @@ class DoseMeanConstraint(object):
 	
 	"""
 	
-	def __init__(self, dose, direction):
-		""" TODO: docstring """
-		self.change(dose, direction)
-
-	def change(self, dose, direction):
-		""" TODO: docstring """
-		if dose < 0:
-			raise ValueError("dose %f must be non-negative" % (dose))
-		if direction not in ['<', '>']:
-			raise ValueError("direction must be either '<' or '>'")
-		self.dose_requested = dose
-		self.direction = direction
-		self.dose_actual = None
-
-	def set_actual_dose(self, slack):
-		""" TODO: docstring """
-		if slack is None:
-			self.dose_actual = self.dose_requested
-			return
-
-		if self.direction == '<':
-			self.dose_actual = self.dose_requested + slack
-		else:
-			self.dose_actual = self.dose_requested - slack
-	
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
 		return {'dose' :[self.dose_requested, self.dose_actual], 
 				'symbol' : self.direction, 'type': 'mean'}
-
-	@property
-	def upper(self):
-		""" TODO: docstring """
-		return self.direction == '<'
 	
 	def __str__(self):
 		return 'Mean Dose {}= {}Gy\n'.format(

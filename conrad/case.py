@@ -1,4 +1,4 @@
-from conrad.dvh import DoseConstraint, tuple_to_canonical_string
+from conrad.dvh import DosePctileConstraint, tuple_to_canonical_string
 from conrad.structure import Structure
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
@@ -171,7 +171,7 @@ class Case(object):
 			for constr in constr_list:
 				# TODO: Modify prescription object to support mean dose digest
 				# self.add_dvh_constraint(label, *constr)
-				self.add_dvh_constraint(label, DoseConstraint(*constr))
+				self.add_dvh_constraint(label, DosePctileConstraint(*constr))
 
 	def drop_all_but_rx_constraints(self):
 		""" TODO: docstring """

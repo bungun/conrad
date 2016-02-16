@@ -156,13 +156,13 @@ class Structure(object):
 
 	def set_constraint(self, constr_id, constr):
 		if self.has_constraint(constr_id):
-			if isinstance(constr, DoseConstraint):
+			if isinstance(constr, DosePctileConstraint):
 				self.dose_constraints[constr_id].change(constr.dose, constr.fraction, constr.direction)
 			elif isinstance(constr, DoseMeanConstraint):
 				self.dose_constraints[constr_id].change(constr.dose, constr.direction)
 			else:
 				raise TypeError("parameter constr must be of type "
-					"conrad.DoseConstraint or conrad.DoseMeanConstraint. Provided: {}".format(type(constr)))
+					"conrad.DoseConstraint. Provided: {}".format(type(constr)))
 
 	@property
 	def w_under(self):

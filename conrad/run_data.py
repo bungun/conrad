@@ -1,4 +1,4 @@
-from conrad.dvh import DoseConstraint
+from conrad.dvh import DosePctileConstraint
 
 """
 TODO: run_data.py docstring
@@ -43,7 +43,7 @@ class RunProfile(object):
 				self.constraints[cid] = {'label' : label,
 				'constraint_id' : cid, 'dose' : dc.dose_requested,
 				'direction' : dc.direction }
-				if isinstance(dc, DoseConstraint):
+				if isinstance(dc, DosePctileConstraint):
 					self.constraints[cid]['percentile'] = 100 * dc.fraction
 
 	def push_objectives(self, structures):
