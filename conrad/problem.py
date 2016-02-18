@@ -10,9 +10,9 @@ ABSTOL_DEFAULT = 1e-4
 VERBOSE_DEFAULT = 1
 MAXITER_DEFAULT = 2000
 
-PRIORTITY_1 = 9
-PRIORTITY_2 = 4
-PRIORTITY_3 = 1
+PRIORITY_1 = 9
+PRIORITY_2 = 4
+PRIORITY_3 = 1
 
 
 def println(*msg):
@@ -28,11 +28,19 @@ class Solver(object):
 		self.use_2pass = False
 		self.use_slack = True
 		self.__x = None
-		self.gamma = GAMMA_DEFAULT
+		self.__gamma = GAMMA_DEFAULT
 		self.dvh_vars = {}
 		self.slack_vars = {}
 		self.dvh_indices = {}
 		self.feasible = False
+
+	@property
+	def gamma(self):
+		return self.__gamma
+
+	@gamma.setter
+	def gamma(self, gamma):
+		self.__gamma = gamma if gamma is not None else GAMMA_DEFAULT
 
 	@staticmethod
 	def get_cd_from_wts(wt_over, wt_under):
@@ -42,14 +50,13 @@ class Solver(object):
 		d = (alpha + 1) / 2
 		return c, d
 
-	@staticmethod
-	def gamma_prioritized(priority):
-		if priorty == 1:
-			return gamma * PRIORTITY_1
-		elif priorty == 2:
-			return gamma * PRIORTITY_2
-		elif priorty == 3:
-			return gamma * PRIORTITY_1
+	def gamma_prioritized(self, priority):
+		if priority == 1:
+			return self.gamma * PRIORITY_1
+		elif priority == 2:
+			return self.gamma * PRIORITY_2
+		elif priority == 3:
+			return self.gamma * PRIORITY_1
 		else:
 			Exception('priority 0 constraints should '
 				'not have slack or associated slack penalties')
@@ -163,7 +170,7 @@ class SolverCVXPY(Solver):
 				slack = Variable(1)
 				self.slack_vars[cid] = slack
 				self.problem.objective += Minimize(gamma * slack)
-				self.problem.constraints += [s >= 0]
+				self.problem.constraints += [slack >= 0]
 			else:
 				slack = 0.
 				self.slack_vars[cid] = None

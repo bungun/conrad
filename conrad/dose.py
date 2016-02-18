@@ -45,7 +45,7 @@ class Constraint(object):
 
 	@property
 	def upper(self):
-		return self.__direction == __
+		return self.__direction == DIRECTIONS.LEQ
 
 	@property
 	def dose(self):
@@ -66,7 +66,8 @@ class Constraint(object):
 	@slack.setter
 	def slack(self, slack):
 		if isinstance(slack, (int, float)):
-			if slack ValueError('argument "slack" must be '
+			if slack < 0:
+				ValueError('argument "slack" must be '
 					'nonnegative by convention')
 			self.__slack = max(0., float(slack))
 		else:
@@ -95,6 +96,10 @@ class Constraint(object):
 		else:
 			TypeError('argument "priority" must be '
 				'an integer between 0 and 3')
+
+	@property
+	def symbol(self):
+		return self.__direction.replace('=', '')
 
 	def __le__(self, other):
 		self.direction = DIRECTIONS.LEQ
@@ -142,7 +147,7 @@ class PercentileConstraint(Constraint):
 		return {'type': 'percentile',
 			'percentile' : 2 * [self.percentile], 
 			'dose' :[self.dose, self.dose_achieved], 
-			'symbol' : self.direction}
+			'symbol' : self.symbol}
 
 	def get_maxmargin_fulfillers(self, y, had_slack = False):
 		""" 
@@ -190,7 +195,7 @@ class MeanConstraint(Constraint):
 	def plotting_data(self):
 		return {'type': 'mean',
 			'dose' :[self.dose, self.dose_achieved], 
-			'symbol' : self.direction}
+			'symbol' : self.symbol}
 
 class MinConstraint(Constraint):
 	def __init__(self, direction = None, dose = None):
@@ -203,7 +208,7 @@ class MinConstraint(Constraint):
 	def plotting_data(self):
 		return {'type': 'min',
 			'dose' :[self.dose, self.dose_achieved], 
-			'symbol' : self.direction}
+			'symbol' : self.symbol}
 
 class MaxConstraint(Constraint):
 	def __init__(self, direction = None, dose = None):
@@ -216,7 +221,7 @@ class MaxConstraint(Constraint):
 	def plotting_data(self):
 		return {'type': 'max',
 			'dose' :[self.dose, self.dose_achieved], 
-			'symbol' : self.direction}
+			'symbol' : self.symbol}
 
 def D(threshold, direction = None, dose = None):
 	if threshold in ('mean', 'Mean'):
