@@ -1,15 +1,21 @@
 from time import time
 from hashlib import sha1
-from warnings import warn
 from numpy import zeros, linspace
+
+class __ConstraintDirections(object):
+	GEQ = '>='
+	LEQ = '<='
+	INDEFINITE = '<>'
+
+DIRECTIONS = __ConstraintDirections()
 
 class Constraint(object):
 	def __init__(self):
 		self.__dose = 0.
 		self.__threshold = None
-		self.__direction = '<>'
+		self.__direction = DIRECTIONS.GEQ
 		self.__slack = 0.
-		self.__priority = 0
+		self.__priority = 1
 
 	
 	@property
@@ -27,27 +33,19 @@ class Constraint(object):
 	@direction.setter
 	def direction(self, direction):
 		if self.threshold == 'max' and '>' in direction:
-			self.__direction = '<'
-			warn(Warning('constraint of form "Dmax > x Gy" '
-				'not allowed, setting direction to "<"'))
-			return
-		if self.threshold == 'min' and '<' in direction:
-			self.__direction = '>'
-			warn(Warning('constraint of form "Dmin < x Gy" '
-				'not allowed, setting direction to ">"'))
-			return
-
+			raise Exception('constraint of form Dmax > x Gy '
+				'not allowed, please rephrase')
 		elif direction in ('<', '<='):
-			self.__direction = '<'
+			self.__direction = DIRECTIONS.LEQ
 		elif direction in ('>', '>='):
-			self.__direction = '>'
+			self.__direction = DIRECTIONS.GEQ
 		else:
 			ValueError('argument "direction" must be'
 				'one of ("<", "<=", ">", ">=")')
 
 	@property
 	def upper(self):
-		return self.__direction == '<'
+		return self.__direction == __
 
 	@property
 	def dose(self):
@@ -68,9 +66,8 @@ class Constraint(object):
 	@slack.setter
 	def slack(self, slack):
 		if isinstance(slack, (int, float)):
-			if slack < 0:
-				warn(Warning('argument "slack" must be '
-					'nonnegative; setting to zero'))
+			if slack ValueError('argument "slack" must be '
+					'nonnegative by convention')
 			self.__slack = max(0., float(slack))
 		else:
 			TypeError('argument "slack" must be '
@@ -90,17 +87,17 @@ class Constraint(object):
 		if isinstance(priority, (int, float)):
 			self.__priority = max(0, min(3, int(priority)))
 			if priority < 0:
-				warn(Warning('argument "priority" cannot be negative, '
-					'setting to 0'))
+				ValueError('argument "priority" cannot be negative. '
+					'allowed values: {0, 1, 2, 3}')
 			elif priority > 3:
-				warn(Warning('argument "priority" cannot be > 3, '
-					'setting to 3'))
+				ValueError('argument "priority" cannot be > 3. '
+					'allowed values: {0, 1, 2, 3}')
 		else:
 			TypeError('argument "priority" must be '
 				'an integer between 0 and 3')
 
 	def __le__(self, other):
-		self.direction = '<'
+		self.direction = DIRECTIONS.LEQ
 		self.dose = other
 		return self
 
@@ -108,7 +105,7 @@ class Constraint(object):
 		return self.__le__(other)
 
 	def __ge__(self, other):
-		self.direction = '>'
+		self.direction = DIRECTIONS.GEQ
 		self.dose = other
 		return self
 
@@ -116,7 +113,7 @@ class Constraint(object):
 		return self.__le__(other)
 
 	def __str__(self):
-		return str('D{} {}= {}Gy'.format(
+		return str('D{} {} {}Gy'.format(
 			str(self.__threshold),
 			str(self.__direction),
 			str(self.__dose)))

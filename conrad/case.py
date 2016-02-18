@@ -148,7 +148,7 @@ class Case(object):
 			self.calc_doses()
 			return True
 		else:
-			warn(Warning('Problem infeasible as formulated'))
+			warn('Problem infeasible as formulated')
 			return False
 
 	def calc_doses(self, x = None):
@@ -183,6 +183,23 @@ class Case(object):
 	def x_pass2(self):
 		return self.x
 
+
+	@property
+	def solvetime(self):
+		tm1 = self.solvetime_pass1
+		tm2 = self.solvetime_pass2
+		if tm1 is not None and tm2 is not None:
+			return tm1 + tm2
+		else:
+			return tm1
+
+	@property
+	def solvetime_pass1(self):
+		return self.history.last_solvetime
+
+	@property
+	def solvetime_pass2(self):
+		return self.history.last_solvetime_exact
 
 	@property
 	def feasible(self):
@@ -228,8 +245,9 @@ class Case(object):
 			if x.size == self.n_beams:
 				self.calc_doses(squeeze(x))
 			else:
-				warn(Warning('argument "x" must be a numpy.ndarray'
-					'of length {}, ignoring argument'.format(self.n_beams)))
+				raise 
+				warn('argument "x" must be a numpy.ndarray'
+					'of length {}, ignoring argument'.format(self.n_beams))
 		elif calc and firstpass:
 			self.calc_doses(self.x_pass1)
 		elif calc:

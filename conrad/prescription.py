@@ -27,6 +27,7 @@ YAML:
   dose : 
   constraints:
   - "D95 <= 20Gy"
+  - "V30 Gy <= 20%"
 
 
 
@@ -99,10 +100,11 @@ def string2constraint(string_constraint, rx_dose=None):
 		meaning: dose to __ percent of volume less than (greater than) x Gy
 	
 
-	- "x Gy to < p %"
-	- "x Gy to > p %"
+	- "V__ Gy < p %"
+	- "V__ Gy > p %"
 	
-		meaning: no more than (at least) x Gy to p percent of volume
+		variants: "V__", "v__", "__ to", "__ to"
+		meaning: no more than (at least) __ Gy to p percent of volume
 
 
 	relative dose constraints
@@ -154,17 +156,14 @@ def string2constraint(string_constraint, rx_dose=None):
 			"\n(input = {})".format(string_constraint))
 	
 	if rdose:
-		tokens = ['mean', 'Mean', 'min', 'Min', 'max', 'Max', 'D', 'd']
+		tokens = ['mean', 'min', 'max', 'D']
 		if not any(map(lambda t : t in left, tokens)):
-			ValueError("If dose specified on right side "
-				"of inequality, left side must contain one "
-				" of the following strings: \n.\ninput={}".format(
+			ValueError('If dose specified on right side '
+				'of inequality, left side must contain one '
+				' of the following strings: \n.\ninput={}'.format(
 					tokens, string_constraint))
 
-	relative = 'v' in left 
-	relative |= 'V' in left
-	relative |= 'd' in left and 'rx' in right
-	relative |= 'D' in left and 'rx' in right
+	relative = not rdose and not ldose 
 	relative &= rx_dose is not None
 
 	if relative and (rdose or ldose):
@@ -193,10 +192,7 @@ def string2constraint(string_constraint, rx_dose=None):
 			# constraint in form "{LHS} <> {x} Gy"
 			#
 			# conversion to canonical form:
-			# -if LHS == "D__" : (none required).
-			# -if LHS == "min", "mean", "max" : 
-			#	convert to D0, D50, D100, respectively.
-			# (inequality direction preserved)
+			#  (none required)
 			#-----------------------------------------------------#
 
 			# parse dose
@@ -219,11 +215,11 @@ def string2constraint(string_constraint, rx_dose=None):
 			# (inequality direction preserved, nothing to do)
 
 		# cases: 
-		# - "x Gy to < p %"
-		# - "x Gy to > p %"
+		# - "V__ Gy < p %" ( == "x Gy to < p %")
+		# - "V__ Gy > p %" ( == "x Gy to > p %")
 		elif ldose:
 			#-----------------------------------------------------#
-			# constraint in form "{x} Gy <> {p} %"
+			# constraint in form "V{x} Gy <> {p} %"
 			#
 			# conversion to canonical form:
 			# {x} Gy < {p} % ---> D{p} > {x} Gy
@@ -232,6 +228,7 @@ def string2constraint(string_constraint, rx_dose=None):
 			#-----------------------------------------------------#
 
 			# parse dose
+			left = left.replace('to', '').replace('v', '').replace('V', '')
 			if 'cGy' in left:
 				dose = float(left.replace('cGy', '')) / 100.
 			else:

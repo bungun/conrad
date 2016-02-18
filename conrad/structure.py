@@ -2,7 +2,6 @@ from numpy import ndarray, array, squeeze, zeros, nan
 from scipy.sparse import csr_matrix, csc_matrix
 from conrad.dose import Constraint, MeanConstraint, ConstraintList, DVH
 from conrad.defs import CONRAD_DEBUG_PRINT
-from warnings import warn
 
 """
 TODO: structure.py docstring
@@ -77,7 +76,7 @@ class Structure(object):
 
 	@property
 	def collapsable(self):
-		return self.constraints.mean_only
+		return self.constraints.mean_only and not self.is_target
 
 	@property
 	def A_full(self):
@@ -176,8 +175,8 @@ class Structure(object):
 		if isinstance(dose, (int, float)):
 			self.__boost = max(0., float(dose)) / self.__dose
 			if dose < 0:
-				warn(Warning('provided dose < 0, '
-					'setting to 0'))
+				ValueError('negative doses are unphysical and '
+					'not allowed in dose constraints')
 		else:
 			TypeError('argument "weight" must be a float '
 				'with value >= 0')
@@ -199,8 +198,7 @@ class Structure(object):
 		if isinstance(weight, (int, float)):
 			self.__w_under = max(0., float(weight))
 			if weight < 0:
-				warn(Warning('provided weight < 0, '
-					'setting to 0'))
+				ValueError('negative objective weights not allowed')
 		else:
 			TypeError('argument "weight" must be a float '
 				'with value >= 0')
@@ -222,8 +220,7 @@ class Structure(object):
 		if isinstance(weight, (int, float)):
 			self.__w_over = max(0., float(weight))
 			if weight < 0:
-				warn(Warning('provided weight < 0, '
-					'setting to 0'))
+				ValueError('negative objective weights not allowed')
 		else:
 			TypeError('argument "weight" must be a float '
 				'with value >= 0')

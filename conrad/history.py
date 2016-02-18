@@ -65,6 +65,14 @@ class RunOutput(object):
 	def x_exact(self):
 		return self.optimal_variables['x_exact']
 
+	@property
+	def solvetime(self):
+		return self.optimal_variables.pop('time', None)
+
+	@property
+	def solvetime_exact(self):
+		return self.optimal_variables.pop('time_exact', None)
+
 
 class RunRecord(object):
 	""" TODO: docstring """
@@ -96,36 +104,58 @@ class PlanningHistory(object):
 
 	@property
 	def last_feasible(self):
-		if len(self.runs) == 0: return False
+		if len(self.runs) == 0:
+			raise Exception('no optimization runs performed, '
+				'cannot retrieve solver feasibility for most recent run')
 		return self.runs[-1].output.feasible
 
 	@property
 	def last_info(self):
-		if len(self.runs) == 0: return None
+		if len(self.runs) == 0:
+			raise Exception('no optimization runs performed, '
+				'cannot retrieve solver feasibility for most recent run')
 		return self.runs[-1].output.solver_info
 
 	@property
 	def last_x(self):
-		if len(self.runs) == 0: return None
+		if len(self.runs) == 0:
+			raise Exception('no optimization runs performed, '
+				'cannot retrieve beam intensities for most recent run')
 		return self.runs[-1].output.x
-
 
 	@property
 	def last_x_exact(self):
-		if len(self.runs) == 0: return None
+		if len(self.runs) == 0:
+			raise Exception('no optimization runs performed, '
+				'cannot retrieve beam intensities for most recent run')
 		return self.runs[-1].output.x_exact
+
+	@property
+	def last_solvetime(self):
+		if len(self.runs) == 0:
+			raise Exception('no optimization runs performed, '
+				'cannot retrieve solve time for most recent run')
+		return self.runs[-1].output.solvetime
+
+	@property
+	def last_solvetime_exact(self):
+		if len(self.runs) == 0:
+			raise Exception('no optimization runs performed, '
+				'cannot retrieve solve time for most recent run')
+		return self.runs[-1].output.solvetime_exact
+
 
 	def tag_last(self, tag):
 		if len(self.runs) == 0:
-			warn(Warning('no runs to tag'))
-			return
+			raise Exception('no optimization runs performed, '
+				'cannot apply tag "{}"" to most recent run'.format(tag))
 		self.run_tags[tag] = len(self.runs) - 1
 
 		
 	def __getitem__(self, runID = None):
 		if len(self.runs) == 0:
-			warn(Warning('no runs exist in history, returning "None"'))
-			return None
+			raise Exception('no optimization runs performed, '
+				'cannot return a {} object'.format(RunRecord))
 		if runID in self.run_tags:
 			return self.runs[self.run_tags[runID]]
 		elif runID > 0 and runID <= self.run_count:
@@ -133,6 +163,5 @@ class PlanningHistory(object):
 		elif run is None or run > self.run_count:
 			return self.runs[-1]
 		else:
-			warn(Warning('invalid run number / run tag used in request ',
-				'returning "None"'))
-			return None
+			ValueError('invalid run number / run tag used in request ',
+				'returning "None"')

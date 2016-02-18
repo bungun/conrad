@@ -2,7 +2,7 @@ from cvxpy import *
 from numpy import inf, array, squeeze, ones, copy as np_copy
 from conrad.dvh import DVHCurve, DoseConstraint
 from conrad.dose import Constraint, PercentileConstraint, MinConstraint, MaxConstraint, MeanConstraint
-from warnings import warn 
+from time import clock
 
 GAMMA_DEFAULT = 1e-2
 RELTOL_DEFAULT = 1e-3
@@ -51,9 +51,8 @@ class Solver(object):
 		elif priorty == 3:
 			return gamma * PRIORTITY_1
 		else:
-			warn(Warning('priority 0 constraints should '
-				'not have slack or associated slack penalties'))
-			return 0.
+			Exception('priority 0 constraints should '
+				'not have slack or associated slack penalties')
 
 	def init_problem(self, n_beams, **options):
 		pass
@@ -277,8 +276,8 @@ class SolverCVXPY(Solver):
 				eps = reltol,
 				use_indirect=False)
 		else:
-			warn(Warning('invalid solver specified: {}\n'
-				'no optimization performed'.format(solver)))
+			Exception('invalid solver specified: {}\n'
+				'no optimization performed'.format(solver))
 			return False
 
 		PRINT("status: {}".format(self.problem.status))
@@ -352,7 +351,9 @@ class PlanningProblem(object):
 
 		# solve
 		# -----
+		start = clock()
 		run_output.feasible = self.solver.solve(**options)
+		runtime = clock() - start
 
 
 		# relay output to run_output object
@@ -360,6 +361,7 @@ class PlanningProblem(object):
 		self.__gather_solver_info(run_output)
 		self.__gather_solver_vars(run_output)
 		self.__gather_dvh_slopes(run_output, structure_dict)
+		run_output.solver_info['time'] = runtime
 
 		if not run_output.feasible:
 			return
@@ -380,9 +382,13 @@ class PlanningProblem(object):
 				self.solver.add_term(s)
 				self.solver.add_constraints(s, exact = True)
 
+			start = clock()
 			self.solver.solve(**options)
+			runtime = clock() - start
+
 			self.__gather_solver_info(run_output, exact = True)
 			self.__gather_solver_vars(run_output, exact = True)
+			run_output.solver_info['time_exact'] = runtime
 
 			for s in structure_dict.itervalues():
 				self.__update_structure(s, exact = True)
