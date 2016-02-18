@@ -179,14 +179,14 @@ class SolverCVXPY(Solver):
 			if isinstance(c, MeanConstraint):
 				if c.upper:
 					self.problem.constraints += \
-						[structure.A_mean * self.x - slack <= c.dose]
+						[structure.A_mean * self.__x - slack <= c.dose]
 				else:
 					self.problem.constraints += \
-						[structure.A_mean * self.x + slack >= c.dose]
+						[structure.A_mean * self.__x + slack >= c.dose]
 
 			elif isinstance(c, MinConstraint):
 				self.problem.constarints += \
-					[structure.A * self.x >= c.dose]
+					[structure.A * self.__x >= c.dose]
 
 			elif isinstance(c, MaxConstraint):
 				self.problem.constarints += \
