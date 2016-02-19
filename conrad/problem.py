@@ -1,6 +1,5 @@
 from cvxpy import *
 from numpy import inf, array, squeeze, ones, copy as np_copy
-from conrad.dvh import DVHCurve, DoseConstraint
 from conrad.dose import Constraint, PercentileConstraint, MinConstraint, MaxConstraint, MeanConstraint
 from time import clock
 

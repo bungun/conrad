@@ -105,7 +105,7 @@ class Structure(object):
 			self.__A_mean = self.A_full.sum(0) / self.A_full.shape[0]
 			if not isinstance(self.A_full, ndarray):
 				# (handling for sparse matrices)
-				squeeze(array(self.A_full)) 
+				self.__A_mean = squeeze(array(self.__A_mean)) 
 
 	@property
 	def A_clustered(self):
