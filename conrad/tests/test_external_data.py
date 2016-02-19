@@ -55,6 +55,7 @@ class TestExternalData(unittest.TestCase):
 
 	 	if cs.plan(solver = 'ECOS', verbose = 1):
 		 	p.plot(cs, show = False, file = 'json_test_plot.pdf')
+			print 'prescription report:\n', cs.prescription_report_string
 
 	 	print "complete"
 
@@ -68,5 +69,6 @@ class TestExternalData(unittest.TestCase):
 
 	 	if cs.plan(solver = 'ECOS', verbose = 1):
 		 	p.plot(cs, show = False, file = 'yaml_test_plot.pdf')
+		 	print 'prescription report:\n', cs.prescription_report_string
 
 	 	print "complete"

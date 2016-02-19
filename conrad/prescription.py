@@ -349,7 +349,6 @@ class Prescription(object):
 				if item['constraints'] is not None:
 					for string in item['constraints']:
 						self.constraint_dict[label] += string2constraint(string)
-
 			self.rx_list = rx_list
 
 		except:
@@ -385,7 +384,7 @@ class Prescription(object):
 		report = {}
 		for label, s in structures.iteritems():
 			sat = []
-			for constr in rx_constraints[label]:
+			for constr in rx_constraints[label].itervalues():
 				status, dose_achieved = s.satisfies(constr)
 				sat.append({'constraint': constr, 
 					'status': status, 'dose_achieved': dose_achieved})
@@ -403,3 +402,4 @@ class Prescription(object):
 					str(item['constraint']),
 					item['status'], 
 					item['dose_achieved'])
+		return out

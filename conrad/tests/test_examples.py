@@ -55,7 +55,6 @@ class TestExamples(unittest.TestCase):
 		cs.plan()
 		print 'solution found in {} seconds\n'.format(cs.solvetime)
 		print 'dose summary:\n', cs.dose_summary_string
-		print 'prescription report:\n', cs.prescription_report_string
 		print cs.x
 		print self.A.dot(cs.x)
 	

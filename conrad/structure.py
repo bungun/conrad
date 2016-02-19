@@ -263,7 +263,7 @@ class Structure(object):
 
 	def satisfies(self, constraint):
 		if not isinstance(constraint, Constraint):
-			TypeError('argument "constraint" must be of type '
+			raise TypeError('argument "constraint" must be of type '
 				'conrad.dose.Constraint')
 
 		dose = constraint.dose
