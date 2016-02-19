@@ -53,7 +53,9 @@ class TestExamples(unittest.TestCase):
 		cs.structures[self.lab_oar].constraints += D(50) < 0.30
 		cs.structures[self.lab_oar].constraints += D(10) < 0.55
 		cs.plan()
-		print cs.dose_summary_string
+		print 'solution found in {} seconds\n'.format(cs.solvetime)
+		print 'dose summary:\n', cs.dose_summary_string
+		print 'prescription report:\n', cs.prescription_report_string
 		print cs.x
 		print self.A.dot(cs.x)
 	

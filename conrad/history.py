@@ -67,11 +67,11 @@ class RunOutput(object):
 
 	@property
 	def solvetime(self):
-		return self.optimal_variables.pop('time', None)
+		return self.solver_info.pop('time', None)
 
 	@property
 	def solvetime_exact(self):
-		return self.optimal_variables.pop('time_exact', None)
+		return self.solver_info.pop('time_exact', None)
 
 
 class RunRecord(object):

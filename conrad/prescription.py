@@ -379,28 +379,27 @@ class Prescription(object):
 		""" TODO: docstring """
 		return str(self.rx_list)
 
-def report(self, structures):
-	"""TODO: docstring"""
-	rx_constraints = self.constraints_by_label
-	report = {}
-	for label, s in structures.iteritems():
-		sat = []
-		for constr in rx_constraints[label]:
-			status, dose_achieved = s.satisfies(constr)
-			sat.append({'constraint': constr, 
-				'status': status, 'dose_achieved': dose_achieved})
-		report[label] = sat
-	return report
+	def report(self, structures):
+		"""TODO: docstring"""
+		rx_constraints = self.constraints_by_label
+		report = {}
+		for label, s in structures.iteritems():
+			sat = []
+			for constr in rx_constraints[label]:
+				status, dose_achieved = s.satisfies(constr)
+				sat.append({'constraint': constr, 
+					'status': status, 'dose_achieved': dose_achieved})
+			report[label] = sat
+		return report
 
-@staticmethod
-def report_string(self, structures):
-	report = self.report(structures)
-	out = ''
-	for label, replist in report.iteritems():
-		sname = structures[label].name
-		sname = '' if sname is None else ' ({})\n'.format(sname)
-		for item in replist:
-			out += '{}\tachieved? {}\tdose at level: {}\n'.format(
-				str(item['constraint']),
-				item['status'], 
-				item['dose_achieved'])
+	def report_string(self, structures):
+		report = self.report(structures)
+		out = ''
+		for label, replist in report.iteritems():
+			sname = structures[label].name
+			sname = '' if sname is None else ' ({})\n'.format(sname)
+			for item in replist:
+				out += '{}\tachieved? {}\tdose at level: {}\n'.format(
+					str(item['constraint']),
+					item['status'], 
+					item['dose_achieved'])
