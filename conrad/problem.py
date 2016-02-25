@@ -8,6 +8,8 @@ RELTOL_DEFAULT = 1e-3
 ABSTOL_DEFAULT = 1e-4
 VERBOSE_DEFAULT = 1
 MAXITER_DEFAULT = 2000
+INDIRECT_DEFAULT = False
+GPU_DEFAULT = False
 
 PRIORITY_1 = 9
 PRIORITY_2 = 4
@@ -262,6 +264,8 @@ class SolverCVXPY(Solver):
 		solver = options.pop('solver', ECOS)
 		reltol = options.pop('reltol', RELTOL_DEFAULT)
 		maxiter = options.pop('maxiter', MAXITER_DEFAULT)
+		use_gpu = options.pop('gpu', GPU_DEFAULT)
+		use_indirect = options.pop('use_indirect', INDIRECT_DEFAULT)
 
 		# solve
 		PRINT("running solver...")
@@ -280,7 +284,8 @@ class SolverCVXPY(Solver):
 				verbose = VERBOSE,
 				max_iters = maxiter,
 				eps = reltol,
-				use_indirect=False)
+				use_indirect = use_indirect,
+				gpu = use_gpu)
 		else:
 			Exception('invalid solver specified: {}\n'
 				'no optimization performed'.format(solver))
