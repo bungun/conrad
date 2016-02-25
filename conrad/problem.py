@@ -279,13 +279,20 @@ class SolverCVXPY(Solver):
 				feastol = reltol, 
 				feastol_inacc = reltol)
 		elif solver == SCS:
-			ret = self.problem.solve(
-				solver = SCS,
-				verbose = VERBOSE,
-				max_iters = maxiter,
-				eps = reltol,
-				use_indirect = use_indirect,
-				gpu = use_gpu)
+			if use_gpu:
+				ret = self.problem.solve(
+					solver = SCS,
+					verbose = VERBOSE,
+					max_iters = maxiter,
+					eps = reltol,
+					gpu = use_gpu)
+			else:
+				ret = self.problem.solve(
+					solver = SCS,
+					verbose = VERBOSE,
+					max_iters = maxiter,
+					eps = reltol,
+					use_indirect = use_indirect)
 		else:
 			Exception('invalid solver specified: {}\n'
 				'no optimization performed'.format(solver))
