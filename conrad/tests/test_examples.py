@@ -1,4 +1,3 @@
-import conrad
 import numpy as np
 import unittest
 import cvxpy
@@ -13,6 +12,10 @@ class TestExamples(unittest.TestCase):
 		A_targ = 1.2 * np.random.rand(self.m_targ, self.n)
 		A_oar = 0.3 * np.random.rand(self.m_oar, self.n)
 		self.A = np.vstack((A_targ, A_oar))
+
+		# Prescription for each structure
+		self.rx = [{'label': self.lab_tum, 'name': 'tumor', 'is_target': True,  'dose': 1., 'constraints': None},
+			  {'label': self.lab_oar, 'name': 'oar',   'is_target': False, 'dose': 0., 'constraints': None}]
 
 	# Runs once before all unit tests
 	def setUpClass(self):
@@ -40,12 +43,8 @@ class TestExamples(unittest.TestCase):
 	tearDownClass = classmethod(tearDownClass)
 
 	def test_basic(self):
-		# Prescription for each structure
-		rx = [{'label': self.lab_tum, 'name': 'tumor', 'is_target': True,  'dose': 1., 'constraints': None},
-			  {'label': self.lab_oar, 'name': 'oar',   'is_target': False, 'dose': 0., 'constraints': None}]
-
 		# Construct unconstrained case
-		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
+		cs = Case(self.A, self.voxel_labels, self.label_order, self.rx)
 
 		# Add DVH constraints and solve
 		cs.structures[self.lab_tum].constraints += D(20) <= 1.15
@@ -59,12 +58,8 @@ class TestExamples(unittest.TestCase):
 		print self.A.dot(cs.x)
 
 	def test_2pass_no_constr(self):
-		# Prescription for each structure
-		rx = [{'label': self.lab_tum, 'name': 'tumor', 'is_target': True,  'dose': 1., 'constraints': None},
-			  {'label': self.lab_oar, 'name': 'oar',   'is_target': False, 'dose': 0., 'constraints': None}]
-
 		# Construct unconstrained case
-		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
+		cs = Case(self.A, self.voxel_labels, self.label_order, self.rx)
 
 		# Solve with slack in single pass
 		cs.plan(solver = 'ECOS')
@@ -79,12 +74,8 @@ class TestExamples(unittest.TestCase):
 		self.assertEqual(res_obj, res_obj_2pass)
 
 	def test_2pass_noslack(self):
-		# Prescription for each structure
-		rx = [{'label': self.lab_tum, 'name': 'tumor', 'is_target': True,  'dose': 1., 'constraints': None},
-			  {'label': self.lab_oar, 'name': 'oar',   'is_target': False, 'dose': 0., 'constraints': None}]
-
 		# Construct unconstrained case
-		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
+		cs = Case(self.A, self.voxel_labels, self.label_order, self.rx)
 
 		# Add DVH constraints and solve
 		cs.structures[self.lab_tum].constraints += D(20) <= 1.15
@@ -99,12 +90,8 @@ class TestExamples(unittest.TestCase):
 		self.assertTrue(res_obj_2pass <= res_obj)
 
 	def test_plotting(self):
-	 	# Prescription for each structure
-		rx = [{'label': self.lab_tum, 'name': 'tumor', 'is_target': True,  'dose': 1., 'constraints': None},
-			  {'label': self.lab_oar, 'name': 'oar',   'is_target': False, 'dose': 0., 'constraints': None}]
-
 		# Construct unconstrained case
-		cs = Case(self.A, self.voxel_labels, self.label_order, rx)
+		cs = Case(self.A, self.voxel_labels, self.label_order, self.rx)
 		p = CasePlotter(cs)
 
 		# Add DVH constraints
