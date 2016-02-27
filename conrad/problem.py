@@ -114,19 +114,39 @@ class SolverCVXPY(Solver):
 		A = structure.A
 		b = structure.dose
 		x = self.__x
+		matrix_info = 'using dose matrix, dimensions {}x{}'.format(*A.shape)
+
 		if structure.is_target:
+			reason  = 'structure is target'
 			c, d = self.get_cd_from_wts(structure.w_over, structure.w_under)
-			self.problem.objective += Minimize(c * sum_entries(abs(A * x - b)) + d * sum_entries((A * x - b)))
+			self.problem.objective += Minimize(
+				c * sum_entries(abs(A * x - b)) + d * sum_entries((A * x - b)))
 		else:
-			if structure.collapsable: A = structure.A_mean
-			self.problem.objective += Minimize(structure.w_over * sum_entries(A * x))
+			if structure.collapsable:
+				A = structure.A_mean
+				matrix_info = 'using mean dose, dimensions 1x{}'.format(A.size)
+				reason = 'structure does NOT have min/max/percentile dose constraints'
+			else:
+				reason = 'structure has min/max/percentile dose constraints'
+
+			self.problem.objective += Minimize(
+				structure.w_over * sum_entries(A * x))
+
+		return str('structure {} (label = {}): {} (reason: {})'.format(
+			structure.name, structure.label, matrix_info, reason))
+
 
 	@staticmethod
 	def __percentile_constraint_restriction(A, x, constr, beta, slack = None):
-		""" Form the upper (or lower) DVH constraint: 
+		""" Form the upper (or lower) DVH constraint:
 
-			upper constraint: \sum (beta + (Ax - (b + slack)))_+ <= beta * vox_limit
-			lower constraint: \sum (beta - (Ax - (b - slack)))_+ <= beta * vox_limit
+			upper constraint:
+
+				\sum (beta + (Ax - (b + slack)))_+ <= beta * vox_limit
+
+			lower constraint:
+
+				\sum (beta - (Ax - (b - slack)))_+ <= beta * vox_limit
 
 		"""
 		if not isinstance(constr, PercentileConstraint):
@@ -166,8 +186,8 @@ class SolverCVXPY(Solver):
 		for cid in structure.constraints:
 			c = structure.constraints[cid]
 			cslack = not exact and self.use_slack and c.priority > 0
-			if cslack:	
-				gamma = self.gamma_prioritized(c.priority)		
+			if cslack:
+				gamma = self.gamma_prioritized(c.priority)
 				slack = Variable(1)
 				self.slack_vars[cid] = slack
 				self.problem.objective += Minimize(gamma * slack)
@@ -197,7 +217,7 @@ class SolverCVXPY(Solver):
 				if exact:
 					# build exact constraint
 					dvh_constr = self.__percentile_constraint_exact(
-						A, self.__x, structure.y, 
+						A, self.__x, structure.y,
 						c, had_slack = self.use_slack)
 
 					# add it to problem
@@ -214,9 +234,9 @@ class SolverCVXPY(Solver):
 						structure.A, self.__x, c, beta, slack)
 
 					# add it to problem
-					self.problem.constraints += [ dvh_constr ] 
+					self.problem.constraints += [ dvh_constr ]
 
-	
+
 	def get_slack_value(self, constr_id):
 		return self.slack_vars[constr_id].value if constr_id in self.slack_vars else None
 
@@ -231,7 +251,7 @@ class SolverCVXPY(Solver):
 	@property
 	def x_dual(self):
 		try:
-			return squeee(array(self.problem.constraints[0].dual_value))
+			return squeeze(array(self.problem.constraints[0].dual_value))
 		except:
 			return None
 
@@ -239,7 +259,7 @@ class SolverCVXPY(Solver):
 	def solvetime(self):
 		# TODO: time run
 	    return 'n/a'
-	
+
 	@property
 	def status(self):
 		return self.problem.status
@@ -259,7 +279,7 @@ class SolverCVXPY(Solver):
 		# set verbosity level
 		VERBOSE = bool(options.pop('verbose', VERBOSE_DEFAULT))
 		PRINT = println if VERBOSE else lambda : None
-		
+
 		# solver options
 		solver = options.pop('solver', ECOS)
 		reltol = options.pop('reltol', RELTOL_DEFAULT)
@@ -271,12 +291,12 @@ class SolverCVXPY(Solver):
 		PRINT("running solver...")
 		if solver == ECOS:
 			ret = self.problem.solve(
-				solver = ECOS, 
-				verbose = VERBOSE, 
-				max_iters = maxiter, 
+				solver = ECOS,
+				verbose = VERBOSE,
+				max_iters = maxiter,
 				reltol = reltol,
-				reltol_inacc = reltol, 
-				feastol = reltol, 
+				reltol_inacc = reltol,
+				feastol = reltol,
 				feastol_inacc = reltol)
 		elif solver == SCS:
 			if use_gpu:
@@ -347,8 +367,11 @@ class PlanningProblem(object):
 
 	def solve(self, structure_dict, run_output, **options):
 		""" TODO: docstring """
+		# TODO: change this to reading an environment variable?
+		PRINT_PROBLEM_CONSTRUCTION = True
 
-		# get number of beams from dose matrix 
+
+		# get number of beams from dose matrix
 		# (attached to any structure)
 		# -------------------------------------
 		for s in structure_dict.itervalues():
@@ -363,9 +386,16 @@ class PlanningProblem(object):
 
 		# add terms and constraints
 		# -------------------------
+		construction_report = []
 		for s in structure_dict.itervalues():
-			self.solver.add_term(s)
+			construction_report.append(self.solver.add_term(s))
 			self.solver.add_constraints(s)
+
+		if PRINT_PROBLEM_CONSTRUCTION:
+			print '\nPROBLEM CONSTRUCTION:'
+			for cr in construction_report:
+				print cr
+
 
 		# solve
 		# -----
