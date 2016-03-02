@@ -281,7 +281,7 @@ class Structure(object):
 
 		if direction == DIRECTIONS.LEQ:
 			status = dose_achieved <= dose
-		else if direction == DIRECTIONS.GEQ:
+		elif direction == DIRECTIONS.GEQ:
 			status = dose_achieved >= dose
 
 		return (status, dose_achieved)
