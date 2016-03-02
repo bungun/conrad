@@ -164,6 +164,12 @@ class Case(object):
 	def tag_plan(self, tag):
 		self.history.tag_last(tag)
 
+	def x_num_nonzero(self, tolerance = 1e-6):
+		if self.x is None:
+			return None
+		else:
+			return len(self.x) - sum(abs(self.x) <= tolerance)
+
 	@property
 	def solver_info(self):
 		return self.history.last_info
@@ -182,7 +188,6 @@ class Case(object):
 	@property
 	def x_pass2(self):
 		return self.x
-
 
 	@property
 	def solvetime(self):

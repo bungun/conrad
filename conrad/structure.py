@@ -1,6 +1,6 @@
 from numpy import ndarray, array, squeeze, zeros, nan
 from scipy.sparse import csr_matrix, csc_matrix
-from conrad.dose import Constraint, MeanConstraint, ConstraintList, DVH
+from conrad.dose import Constraint, MeanConstraint, ConstraintList, DVH, DIRECTIONS
 from conrad.defs import CONRAD_DEBUG_PRINT
 
 """
@@ -279,9 +279,9 @@ class Structure(object):
 			dose_achieved = self.dvh.dose_at_percentile(
 				constraint.threshold)
 
-		if direction == '<':
+		if direction == DIRECTIONS.LEQ:
 			status = dose_achieved <= dose
-		else:
+		else if direction == DIRECTIONS.GEQ:
 			status = dose_achieved >= dose
 
 		return (status, dose_achieved)
