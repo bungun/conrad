@@ -115,7 +115,7 @@ class Constraint(object):
 		return self
 
 	def __gt__(self, other):
-		return self.__le__(other)
+		return self.__ge__(other)
 
 	def __str__(self):
 		return str('D{} {} {}Gy'.format(
@@ -233,7 +233,7 @@ def D(threshold, direction = None, dose = None):
 	elif isinstance(threshold, (int, float)):
 		return PercentileConstraint(percentile = threshold, direction = direction, dose = dose)
 	else:
-		ValueError('constraint unparsable as phrased')
+		raise ValueError('constraint unparsable as phrased')
 
 class ConstraintList(object):
 	def __init__(self):

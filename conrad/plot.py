@@ -79,8 +79,7 @@ class DVHPlot(object):
 
 
 		max_dose = max([data['curve']['dose'].max() for data in plot_data.itervalues()])
-
-
+		
 		for label, data in plot_data.iteritems():
 			plt.subplot(self.rows, self.cols, self.panels_by_structure[label])
 			
@@ -88,10 +87,9 @@ class DVHPlot(object):
 			name = self.names_by_structure[label]
 			plt.plot(data['curve']['dose'], data['curve']['percentile'],
 				color = color, label = name, **options)
-			plt.xlim(0, 1.1 * max_dose)
-			plt.ylim(0, 103)
-
+			
 			for constraint in data['constraints']:
+				# TODO: What should we plot for other constraints like mean, min, max, etc?
 				if constraint[1]['type'] is 'percentile':
 					plt.plot(constraint[1]['dose'][0], constraint[1]['percentile'][0], 
 						constraint[1]['symbol'], color = color, **options)
@@ -99,7 +97,10 @@ class DVHPlot(object):
 						constraint[1]['symbol'], alpha  = 0.7, color = color, **options)
 					plt.plot(constraint[1]['dose'], constraint[1]['percentile'], 
 						'.', color = color, **options)
-				# TODO: What should we plot for other constraints like mean, min, max, etc?
+					max_dose = max(max_dose, constraint[1]['dose'][0])   # So we don't cut off DVH constraint labels
+			
+			plt.xlim(0, 1.1 * max_dose)
+			plt.ylim(0, 103)
 
 		if show: SHOW()
 

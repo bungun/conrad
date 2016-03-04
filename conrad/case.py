@@ -83,7 +83,7 @@ class Case(object):
 
 	def add_dvh_constraint(self, label, threshold, direction, dose):
 		""" TODO: docstring """
-		if '<' in direction:
+		if '<' in direction or '<=' in direction:
 			self.structures[label].constraints += D(threshold) <= dose
 		else:
 			self.structures[label].constraints -= D(threshold) <= dose
@@ -135,7 +135,6 @@ class Case(object):
 			use_2pass = use_2pass, 
 			use_slack = use_slack, 
 			gamma = gamma)
-
 
 		# solve problem
 		self.problem.solve(self.structures, rr.output, **options)
