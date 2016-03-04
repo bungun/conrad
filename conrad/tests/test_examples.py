@@ -101,6 +101,9 @@ class TestExamples(unittest.TestCase):
 
 		# This constraint makes no-slack problem infeasible
 		cs.structures[self.lab_oar].constraints += D(99) < 0.05
+		
+		# Add a DVH mean constraint
+		cs.structures[self.lab_tum].constraints += D('mean') <= 1.0
 
 		# Solve and plot resulting DVH curves
 		if cs.plan(solver = 'ECOS'):

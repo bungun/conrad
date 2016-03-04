@@ -92,12 +92,14 @@ class DVHPlot(object):
 			plt.ylim(0, 103)
 
 			for constraint in data['constraints']:
-				plt.plot(constraint[1]['dose'][0], constraint[1]['percentile'][0], 
-					constraint[1]['symbol'], color = color, **options)
-				plt.plot(constraint[1]['dose'][1], constraint[1]['percentile'][1], 
-					constraint[1]['symbol'], alpha  = 0.7, color = color, **options)
-				plt.plot(constraint[1]['dose'], constraint[1]['percentile'], 
-					'.', color = color, **options)
+				if constraint[1]['type'] is 'percentile':
+					plt.plot(constraint[1]['dose'][0], constraint[1]['percentile'][0], 
+						constraint[1]['symbol'], color = color, **options)
+					plt.plot(constraint[1]['dose'][1], constraint[1]['percentile'][1], 
+						constraint[1]['symbol'], alpha  = 0.7, color = color, **options)
+					plt.plot(constraint[1]['dose'], constraint[1]['percentile'], 
+						'.', color = color, **options)
+				# TODO: What should we plot for other constraints like mean, min, max, etc?
 
 		if show: SHOW()
 
