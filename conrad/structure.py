@@ -237,6 +237,8 @@ class Structure(object):
 			self.__y = self.A.dot(x)
 
 		self.__y_mean = self.A_mean.dot(x)
+		if isinstance(self.__y_mean, ndarray):
+			self.__y_mean = self.__y_mean[0]
 
 		# make DVH curve from calculated dose
 		self.dvh.data = self.__y
