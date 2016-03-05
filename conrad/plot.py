@@ -73,9 +73,9 @@ class DVHPlot(object):
 				self.colors_by_structure[label] = colors[idx]
 
 
-	def plot(self, plot_data, show = False, **options):
+	def plot(self, plot_data, show = False, clear = True, **options):
 		""" TODO: docstring """
-		self.fig.clf()
+		if clear: self.fig.clf()
 
 		max_dose = max([data['curve']['dose'].max() for data in plot_data.itervalues()])
 		
@@ -86,6 +86,7 @@ class DVHPlot(object):
 			name = self.names_by_structure[label]
 			plt.plot(data['curve']['dose'], data['curve']['percentile'],
 				color = color, label = name, **options)
+			plt.title(name)
 			
 			for constraint in data['constraints']:
 				# TODO: What should we plot for other constraints like mean, min, max, etc?
@@ -102,7 +103,7 @@ class DVHPlot(object):
 			plt.ylim(0, 103)
 
 		if show: SHOW()
-
+	
 	def save(self, filepath):
 		try:
 			print "SAVING TO ", filepath
@@ -130,6 +131,8 @@ class CasePlotter(object):
 	def plot(self, case, **options):
 		plotfile = options.pop('file', None)
 		self.dvh_plot.plot(case.plotting_data, 
-			show = options.pop('show', False))
+			show = options.pop('show', False),
+			clear = options.pop('clear', True),
+			**options)
 		if plotfile is not None:
 			self.dvh_plot.save(plotfile)
