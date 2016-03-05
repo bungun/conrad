@@ -93,7 +93,7 @@ class SolverCVXPY(Solver):
 	# methods:
 	def init_problem(self, n_beams, **options):
 		""" TODO: docstring """
-		self.use_slack = options.pop('dvh_no_slack', True)
+		self.use_slack = options.pop('dvh_slack', True)
 		self.use_2pass = options.pop('dvh_2pass', False)
 		self.__x = Variable(n_beams)
 		self.objective = Minimize(0)
@@ -380,9 +380,9 @@ class PlanningProblem(object):
 
 		# initialize problem with size and options
 		# ----------------------------------------
+		self.solver.init_problem(n_beams, **options)
 		self.use_slack = options.pop('dvh_slack', True)
 		self.use_2pass = options.pop('dvh_exact', False)
-		self.solver.init_problem(n_beams, **options)
 
 		# add terms and constraints
 		# -------------------------

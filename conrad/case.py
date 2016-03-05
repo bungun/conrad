@@ -126,7 +126,7 @@ class Case(object):
 		use_2pass = options['dvh_exact'] = options.pop('dvh_exact', False)
 
 		# dvh slack ON by default
-		use_slack = options['dvh_slack'] = options.pop('dvh_slack', False)
+		use_slack = options['dvh_slack'] = options.pop('dvh_slack', True)
 
 		# objective weight for slack minimization
 		gamma = options['gamma'] = options.pop('slack_penalty', None)
