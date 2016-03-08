@@ -457,7 +457,7 @@ class PlanningProblem(object):
 		if self.use_2pass and run_output.feasible:
 
 			self.solver.clear()
-			self.solver.build(structures, exact=True)
+			self.solver.build(structure_dict.values(), exact=True)
 
 			start = clock()
 			self.solver.solve(**options)
