@@ -1,7 +1,7 @@
 from conrad.prescription import Prescription
 from conrad.problem import PlanningProblem
 from conrad.history import RunRecord, PlanningHistory
-from operator import add 
+from operator import add
 from numpy import ndarray, array, squeeze, zeros
 from warnings import warn
 
@@ -15,21 +15,19 @@ class Case(object):
 	initialize a case with:
 		- dose matrix (A): matrix \in R^m x n, m = # voxels, n = # beams
 		- voxel labels: vector{int} in \R^m
-		- label_order: list{labels}, (labels are integers) TODO: finish description 
+		- label_order: list{labels}, (labels are integers) TODO: finish description
 		- prescription: dict{labels, dict}, where each element has the fields:
 			label (int, also the key)
 			dose (float)
 			is_target (bool)
 			dose_constraints (dict, or probably string/tuple list)
 	"""
-
-	def __init__(self, A, voxel_labels, label_order, 
+	def __init__(self, A, voxel_labels, label_order,
 		prescription_raw, suppress_rx_constraints = False):
 		"""TODO: Case.__init__() docstring"""
 		self.problem = PlanningProblem()
 		self.voxel_labels = voxel_labels
 		self.label_order = label_order
-
 
 		# digest clinical specification
 		self.prescription = Prescription(prescription_raw)
@@ -49,8 +47,6 @@ class Case(object):
 		if not suppress_rx_constraints:
 			self.add_all_rx_constraints()
 
-
-
 		# planning history
 		self.history = PlanningHistory()
 
@@ -58,7 +54,7 @@ class Case(object):
 		"""TODO: docstring
 
 		NB: ASSUMES dose_matrix IS SORTED IN SAME ORDER AS LABELS IN voxel_labels
-		
+
 		(fails if voxel_labels unsorted; TODO: sorting? pre-sort?)
 		"""
 		ptr1 = ptr2 = 0
@@ -68,17 +64,16 @@ class Case(object):
 			size = reduce(add, map(lambda v : int(v == label), self.voxel_labels))
 			self.structures[label].size = size
 			ptr2 += size
-			
+
 			# assess sorting of label blocks:
 			if not all(map(lambda v: v == label, self.voxel_labels[ptr1:ptr2])):
 				raise ValueError("inputs voxel_labels and dose_matrix are expected "
 								 "to be (block) sorted in the order specified by argument "
 								 "`label_order'. voxel_labels not block sorted.")
-			
+
 			# partition dose matrix	into blocks
 			self.structures[label].A_full = self.A[ptr1:ptr2, :]
-			self.structures[label].A_mean = squeeze(array(
-				sum(self.A[ptr1:ptr2, :], 0))) / size
+			self.structures[label].A_mean = None
 			ptr1 = ptr2
 
 	def add_dvh_constraint(self, label, threshold, direction, dose):
@@ -115,7 +110,7 @@ class Case(object):
 		for s in self.structures.itervalues():
 			s.set_constraint(constr_id, threshold, direction, dose)
 
-	def change_objective(self, label, dose = None, 
+	def change_objective(self, label, dose = None,
 		w_under = None, w_over = None):
 		""" TODO: docstring """
 		self.structures[label].set_objective(dose, w_under, w_over)
@@ -131,9 +126,9 @@ class Case(object):
 		# objective weight for slack minimization
 		gamma = options['gamma'] = options.pop('slack_penalty', None)
 
-		rr = RunRecord(self.structures, 
-			use_2pass = use_2pass, 
-			use_slack = use_slack, 
+		rr = RunRecord(self.structures,
+			use_2pass = use_2pass,
+			use_slack = use_slack,
 			gamma = gamma)
 
 		# solve problem
@@ -183,7 +178,7 @@ class Case(object):
 	@property
 	def x_pass1(self):
 		return self.history.last_x
-	
+
 	@property
 	def x_pass2(self):
 		return self.x
@@ -249,20 +244,20 @@ class Case(object):
 			if x.size == self.n_beams:
 				self.calc_doses(squeeze(x))
 			else:
-				raise 
-				warn('argument "x" must be a numpy.ndarray'
-					'of length {}, ignoring argument'.format(self.n_beams))
+				raise ValueError('argument "x" must be a numpy.ndarray'
+								 'of length {}, ignoring argument'.format(
+								 self.n_beams))
 		elif calc and firstpass:
 			self.calc_doses(self.x_pass1)
 		elif calc:
 			self.calc_doses(self.x)
 		return self.plotting_data
-		
+
 	@property
 	def n_structures(self):
 		""" TODO: docstring """
 		return len(self.structures.keys())
-	
+
 	@property
 	def n_voxels(self):
 		""" TODO: docstring """

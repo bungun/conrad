@@ -1,6 +1,7 @@
 from cvxpy import *
-from numpy import inf, array, squeeze, ones, copy as np_copy
-from conrad.dose import Constraint, PercentileConstraint, MinConstraint, MaxConstraint, MeanConstraint
+from numpy import inf, array, squeeze, ones, zeros, copy as np_copy
+from conrad.dose import Constraint, PercentileConstraint, MinConstraint, \
+						MaxConstraint, MeanConstraint
 from time import clock
 
 GAMMA_DEFAULT = 1e-2
@@ -15,7 +16,6 @@ PRIORITY_1 = 9
 PRIORITY_2 = 4
 PRIORITY_3 = 1
 
-
 def println(*msg):
 	print(msg)
 
@@ -23,7 +23,6 @@ def println(*msg):
 """
 TODO: problem.py docstring
 """
-
 class Solver(object):
 	def __init__(self):
 		self.use_2pass = False
@@ -46,9 +45,8 @@ class Solver(object):
 	@staticmethod
 	def get_cd_from_wts(wt_over, wt_under):
 		""" TODO: docstring """
-		alpha = wt_over / wt_under
-		c = (alpha + 1) / 2
-		d = (alpha + 1) / 2
+		c = (wt_over + wt_under) / 2.
+		d = (wt_over - wt_under) / 2.
 		return c, d
 
 	def gamma_prioritized(self, priority):
@@ -68,10 +66,7 @@ class Solver(object):
 	def clear(self):
 		pass
 
-	def add_term(self, structure):
-		pass
-
-	def add_constraints(self, structure):
+	def build(self, structures, exact=False):
 		pass
 
 	def get_slack_value(Self, constraint_id):
@@ -89,6 +84,10 @@ class SolverCVXPY(Solver):
 		self.objective = None
 		self.constraints = None
 		self.problem = None
+		self.__x = Variable(0)
+		self.dvh_vars = {}
+		self.slack_vars = {}
+		self.gamma = GAMMA_DEFAULT
 
 	# methods:
 	def init_problem(self, n_beams, **options):
@@ -103,38 +102,92 @@ class SolverCVXPY(Solver):
 		self.problem = Problem(self.objective, self.constraints)
 		self.gamma = options.pop('gamma', GAMMA_DEFAULT)
 
+	@property
+	def n_beams(self):
+		return self.__x.size[0]
+
 	def clear(self):
 		""" TODO: docstring """
 		self.constraints = [self.__x >= 0]
 		self.objective = Minimize(0)
 		self.problem = Problem(self.objective, self.constraints)
 
-	def add_term(self, structure):
-		"""extract clinical objective from structure"""
-		A = structure.A
-		b = structure.dose
-		x = self.__x
-		matrix_info = 'using dose matrix, dimensions {}x{}'.format(*A.shape)
+	def build(self, structures, exact = False):
+		self.__check_dimensions(structures)
 
-		if structure.is_target:
-			reason  = 'structure is target'
-			c, d = self.get_cd_from_wts(structure.w_over, structure.w_under)
-			self.problem.objective += Minimize(
-				c * sum_entries(abs(A * x - b)) + d * sum_entries((A * x - b)))
-		else:
-			if structure.collapsable:
-				A = structure.A_mean
-				matrix_info = 'using mean dose, dimensions 1x{}'.format(A.size)
-				reason = 'structure does NOT have min/max/percentile dose constraints'
+		rows = sum([s.size if not s.collapsable else 1 for s in structures])
+		cols = self.n_beams
+		A = zeros((rows, cols))
+		b = zeros(rows)
+		c = zeros(rows)
+		d = zeros(rows)
+		ptr = 0
+		for s in structures:
+			if s.collapsable:
+				A[ptr, :] = s.A_mean[:]
+				c[ptr] = s.size * s.w_over
+				d[ptr] = 0
+				ptr += 1
 			else:
-				reason = 'structure has min/max/percentile dose constraints'
+				print A[ptr : ptr + s.size, :].shape
+				print s.A_full.shape
+				A[ptr : ptr + s.size, :] += s.A_full
+				if s.is_target:
+					c_, d_ = self.get_cd_from_wts(s.w_over, s.w_under)
+					b[ptr : ptr + s.size] = s.dose
+					c[ptr : ptr + s.size] = c_
+					d[ptr : ptr + s.size] = d_
+				else:
+					b[ptr : ptr + s.size] = 0
+					c[ptr : ptr + s.size] = s.w_over
+					d[ptr : ptr + s.size] = 0
+				ptr += s.size
 
-			self.problem.objective += Minimize(
-				structure.w_over * sum_entries(A * x))
+		self.problem.objective = Minimize(
+				c.T*abs(A*self.__x - b) + d.T*(A*self.__x - b))
 
-		return str('structure {} (label = {}): {} (reason: {})'.format(
-			structure.name, structure.label, matrix_info, reason))
+		for s in structures:
+			self.__add_constraints(s, exact=exact)
 
+		return self.__construction_report(structures)
+
+	def __check_dimensions(self, structures):
+		columns = [s.A.shape[1] for s in structures]
+		if not all([col == self.n_beams for col in columns]):
+			raise ValueError('all structures in plan must have full dose '
+							 'matrices with # columns that match # beams in '
+							 'the plan. \n # beams: {}\n provided matrix '
+							 'shapes: {}'.format(n_beams,
+							 [(s.name, s.A.shape) for s in structures]))
+		columns = [s.A_mean.size for s in structures]
+		if not all([col == self.n_beams for col in columns]):
+			raise ValueError('all structures in plan must have mean dose '
+							 'vectors with # columns that match # beams in the'
+							 ' plan. \n # beams: {}\n provided matrix shapes: '
+							 '{}'.format(n_beams,
+							 [(s.name, s.A_mean.sisze) for s in structures]))
+
+	def __construction_report(self, structures):
+		report = []
+		for structure in structures:
+			A = structure.A
+			matrix_info = str('using dose matrix, dimensions {}x{}'.format(
+							  *structure.A.shape))
+			if structure.is_target:
+				reason  = 'structure is target'
+			else:
+				if structure.collapsable:
+					A = structure.A_mean
+					matrix_info = str('using mean dose, dimensions '
+									  '1x{}'.format(structure.A_mean.size))
+					reason = 'structure does NOT have min/max/percentile dose constraints'
+				else:
+					reason = 'structure has min/max/percentile dose constraints'
+
+			report.append('structure {} (label = {}): {} (reason: {})'.format(
+						  structure.name, structure.label, matrix_info,
+						  reason))
+		return report
 
 	@staticmethod
 	def __percentile_constraint_restriction(A, x, constr, beta, slack = None):
@@ -175,7 +228,7 @@ class SolverCVXPY(Solver):
 		A_exact = np_copy(A[idx_exact, :])
 		return sign * (A_exact * x - b) <= 0
 
-	def add_constraints(self, structure, exact = False):
+	def __add_constraints(self, structure, exact = False):
 		""" TODO: docstring """
 		# extract dvh constraint from structure,
 		# make slack variable (if self.use_slack), add
@@ -195,7 +248,6 @@ class SolverCVXPY(Solver):
 			else:
 				slack = 0.
 				self.slack_vars[cid] = None
-
 
 			if isinstance(c, MeanConstraint):
 				if c.upper:
@@ -235,7 +287,6 @@ class SolverCVXPY(Solver):
 
 					# add it to problem
 					self.problem.constraints += [ dvh_constr ]
-
 
 	def get_slack_value(self, constr_id):
 		return self.slack_vars[constr_id].value if constr_id in self.slack_vars else None
@@ -323,7 +374,6 @@ class SolverCVXPY(Solver):
 
 		return ret != inf and not isinstance(ret, str)
 
-
 class PlanningProblem(object):
 	""" TODO: docstring """
 
@@ -364,48 +414,33 @@ class PlanningProblem(object):
 			for cid in s.constraints:
 				run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(cid)
 
-
 	def solve(self, structure_dict, run_output, **options):
 		""" TODO: docstring """
 		# TODO: change this to reading an environment variable?
 		PRINT_PROBLEM_CONSTRUCTION = True
 
-
 		# get number of beams from dose matrix
-		# (attached to any structure)
-		# -------------------------------------
-		for s in structure_dict.itervalues():
-			n_beams = s.A.shape[1]
-			break
+		n_beams = structure_dict.values()[0].A.shape[1]
 
 		# initialize problem with size and options
-		# ----------------------------------------
 		self.solver.init_problem(n_beams, **options)
 		self.use_slack = options.pop('dvh_slack', True)
 		self.use_2pass = options.pop('dvh_exact', False)
 
-		# add terms and constraints
-		# -------------------------
-		construction_report = []
-		for s in structure_dict.itervalues():
-			construction_report.append(self.solver.add_term(s))
-			self.solver.add_constraints(s)
+		# build problem
+		construction_report = self.solver.build(structure_dict.values())
 
 		if PRINT_PROBLEM_CONSTRUCTION:
 			print '\nPROBLEM CONSTRUCTION:'
 			for cr in construction_report:
 				print cr
 
-
 		# solve
-		# -----
 		start = clock()
 		run_output.feasible = self.solver.solve(**options)
 		runtime = clock() - start
 
-
 		# relay output to run_output object
-		# ---------------------------------
 		self.__gather_solver_info(run_output)
 		self.__gather_solver_vars(run_output)
 		self.__gather_dvh_slopes(run_output, structure_dict)
@@ -415,20 +450,14 @@ class PlanningProblem(object):
 			return
 
 		# relay output to structures
-		# --------------------------
-		for s in structure_dict.itervalues():
+		for s in structure_dict.values():
 			self.__update_structure(s)
 
-
 		# second pass, if applicable
-		# --------------------------
 		if self.use_2pass and run_output.feasible:
 
 			self.solver.clear()
-
-			for s in structure_dict.itervalues():
-				self.solver.add_term(s)
-				self.solver.add_constraints(s, exact = True)
+			self.solver.build(structures, exact=True)
 
 			start = clock()
 			self.solver.solve(**options)
@@ -438,5 +467,5 @@ class PlanningProblem(object):
 			self.__gather_solver_vars(run_output, exact = True)
 			run_output.solver_info['time_exact'] = runtime
 
-			for s in structure_dict.itervalues():
+			for s in structure_dict.values():
 				self.__update_structure(s, exact = True)

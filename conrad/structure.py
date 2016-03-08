@@ -7,11 +7,11 @@ from conrad.defs import CONRAD_DEBUG_PRINT
 TODO: structure.py docstring
 """
 
-class Structure(object):
-	W_UNDER_DEFAULT = 1.
-	W_OVER_DEFAULT = 0.05
-	W_NONTARG_DEFAULT = 0.1
+W_UNDER_DEFAULT = 1.
+W_OVER_DEFAULT = 0.05
+W_NONTARG_DEFAULT = 0.025
 
+class Structure(object):
 	""" TODO: docstring """
 	def __init__(self, label, name, is_target, dose, **options):
 		""" TODO: docstring """
@@ -22,8 +22,8 @@ class Structure(object):
 		self.__size = None
 		self.__dose = max(float(dose), 0.) if is_target else 0.
 		self.__boost = 1.
-		self.__w_under = 0.
-		self.__w_over = 0.
+		self.__w_under = W_UNDER_DEFAULT if is_target else 0.
+		self.__w_over = W_OVER_DEFAULT if is_target else W_NONTARG_DEFAULT
 		self.__A_full = None
 		self.__A_mean = None
 		self.__A_clustered = None
@@ -38,7 +38,7 @@ class Structure(object):
 
 		# dose constraints
 		self.constraints = ConstraintList()
-		
+
 		# dvh curve
 		self.dvh = DVH(self.size) if self.size is not None else None
 
@@ -54,10 +54,10 @@ class Structure(object):
 		self.A_mean = options.pop('A_mean', None)
 
 		# objective weights (set to defaults if not provided)
-		w_under_default = self.W_UNDER_DEFAULT if self.is_target else 0.
-		w_over_default = self.W_OVER_DEFAULT if self.is_target else self.W_NONTARG_DEFAULT
-		self.w_under = options.pop('w_under', w_under_default)
-		self.w_over = options.pop('w_over', w_over_default)
+		if 'w_under' in options:
+			self.w_under = options.pop('w_under')
+		if 'w_over' in options:
+			self.w_over = options.pop('w_over')
 
 	@property
 	def size(self):
@@ -81,11 +81,11 @@ class Structure(object):
 	@property
 	def A_full(self):
 		return self.__A_full
-	
+
 	@A_full.setter
 	def A_full(self, A_full):
 		# verify type of A_full
-		if A_full is not None and not isinstance(A_full, 
+		if A_full is not None and not isinstance(A_full,
 			(ndarray, csr_matrix, csc_matrix)):
 			TypeError("input A must by a numpy or "
 				"scipy csr/csc sparse matrix")
@@ -100,12 +100,25 @@ class Structure(object):
 	@A_mean.setter
 	def A_mean(self, A_mean = None):
 		if A_mean is not None:
-			self.__A_mean = A_mean
+			if not isinstance(A_mean, ndarray):
+				raise TypeError('if argument "A_mean" is provided, it must be '
+								'of type {}'.format(ndarray))
+			elif not A_mean.size in A_mean.shape:
+				raise ValueError('if argument "A_mean" is provided, it must be'
+								 ' a row or column vector. shape of argument: '
+								 '{}'.format(A_mean.shape))
+			else:
+				self.__A_mean = squeee(array(A_mean))
 		elif self.A_full is not None:
-			self.__A_mean = self.A_full.sum(0) / self.A_full.shape[0]
-			if not isinstance(self.A_full, ndarray):
-				# (handling for sparse matrices)
-				self.__A_mean = squeeze(array(self.__A_mean)) 
+			if not isinstance(self.A_full, (ndarray, csc_matrix, csr_matrix)):
+				raise TypeError('cannot calculate structure.A_mean from'
+								'structure.A_full: A_full must be one of'
+								' ({},{},{})'.format(ndarray, csc_matrix,
+								csr_matrix))
+			else:
+				self.__A_mean = self.A_full.sum(0) / self.A_full.shape[0]
+				if not isinstance(self.A_full, ndarray):
+					self.__A_mean = squeeze(array(self.__A_mean))
 
 	@property
 	def A_clustered(self):
@@ -145,7 +158,7 @@ class Structure(object):
 	@property
 	def A(self):
 		return self.__A_full
-	
+
 	def set_objective(self, dose, w_under, w_over):
 		if self.is_target:
 			self.dose = dose
@@ -155,7 +168,7 @@ class Structure(object):
 	def set_constraint(self, constr_id, threshold, direction, dose):
 		if self.has_constraint(constr_id):
 			c = self.constraints.items[constr_id]
-			if isinstance(c, PercentileConstraint): 
+			if isinstance(c, PercentileConstraint):
 				c.percentile = threshold
 			c.direction = direction
 			c.dose = dose
@@ -188,20 +201,19 @@ class Structure(object):
 		    return self.__w_under / float(self.size)
 		else:
 			return None
-	
+
 	@property
 	def w_under_raw(self):
 	    return self.__w_under
-	
+
 	@w_under.setter
 	def w_under(self, weight):
 		if isinstance(weight, (int, float)):
 			self.__w_under = max(0., float(weight))
 			if weight < 0:
-				ValueError('negative objective weights not allowed')
+				raise ValueError('negative objective weights not allowed')
 		else:
-			TypeError('argument "weight" must be a float '
-				'with value >= 0')
+			raise TypeError('argument "weight" must be a float >= 0')
 
 	@property
 	def w_over(self):
@@ -210,20 +222,19 @@ class Structure(object):
 		    return self.__w_over / float(self.size)
 		else:
 			return None
-	
+
 	@property
 	def w_over_raw(self):
-	    return self.__w_under
+	    return self.__w_over
 
 	@w_over.setter
 	def w_over(self, weight):
 		if isinstance(weight, (int, float)):
 			self.__w_over = max(0., float(weight))
 			if weight < 0:
-				ValueError('negative objective weights not allowed')
+				raise ValueError('negative objective weights not allowed')
 		else:
-			TypeError('argument "weight" must be a float '
-				'with value >= 0')
+			raise TypeError('argument "weight" must be a float >= 0')
 
 	def calc_y(self, x):
 		""" TODO: docstring """
@@ -247,7 +258,7 @@ class Structure(object):
 	def y(self):
 		""" TODO: docstring """
 		return self.__y
-	
+
 	@property
 	def mean_dose(self):
 		""" TODO: docstring """
@@ -291,9 +302,9 @@ class Structure(object):
 	@property
 	def plotting_data(self):
 		""" TODO: docstring """
-		return {'curve': self.dvh.plotting_data, 
+		return {'curve': self.dvh.plotting_data,
 		'constraints': self.constraints.plotting_data}
-	
+
 	@property
 	def __header_string(self):
 		""" TODO: docstring """
@@ -301,7 +312,7 @@ class Structure(object):
 		if self.name != '':
 			out += ' ({})'.format(self.name)
 			out += '\n'
-		return out		
+		return out
 
 	@property
 	def __obj_string(self):
@@ -310,10 +321,10 @@ class Structure(object):
 		out += 'rx dose: {}\n'.format(self.dose)
 		if self.is_target:
 			out += 'weight_under: {}\n'.format(self.__w_under)
-			out += 'weight_over: {}\n'.format(self.__w_over)			
+			out += 'weight_over: {}\n'.format(self.__w_over)
 		else:
 			out += 'weight: {}\n'.format(self.__w_over)
-		out += "\n"		
+		out += "\n"
 		return out
 
 	@property
@@ -358,7 +369,6 @@ class Structure(object):
 	def summary_string(self):
 		""" TODO: docstring """
 		return self.__header_string + self.__summary_string
-
 
 	def __str__(self):
 		return self.__header_string + self.__obj_string + self.__constr_string

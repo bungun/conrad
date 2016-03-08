@@ -1,10 +1,10 @@
 import matplotlib
 from os import path
-from math import ceil 
+from math import ceil
 from numpy import linspace
 from os import getenv
 
-if getenv('DISPLAY') is not None: 
+if getenv('DISPLAY') is not None:
 	import matplotlib.pyplot as plt
 	SHOW = plt.show
 else:
@@ -28,7 +28,7 @@ def panels_to_cols(n_panels):
 	if n_panels > 4:
 		n_cols += 1
 	if n_panels > 7:
-		panels += 1
+		n_cols += 1
 	return n_cols
 
 class DVHPlot(object):
@@ -39,7 +39,7 @@ class DVHPlot(object):
 		self.fig = plt.figure()
 		self.n_structures = len(panels_by_structure.keys())
 		self.panels_by_structure = panels_by_structure
-		self.n_panels = max(panels_by_structure.itervalues())
+		self.n_panels = max(panels_by_structure.values())
 		self.cols = panels_to_cols(self.n_panels)
 		self.rows = int(ceil(float(self.n_panels) / self.cols))
 		self.names_by_structure = names_by_structure
@@ -52,7 +52,7 @@ class DVHPlot(object):
 	def set_series_names(self, names_by_structure):
 		""" TODO: docstring """
 		self.names_by_structure = names_by_structure
-		
+
 
 	def set_series_colors(self, colors_by_structure):
 		""" TODO: docstring """
@@ -65,7 +65,7 @@ class DVHPlot(object):
 		else:
 			cmap = get_cmap('rainbow')
 			colors = map(cmap, linspace(0.9, 0.1, self.n_structures))
-		
+
 		for idx, label in enumerate(self.panels_by_structure.keys()):
 			if structure_order_dict is not None:
 				self.colors_by_structure[label] = colors[structure_order_dict[label]]
@@ -78,32 +78,32 @@ class DVHPlot(object):
 		if clear: self.fig.clf()
 
 		max_dose = max([data['curve']['dose'].max() for data in plot_data.itervalues()])
-		
+
 		for label, data in plot_data.iteritems():
 			plt.subplot(self.rows, self.cols, self.panels_by_structure[label])
-			
+
 			color = self.colors_by_structure[label]
 			name = self.names_by_structure[label]
 			plt.plot(data['curve']['dose'], data['curve']['percentile'],
 				color = color, label = name, **options)
 			plt.title(name)
-			
+
 			for constraint in data['constraints']:
 				# TODO: What should we plot for other constraints like mean, min, max, etc?
 				if constraint[1]['type'] is 'percentile':
-					plt.plot(constraint[1]['dose'][0], constraint[1]['percentile'][0], 
+					plt.plot(constraint[1]['dose'][0], constraint[1]['percentile'][0],
 						constraint[1]['symbol'], color = color, **options)
-					plt.plot(constraint[1]['dose'][1], constraint[1]['percentile'][1], 
+					plt.plot(constraint[1]['dose'][1], constraint[1]['percentile'][1],
 						constraint[1]['symbol'], alpha  = 0.7, color = color, **options)
-					plt.plot(constraint[1]['dose'], constraint[1]['percentile'], 
+					plt.plot(constraint[1]['dose'], constraint[1]['percentile'],
 						'.', color = color, **options)
 					max_dose = max(max_dose, constraint[1]['dose'][0])   # So we don't cut off DVH constraint labels
-			
+
 			plt.xlim(0, 1.1 * max_dose)
 			plt.ylim(0, 103)
 
 		if show: SHOW()
-	
+
 	def save(self, filepath):
 		try:
 			print "SAVING TO ", filepath
@@ -119,18 +119,19 @@ class CasePlotter(object):
 	def __init__(self, case):
 		if not isinstance(case, Case):
 			TypeError('argument "case" must be of type conrad.Case')
-		
+
 		# plot setup
 		panels_by_structure = {}
 		names_by_structure = {}
 		for idx, label in enumerate(case.label_order):
-			panels_by_structure[label] = idx + 1
+			# panels_by_structure[label] = idx + 1
+			panels_by_structure[label] = 1
 			names_by_structure[label] = case.structures[label].name
 		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
 
 	def plot(self, case, **options):
 		plotfile = options.pop('file', None)
-		self.dvh_plot.plot(case.plotting_data, 
+		self.dvh_plot.plot(case.plotting_data,
 			show = options.pop('show', False),
 			clear = options.pop('clear', True),
 			**options)
