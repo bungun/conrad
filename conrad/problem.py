@@ -112,7 +112,9 @@ class SolverCVXPY(Solver):
 		self.objective = Minimize(0)
 		self.problem = Problem(self.objective, self.constraints)
 
-	def build(self, structures, exact = False):
+	def build(self, structures, exact=False):
+		print "\n SolverCVXPY.BUILD CALL: EXACT=", exact
+
 		self.__check_dimensions(structures)
 
 		rows = sum([s.size if not s.collapsable else 1 for s in structures])
@@ -202,6 +204,9 @@ class SolverCVXPY(Solver):
 				\sum (beta - (Ax - (b - slack)))_+ <= beta * vox_limit
 
 		"""
+
+		print "\nADDING RESTRICTED CONSTRAINT"
+
 		if not isinstance(constr, PercentileConstraint):
 			TypeError('parameter constr must be of type '
 				'conrad.dose.PercentileConstraint. '
@@ -217,6 +222,9 @@ class SolverCVXPY(Solver):
 	@staticmethod
 	def __percentile_constraint_exact(A, x, y, constr, had_slack = False):
 		""" TODO: docstring """
+
+		print "\nADDING EXACT CONSTRAINT"
+
 		if not isinstance(constr, DoseConstraint):
 			TypeError('parameter constr must be of type '
 				'conrad.dose.PercentileConstraint. '
@@ -228,12 +236,24 @@ class SolverCVXPY(Solver):
 		A_exact = np_copy(A[idx_exact, :])
 		return sign * (A_exact * x - b) <= 0
 
-	def __add_constraints(self, structure, exact = False):
+	def __add_constraints(self, structure, exact=False):
 		""" TODO: docstring """
+
+		print "\n SolverCVXPY.__ADD_CONSTRAINTS CALL: EXACT=", exact
+
 		# extract dvh constraint from structure,
 		# make slack variable (if self.use_slack), add
 		# slack to self.objective and slack >= 0 to constraints
-		exact &= self.use_2pass and structure.y is not None
+		if exact:
+			if not self.use_2pass or structure.y is None:
+				raise RuntimeError('exact constraints requested, but cannot '
+								   'be built. requirements\n'
+								   'input flag "use_2pass" must be "True"\n'
+								   '(provided: {})\n'
+								   'structure dose must be calculated\n'
+								   '(structure dose: {}\n'.format(
+								   self.use_2pass, structure.y))
+
 		no_slack = not self.use_slack
 
 		for cid in structure.constraints:
@@ -267,15 +287,21 @@ class SolverCVXPY(Solver):
 
 			elif isinstance(c, PercentileConstraint):
 				if exact:
+					print "\n SolverCVXPY.__ADD_CONSTRAINTS CALL: EXACT BRANCH"
+
 					# build exact constraint
 					dvh_constr = self.__percentile_constraint_exact(
 						A, self.__x, structure.y,
 						c, had_slack = self.use_slack)
 
+					print dvh_constr
+
 					# add it to problem
 					self.problem.constraints += [ dvh_constr ]
 
 				else:
+					print "\n SolverCVXPY.__ADD_CONSTRAINTS CALL: RESTRICTION BRANCH"
+
 					# beta = 1 / slope for DVH constraint approximation
 					beta = Variable(1)
 					self.dvh_vars[cid] = beta
@@ -284,6 +310,8 @@ class SolverCVXPY(Solver):
 					# build convex restriction to constraint
 					dvh_constr = self.__percentile_constraint_restriction(
 						structure.A, self.__x, c, beta, slack)
+
+					print dvh_constr
 
 					# add it to problem
 					self.problem.constraints += [ dvh_constr ]
@@ -426,6 +454,8 @@ class PlanningProblem(object):
 		self.solver.init_problem(n_beams, **options)
 		self.use_slack = options.pop('dvh_slack', True)
 		self.use_2pass = options.pop('dvh_exact', False)
+		options['dvh_slack'] = self.use_slack
+		options['dvh_slack'] = self.use_2pass
 
 		# build problem
 		construction_report = self.solver.build(structure_dict.values())

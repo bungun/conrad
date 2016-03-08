@@ -127,9 +127,9 @@ class Case(object):
 		gamma = options['gamma'] = options.pop('slack_penalty', None)
 
 		rr = RunRecord(self.structures,
-			use_2pass = use_2pass,
-			use_slack = use_slack,
-			gamma = gamma)
+			use_2pass=use_2pass,
+			use_slack=use_slack,
+			gamma= gamma)
 
 		# solve problem
 		self.problem.solve(self.structures, rr.output, **options)
