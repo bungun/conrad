@@ -9,7 +9,7 @@ setup(
     author_email='ungun@stanford.edu',
     url='http://github.com/bungun/conrad/',
     package_dir={'conrad': 'conrad'},
-    packages=[],
+    packages=['conrad'],
     license='GPLv3',
     zip_safe=False,
     description='A convex optimization framework for radiation therapy treament planning',
