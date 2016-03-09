@@ -75,7 +75,7 @@ class DVHPlot(object):
 
 
 	def plot(self, plot_data, show=False, clear=True, xmax=None, legend=False,
-			 **options):
+			 title=None, self_title=False, **options):
 		""" TODO: docstring """
 		if clear: self.fig.clf()
 
@@ -88,7 +88,10 @@ class DVHPlot(object):
 			name = self.names_by_structure[label] if legend else '_nolegend_'
 			plt.plot(data['curve']['dose'], data['curve']['percentile'],
 				color=color, label=name, **options)
-			plt.title(name)
+			if self_title:
+				plt.title(name)
+			elif title is not None:
+				plt.title(title)
 
 			if data['rx'] > 0:
 				plt.axvline(x=data['rx'], linewidth=1, color=color,
