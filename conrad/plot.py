@@ -107,7 +107,7 @@ class DVHPlot(object):
 								constraint[1]['dose'][0])
 					if slack > 0.1:
 						plt.plot(constraint[1]['dose'],
-								 constraint[1]['percentile'], ls='--',
+								 constraint[1]['percentile'], ls='-',
 								 label=None, color=color, **options)
 
 					# So we don't cut off DVH constraint labels
@@ -120,11 +120,14 @@ class DVHPlot(object):
 		plt.xlim(0, xlim_upper)
 		plt.ylim(0, 103)
 		if legend:
-			labels = [self.names_by_structure[label] for label in plot_data]
-			plt.legend(labels, ncol=1, loc='upper right',
-					   bbox_to_anchor=[1.1, 0.9], columnspacing=1.0,
-					   labelspacing=0.0, handletextpad=0.0,
+			# labels = [self.names_by_structure[label] for label in plot_data]
+			plt.legend(ncol=1, loc='upper right',
+					   columnspacing=1.0, labelspacing=0.0, handletextpad=0.0,
            			   handlelength=1.5, fancybox=True, shadow=True)
+			# plt.legend(labels, ncol=1, loc='upper right',
+			# 		   bbox_to_anchor=[1.1, 0.9], columnspacing=1.0,
+			# 		   labelspacing=0.0, handletextpad=0.0,
+   #         			   handlelength=1.5, fancybox=True, shadow=True)
 
 		if show: SHOW()
 
