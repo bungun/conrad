@@ -90,6 +90,7 @@ class Case(object):
 		for s in self.structures.itervalues():
 			s.constraints -= constr_id
 
+	# TODO: change name to clear_constraints
 	def drop_all_dvh_constraints(self):
 		""" TODO: docstring """
 		for s in self.structures.itervalues():

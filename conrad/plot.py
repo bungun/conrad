@@ -74,13 +74,12 @@ class DVHPlot(object):
 				self.colors_by_structure[label] = colors[idx]
 
 
-	def plot(self, plot_data, show = False, clear = True, **options):
+	def plot(self, plot_data, show=False, clear=True, xmax=None, legend=False,
+			 **options):
 		""" TODO: docstring """
 		if clear: self.fig.clf()
 
 		max_dose = max([data['curve']['dose'].max() for data in plot_data.values()])
-		xmax = options.pop('xmax', None)
-		legend = options.pop('legend', False)
 
 		for label, data in plot_data.items():
 			plt.subplot(self.rows, self.cols, self.panels_by_structure[label])
@@ -114,7 +113,9 @@ class DVHPlot(object):
 					# So we don't cut off DVH constraint labels
 					max_dose = max(max_dose, constraint[1]['dose'][0])
 
-			xlim_upper = xmax if xmax is not None else 1.1 * max_dose
+		xlim_upper = xmax if xmax is not None else 1.1 * max_dose
+		print "ARG XMAX", xmax
+		print "XLIM_UPPER", xlim_upper
 
 		plt.xlim(0, xlim_upper)
 		plt.ylim(0, 103)
