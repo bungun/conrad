@@ -90,10 +90,11 @@ class SolverCVXPY(Solver):
 		self.gamma = GAMMA_DEFAULT
 
 	# methods:
-	def init_problem(self, n_beams, **options):
+	def init_problem(self, n_beams, use_slack=True, use_2pass=False,
+					 **options):
 		""" TODO: docstring """
-		self.use_slack = options.pop('dvh_slack', True)
-		self.use_2pass = options.pop('dvh_2pass', False)
+		self.use_slack = use_slack
+		self.use_2pass = use_2pass
 		self.__x = Variable(n_beams)
 		self.objective = Minimize(0)
 		self.constraints = [self.__x >= 0]
@@ -225,7 +226,7 @@ class SolverCVXPY(Solver):
 
 		print "\nADDING EXACT CONSTRAINT"
 
-		if not isinstance(constr, DoseConstraint):
+		if not isinstance(constr, Constraint):
 			TypeError('parameter constr must be of type '
 				'conrad.dose.PercentileConstraint. '
 				'Provided: {}'.format(type(constr)))
@@ -247,7 +248,7 @@ class SolverCVXPY(Solver):
 		if exact:
 			if not self.use_2pass or structure.y is None:
 				raise RuntimeError('exact constraints requested, but cannot '
-								   'be built. requirements\n'
+								   'be built. \nrequirements:\n'
 								   'input flag "use_2pass" must be "True"\n'
 								   '(provided: {})\n'
 								   'structure dose must be calculated\n'
@@ -291,7 +292,7 @@ class SolverCVXPY(Solver):
 
 					# build exact constraint
 					dvh_constr = self.__percentile_constraint_exact(
-						A, self.__x, structure.y,
+						structure.A, self.__x, structure.y,
 						c, had_slack = self.use_slack)
 
 					print dvh_constr
@@ -451,11 +452,10 @@ class PlanningProblem(object):
 		n_beams = structure_dict.values()[0].A.shape[1]
 
 		# initialize problem with size and options
-		self.solver.init_problem(n_beams, **options)
 		self.use_slack = options.pop('dvh_slack', True)
 		self.use_2pass = options.pop('dvh_exact', False)
-		options['dvh_slack'] = self.use_slack
-		options['dvh_slack'] = self.use_2pass
+		self.solver.init_problem(n_beams, use_slack=self.use_slack,
+								 use_2pass=self.use_2pass, **options)
 
 		# build problem
 		construction_report = self.solver.build(structure_dict.values())
