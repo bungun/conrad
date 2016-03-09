@@ -243,8 +243,8 @@ class CasePlotter(object):
 
 
 
-	def plot(self, case, **options, show=False, clear=True, subset=None,
-			 plotfile=None):
+	def plot(self, case, show=False, clear=True, subset=None, plotfile=None,
+		  	 **options):
 		"""
 		Plots dose data given current state of argument "case".
 
