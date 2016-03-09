@@ -303,7 +303,8 @@ class Structure(object):
 	def plotting_data(self):
 		""" TODO: docstring """
 		return {'curve': self.dvh.plotting_data,
-		'constraints': self.constraints.plotting_data}
+				'constraints': self.constraints.plotting_data,
+				'rx': self.dose_rx}
 
 	@property
 	def __header_string(self):

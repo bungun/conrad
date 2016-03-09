@@ -90,6 +90,11 @@ class DVHPlot(object):
 				color=color, label=name, **options)
 			plt.title(name)
 
+			if data['rx'] > 0:
+				plt.axvline(x=data['rx'], linewidth=1, color=color,
+							linestyle='dotted', label='_nolegend_')
+
+
 			for constraint in data['constraints']:
 				# TODO: What should we plot for other constraints like mean, min, max, etc?
 				if constraint[1]['type'] is 'percentile':
@@ -97,18 +102,18 @@ class DVHPlot(object):
 							constraint[1]['dose'][0],
 							constraint[1]['percentile'][0],
 							constraint[1]['symbol'],
-							alpha=0.7, color=color, label=None, **options)
+							alpha=0.7, color=color, label='_nolegend_', **options)
 					plt.plot(
 							constraint[1]['dose'][1],
 							constraint[1]['percentile'][1],
-							constraint[1]['symbol'], label=None, color=color,
+							constraint[1]['symbol'], label='_nolegend_', color=color,
 							**options)
 					slack = abs(constraint[1]['dose'][1] -
 								constraint[1]['dose'][0])
 					if slack > 0.1:
 						plt.plot(constraint[1]['dose'],
 								 constraint[1]['percentile'], ls='-',
-								 label=None, color=color, **options)
+								 label='_nolegend_', color=color, **options)
 
 					# So we don't cut off DVH constraint labels
 					max_dose = max(max_dose, constraint[1]['dose'][0])
