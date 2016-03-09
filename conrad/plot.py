@@ -88,7 +88,7 @@ class DVHPlot(object):
 			color = self.colors_by_structure[label]
 			name = self.names_by_structure[label]
 			plt.plot(data['curve']['dose'], data['curve']['percentile'],
-				color = color, label = name, **options)
+				color=color, label=name, **options)
 			plt.title(name)
 
 			for constraint in data['constraints']:
@@ -102,13 +102,14 @@ class DVHPlot(object):
 					plt.plot(
 							constraint[1]['dose'][1],
 							constraint[1]['percentile'][1],
-							constraint[1]['symbol'], color=color, **options)
+							constraint[1]['symbol'], label=None, color=color,
+							**options)
 					slack = abs(constraint[1]['dose'][1] -
 								constraint[1]['dose'][0])
 					if slack > 0.1:
 						plt.plot(constraint[1]['dose'],
-								 constraint[1]['percentile'], label=None,
-								 '--', color=color, **options)
+								 constraint[1]['percentile'], ls='--',
+								 label=None, color=color, **options)
 
 					# So we don't cut off DVH constraint labels
 					max_dose = max(max_dose, constraint[1]['dose'][0])
@@ -118,8 +119,10 @@ class DVHPlot(object):
 		plt.xlim(0, xlim_upper)
 		plt.ylim(0, 103)
 		if legend:
-			plt.legend(ncol=1, loc='upper right', bbox_to_anchor=[1.1, 0.9],
-           			   columnspacing=1.0, labelspacing=0.0, handletextpad=0.0,
+			labels = [self.names_by_structure[label] for label in plot_data]
+			plt.legend(labels, ncol=1, loc='upper right',
+					   bbox_to_anchor=[1.1, 0.9], columnspacing=1.0,
+					   labelspacing=0.0, handletextpad=0.0,
            			   handlelength=1.5, fancybox=True, shadow=True)
 
 		if show: SHOW()
@@ -240,8 +243,8 @@ class CasePlotter(object):
 
 
 
-	def plot(self, case, show=False, clear=True, subset=None,
-			 plotfile=None, **options):
+	def plot(self, case, **options, show=False, clear=True, subset=None,
+			 plotfile=None):
 		"""
 		Plots dose data given current state of argument "case".
 
