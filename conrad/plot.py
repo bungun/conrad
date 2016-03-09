@@ -285,7 +285,7 @@ class CasePlotter(object):
 			if not isinstance(subset, (list, tuple)):
 				raise TypeError('argument "subset" must be of type {} or '
 								'{}'.format(list, tuple))
-			if not all([label in data.keys() for label in subset]):
+			if not all([label in data_.keys() for label in subset]):
 				raise KeyError('argument "subset" specifies an invalid '
 							   'structure label')
 			data = {}
