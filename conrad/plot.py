@@ -85,7 +85,7 @@ class DVHPlot(object):
 			plt.subplot(self.rows, self.cols, self.panels_by_structure[label])
 
 			color = self.colors_by_structure[label]
-			name = self.names_by_structure[label]
+			name = self.names_by_structure[label] if legend else '_nolegend_'
 			plt.plot(data['curve']['dose'], data['curve']['percentile'],
 				color=color, label=name, **options)
 			plt.title(name)
