@@ -76,8 +76,9 @@ class DVHPlot(object):
 
 	def plot(self, plot_data, show=False, clear=True, xmax=None, legend=False,
 			 title=None, self_title=False, large_markers=False,
-			 suppress_xticks=False, suppress_yticks=False, suppress_xlabel=True,
-			 suppress_ylabel=True, **options):
+			 suppress_constraints=False, suppress_xticks=False,
+			 suppress_yticks=False, suppress_xlabel=True, suppress_ylabel=True,
+			 **options):
 		""" TODO: docstring """
 		if clear: self.fig.clf()
 
@@ -100,6 +101,10 @@ class DVHPlot(object):
 			if data['rx'] > 0:
 				plt.axvline(x=data['rx'], linewidth=1, color=color,
 							linestyle='dotted', label='_nolegend_')
+
+
+			if suppress_constraints:
+				continue
 
 
 			for constraint in data['constraints']:
