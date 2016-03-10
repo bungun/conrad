@@ -102,10 +102,8 @@ class DVHPlot(object):
 				plt.axvline(x=data['rx'], linewidth=1, color=color,
 							linestyle='dotted', label='_nolegend_')
 
-
 			if suppress_constraints:
 				continue
-
 
 			for constraint in data['constraints']:
 				# TODO: What should we plot for other constraints like mean, min, max, etc?
@@ -113,7 +111,7 @@ class DVHPlot(object):
 					plt.plot(
 							constraint[1]['dose'][0],
 							constraint[1]['percentile'][0],
-							constraint[1]['symbol'], alpha=0.7, color=color,
+							constraint[1]['symbol'], alpha=0.5, color=color,
 							markersize=marker_size, label='_nolegend_', **options)
 					plt.plot(
 							constraint[1]['dose'][1],
@@ -124,7 +122,7 @@ class DVHPlot(object):
 								constraint[1]['dose'][0])
 					if slack > 0.1:
 						plt.plot(constraint[1]['dose'],
-								 constraint[1]['percentile'], ls='-',
+								 constraint[1]['percentile'], ls='-', alpha=0.8,
 								 label='_nolegend_', color=color)
 
 					# So we don't cut off DVH constraint labels
