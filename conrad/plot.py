@@ -116,7 +116,7 @@ class DVHPlot(object):
 					if slack > 0.1:
 						plt.plot(constraint[1]['dose'],
 								 constraint[1]['percentile'], ls='-',
-								 label='_nolegend_', color=color, **options)
+								 label='_nolegend_', color=color)
 
 					# So we don't cut off DVH constraint labels
 					max_dose = max(max_dose, constraint[1]['dose'][0])
