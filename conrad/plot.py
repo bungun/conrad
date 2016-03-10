@@ -134,7 +134,7 @@ class DVHPlot(object):
 		if suppress_yticks:
 			plt.yticks([])
 		else:
-			plt.yticks(fontize=14)
+			plt.yticks(fontsize=14)
 		if suppress_xticks:
 			plt.suppress_xticks([])
 		else:
