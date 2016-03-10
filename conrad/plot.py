@@ -133,21 +133,21 @@ class DVHPlot(object):
 		plt.ylim(0, 103)
 		if suppress_yticks:
 			plt.yticks([])
+		else:
+			plt.yticks(fontize=14)
 		if suppress_xticks:
 			plt.suppress_xticks([])
+		else:
+			plt.yticks(fontsize=14)
 		if not suppress_xlabel:
 			plt.xlabel('Dose (Gy)', fontsize=16)
 		if not suppress_ylabel:
 			plt.ylabel('Percentile')
 		if legend:
-			# labels = [self.names_by_structure[label] for label in plot_data]
 			plt.legend(ncol=1, loc='upper right',
 					   columnspacing=1.0, labelspacing=0.0, handletextpad=0.0,
            			   handlelength=1.5, fancybox=True, shadow=True)
-			# plt.legend(labels, ncol=1, loc='upper right',
-			# 		   bbox_to_anchor=[1.1, 0.9], columnspacing=1.0,
-			# 		   labelspacing=0.0, handletextpad=0.0,
-   #         			   handlelength=1.5, fancybox=True, shadow=True)
+
 
 		if show: SHOW()
 
