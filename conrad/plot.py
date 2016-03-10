@@ -111,7 +111,7 @@ class DVHPlot(object):
 					plt.plot(
 							constraint[1]['dose'][0],
 							constraint[1]['percentile'][0],
-							constraint[1]['symbol'], alpha=0.4, color=color,
+							constraint[1]['symbol'], alpha=0.55, color=color,
 							markersize=marker_size, label='_nolegend_', **options)
 					plt.plot(
 							constraint[1]['dose'][1],
