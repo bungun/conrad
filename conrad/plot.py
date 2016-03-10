@@ -75,11 +75,15 @@ class DVHPlot(object):
 
 
 	def plot(self, plot_data, show=False, clear=True, xmax=None, legend=False,
-			 title=None, self_title=False, **options):
+			 title=None, self_title=False, large_markers=False,
+			 suppress_xticks=False, suppress_yticks=False, suppress_xlabel=True,
+			 suppress_ylabel=True, **options):
 		""" TODO: docstring """
 		if clear: self.fig.clf()
 
 		max_dose = max([data['curve']['dose'].max() for data in plot_data.values()])
+		marker_size = 16 if large_markers else 12
+
 
 		for label, data in plot_data.items():
 			plt.subplot(self.rows, self.cols, self.panels_by_structure[label])
@@ -104,13 +108,13 @@ class DVHPlot(object):
 					plt.plot(
 							constraint[1]['dose'][0],
 							constraint[1]['percentile'][0],
-							constraint[1]['symbol'],
-							alpha=0.7, color=color, label='_nolegend_', **options)
+							constraint[1]['symbol'], alpha=0.7, color=color,
+							markersize=marker_size, label='_nolegend_', **options)
 					plt.plot(
 							constraint[1]['dose'][1],
 							constraint[1]['percentile'][1],
 							constraint[1]['symbol'], label='_nolegend_', color=color,
-							**options)
+							markersize=marker_size, **options)
 					slack = abs(constraint[1]['dose'][1] -
 								constraint[1]['dose'][0])
 					if slack > 0.1:
@@ -127,6 +131,14 @@ class DVHPlot(object):
 
 		plt.xlim(0, xlim_upper)
 		plt.ylim(0, 103)
+		if suppress_yticks:
+			plt.yticks([])
+		if suppress_xticks:
+			plt.suppress_xticks([])
+		if not suppress_xlabel:
+			plt.xlabel('Dose (Gy)', fontsize=16)
+		if not suppress_ylabel:
+			plt.ylabel('Percentile')
 		if legend:
 			# labels = [self.names_by_structure[label] for label in plot_data]
 			plt.legend(ncol=1, loc='upper right',
