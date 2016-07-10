@@ -207,7 +207,7 @@ class CasePlotter(object):
 		self.valid_labels = case.structures.keys()
 
 
-	def set_display_groups(grouping='together', group_list=None):
+	def set_display_groups(self, grouping='together', group_list=None):
 		"""
 		Specifies structure-to-panel assignments for display.
 
@@ -235,7 +235,6 @@ class CasePlotter(object):
 				   from the case used to initializes this
 				   :class:`CasePlotter` object.
 		"""
-
 		if not isinstance(grouping, str):
 			raise TypeError('argument "grouping" must be of type {}'.format(
 							str))
@@ -250,6 +249,9 @@ class CasePlotter(object):
 		elif grouping == 'separate':
 			for i, k in enumerate(self.dvh_plot.panels_by_structure):
 				self.dvh_plot.panels_by_structure[k] = i + 1
+			self.dvh_plot.n_panels = max(self.dvh_plot.panels_by_structure.values())
+			self.dvh_plot.cols = panels_to_cols(self.dvh_plot.n_panels)
+			self.dvh_plot.rows = int(ceil(float(self.dvh_plot.n_panels) / self.dvh_plot.cols))
 		elif grouping == 'list':
 			valid &= isinstance(group_list, list)
 			valid &= all(map(lambda x: isinstance(x, tuple), group_list))
@@ -263,6 +265,9 @@ class CasePlotter(object):
 											 'does not correspond to any known'
 											 'structure labels in the current'
 											 'case'.format(label))
+				self.dvh_plot.n_panels = max(self.dvh_plot.panels_by_structure.values())
+				self.dvh_plot.cols = self.dvh_plot.panels_to_cols(self.dvh_plot.n_panels)
+				self.dvh_plot.rows = int(ceil(float(self.dvh_plot.n_panels) / self.dvh_plot.cols))
 			else:
 				raise TypeError('')
 
