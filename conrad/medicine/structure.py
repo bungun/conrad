@@ -1,6 +1,8 @@
 from numpy import ndarray, array, squeeze, zeros, nan
 from scipy.sparse import csr_matrix, csc_matrix
-from conrad.dose import Constraint, MeanConstraint, ConstraintList, DVH, DIRECTIONS
+
+from conrad.compat import *
+from conrad.dose import Constraint, MeanConstraint, ConstraintList, DVH, RELOPS
 from conrad.defs import CONRAD_DEBUG_PRINT
 
 """
@@ -13,51 +15,36 @@ W_NONTARG_DEFAULT = 0.025
 
 class Structure(object):
 	""" TODO: docstring """
-	def __init__(self, label, name, is_target, dose, **options):
+	def __init__(self, label, name, is_target, **options):
 		""" TODO: docstring """
 		# basic information
 		self.label = label
 		self.name = name
-		self.is_target = is_target
-		self.__size = None
-		self.__dose = max(float(dose), 0.) if is_target else 0.
+		self.is_target = bool(is_target)
+		self.__size = nan
+		self.__dose = 0.
 		self.__boost = 1.
-		self.__w_under = W_UNDER_DEFAULT if is_target else 0.
-		self.__w_over = W_OVER_DEFAULT if is_target else W_NONTARG_DEFAULT
+		self.__w_under = nan
+		self.__w_over = nan
 		self.__A_full = None
 		self.__A_mean = None
-		self.__A_clustered = None
-		self.__voxels_2_clusters = None
-		self.__cluster_sizes = None
-		self.__representation = 'full'
 		self.__y = None
 		self.__y_mean = nan
 
-		# number of voxels in structure
-		self.size = options.pop('size', None)
-
-		# dose constraints
-		self.constraints = ConstraintList()
-
-		# dvh curve
-		self.dvh = DVH(self.size) if self.size is not None else None
-
-		# set (pointer to) subsection of dose matrix corresponding to structure
+		if 'size' in options:
+			self.size = options['size']
+		self.dose = options.pop('dose', 0.)
 		self.A_full = options.pop('A', None)
-
-		# set (pointer to) clustered version of same dose matrix
-		self.A_clustered = (options.pop('A_clustered', None),
-			options.pop('vox2cluster', None),
-			options.pop('vox_per_cluster', None))
-
-		# set (pointer to) fully compressed version of same dose matrix
 		self.A_mean = options.pop('A_mean', None)
 
-		# objective weights (set to defaults if not provided)
-		if 'w_under' in options:
-			self.w_under = options.pop('w_under')
-		if 'w_over' in options:
-			self.w_over = options.pop('w_over')
+		WU_DEFAULT = W_UNDER_DEFAULT if is_target else 0.
+		WO_DEFAULT = W_OVER_DEFAULT if is_target else W_NONTARG_DEFAULT
+
+		self.w_under = options.pop('w_under', WU_DEFAULT)
+		self.w_over = options.pop('w_over', WO_DEFAULT)
+
+		self.constraints = ConstraintList()
+		self.dvh = DVH(self.size) if self.size is not None else None
 
 	@property
 	def size(self):
@@ -121,56 +108,15 @@ class Structure(object):
 					self.__A_mean = squeeze(array(self.__A_mean))
 
 	@property
-	def A_clustered(self):
-		return (self.__A_clustered, self.__voxels_2_clusters,
-			self.__cluster_sizes)
-
-	@A_clustered.setter
-	def A_clustered(self, input_tuple):
-		valid = True
-		input_len = len(input_tuple)
-
-		valid &= input_len >= 2
-		valid &= isinstance(input_tuple[0], (ndarray, csr_matrix, csc_matrix))
-		valid &= isinstance(input_tuple[1], (ndarray, list))
-		if input_len > 2:
-			valid &= isinstance(input_tuple[2], (ndarray, list))
-
-		if not valid:
-			ValueError('must provide at least (1) the clustered matrix and '
-				'(2) the voxel->cluster mapping to add clustered matrix; '
-				'optionally provide (3) the vector/list of cluster sizes')
-
-		A_clu = input_tuple[0]
-		vox2cluster = input_tuple[1]
-		cluster_sizes = input_tuple[2] if input_len > 2 else None
-
-		self.__A_clustered = A_clu
-		self.__voxels_2_clusters = vox2cluster
-
-		if cluster_sizes is not None:
-			self.__cluster_sizes = cluster_sizes
-		elif vox2cluster is not None:
-			self.__cluster_sizes = zeros(A_clu.shape[0])
-			for cluster in self.__voxels_2_clusters:
-				self.vpc[cluster] += 1
-
-	@property
 	def A(self):
 		return self.__A_full
 
-	def set_objective(self, dose, w_under, w_over):
-		if self.is_target:
-			self.dose = dose
-			self.w_under = w_under
-		self.w_over = w_over
-
-	def set_constraint(self, constr_id, threshold, direction, dose):
+	def set_constraint(self, constr_id, threshold, relop, dose):
 		if self.has_constraint(constr_id):
 			c = self.constraints.items[constr_id]
 			if isinstance(c, PercentileConstraint):
 				c.percentile = threshold
-			c.direction = direction
+			c.relop = relop
 			c.dose = dose
 			self.constraints.items[constr_id] = c
 
@@ -280,7 +226,7 @@ class Structure(object):
 				'conrad.dose.Constraint')
 
 		dose = constraint.dose
-		direction = constraint.direction
+		relop = constraint.relop
 
 		if constraint.threshold == 'mean':
 			dose_achieved = self.mean_dose
@@ -292,9 +238,9 @@ class Structure(object):
 			dose_achieved = self.dvh.dose_at_percentile(
 				constraint.threshold)
 
-		if direction == DIRECTIONS.LEQ:
+		if relop == DIRECTIONS.LEQ:
 			status = dose_achieved <= dose
-		elif direction == DIRECTIONS.GEQ:
+		elif relop == DIRECTIONS.GEQ:
 			status = dose_achieved >= dose
 
 		return (status, dose_achieved)
@@ -337,7 +283,7 @@ class Structure(object):
 		out += '\n'
 		return out
 
-	def summary(self, percentiles = [2, 25, 75, 98]):
+	def summary(self, percentiles=[2, 25, 75, 98]):
 		s = {}
 		s['mean'] = self.mean_dose
 		s['min'] = self.min_dose

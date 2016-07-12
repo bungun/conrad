@@ -13,18 +13,23 @@ class TestConstruction(unittest.TestCase):
 		self.A = np.vstack((A_targ, A_oar))
 
 		# Prescription for each structure
-		self.rx = [{'label': self.lab_tum, 'name': 'tumor', 'is_target': True,  'dose': 1., 'constraints': None},
-			  {'label': self.lab_oar, 'name': 'oar',   'is_target': False, 'dose': 0., 'constraints': None}]
-		
+		self.rx = [
+				{'label': self.lab_tum, 'name': 'tumor', 'is_target': True,
+				 'dose': 1., 'constraints': None},
+				{'label': self.lab_oar, 'name': 'oar', 'is_target': False,
+				 'dose': 0., 'constraints': None}]
+
 		def print_dims(data, solver='ECOS'):
 			# min c'*x
 			# s.t. A*x = b
 			#      G*x <= _K h
 			# See https://github.com/embotech/ecos
 			print 'c has length {}'.format(len(data['c']))
-			print 'A has {} rows and {} columns'.format(data['A'].shape[0], data['A'].shape[1])
-			print 'G has {} rows and {} columns\n'.format(data['G'].shape[0], data['G'].shape[1])
-		
+			print 'A has {} rows and {} columns'.format(
+					data['A'].shape[0], data['A'].shape[1])
+			print 'G has {} rows and {} columns\n'.format(
+					data['G'].shape[0], data['G'].shape[1])
+
 		self.print_dims = print_dims
 
 	# Runs once before all unit tests
@@ -52,7 +57,6 @@ class TestConstruction(unittest.TestCase):
 		# method that can be called to retrieve the data passed from CVXPY to the
 		# solver. In the future there should be something less hacky.
 
-
 		# Construct unconstrained case
 		cs = Case(self.A, self.voxel_labels, self.label_order, self.rx)
 
@@ -65,10 +69,10 @@ class TestConstruction(unittest.TestCase):
 		data_small_solvetime = cs.solvetime
 		data_small_c_len = len(data_small['c'])
 		data_small_G_rows = data_small['G'].shape[0]
-		
+
 		self.print_dims(data_small)
 		print 'solution found in {} seconds\n'.format(data_small_solvetime)
-		
+
 		# Test mathematical coherence of problem matrix
 		self.assertEqual(data_small_c_len, data_small['A'].shape[1])   # len(c) == ncol(A)
 		self.assertEqual(data_small_c_len, data_small['G'].shape[1])   # len(c) == ncol(G)
@@ -83,10 +87,10 @@ class TestConstruction(unittest.TestCase):
 		data_also_small_solvetime = cs.solvetime
 		data_also_small_c_len = len(data_also_small['c'])
 		data_also_small_G_rows = data_also_small['G'].shape[0]
-		
+
 		self.print_dims(data_also_small)
 		print 'solution found in {} seconds\n'.format(data_also_small_solvetime)
-		
+
 		# Test mean constraint doesn't result in much larger problem
 		self.assertAlmostEqual(data_also_small_solvetime, data_small_solvetime, places = 2)   # Solve time should be roughly the same
 		self.assertEqual(data_also_small_c_len, data_small_c_len + 1)   # Add one more term to objective
@@ -99,10 +103,10 @@ class TestConstruction(unittest.TestCase):
 		data_larger_solvetime = cs.solvetime
 		data_larger_c_len = len(data_larger['c'])
 		data_larger_G_rows = data_larger['G'].shape[0]
-		
+
 		self.print_dims(data_larger)
 		print 'solution found in {} seconds\n'.format(data_larger_solvetime)
-		
+
 		# Test percentile constraint on OAR results in larger problem
 		self.assertTrue(data_larger_solvetime > data_also_small_solvetime)
 		self.assertTrue(data_larger_c_len > data_also_small_c_len)

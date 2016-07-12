@@ -1,8 +1,11 @@
-from cvxpy import *
-from numpy import inf, array, squeeze, ones, zeros, copy as np_copy
-from conrad.dose import Constraint, PercentileConstraint, MinConstraint, \
-						MaxConstraint, MeanConstraint
 from time import clock
+from numpy import inf, array, squeeze, ones, zeros, copy as np_copy
+from cvxpy import *
+
+from conrad.compat import *
+from conrad.medicine.dose import Constraint, PercentileConstraint, \
+								 MinConstraint, MaxConstraint, \
+								 MeanConstraint
 
 GAMMA_DEFAULT = 1e-2
 RELTOL_DEFAULT = 1e-3

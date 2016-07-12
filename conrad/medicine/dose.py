@@ -1,23 +1,26 @@
 from time import time
 from hashlib import sha1
-from numpy import zeros, linspace
+from numpy import zeros, linspace, nan
 
-class __ConstraintDirections(object):
+from conrad.compat import *
+from conrad.physics.units import Gy, Percent
+
+class __ConstraintRelops(object):
 	GEQ = '>='
 	LEQ = '<='
 	INDEFINITE = '<>'
 
-DIRECTIONS = __ConstraintDirections()
+RELOPS = __ConstraintRelops()
 
 class Constraint(object):
 	def __init__(self):
 		self.__dose = 0.
 		self.__threshold = None
-		self.__direction = DIRECTIONS.GEQ
+		self.__relop = RELOPS.INDEFINITE
 		self.__slack = 0.
 		self.__priority = 1
+		self.__prescription_dose = nan * Gy
 
-	
 	@property
 	def threshold(self):
 		return self.__threshold
@@ -27,52 +30,67 @@ class Constraint(object):
 		self.__threshold = threshold
 
 	@property
-	def direction(self):
-		return self.__direction
-	
-	@direction.setter
-	def direction(self, direction):
-		if self.threshold == 'max' and '>' in direction:
-			raise Exception('constraint of form Dmax > x Gy '
-				'not allowed, please rephrase')
-		elif direction in ('<', '<='):
-			self.__direction = DIRECTIONS.LEQ
-		elif direction in ('>', '>='):
-			self.__direction = DIRECTIONS.GEQ
+	def relop(self):
+		return self.__relop
+
+	@relop.setter
+	def relop(self, relop):
+		if self.threshold == 'max' and '>' in relop:
+			raise Exception('constraint of form Dmax > x Gy not allowed, '
+							'please rephrase')
+		elif relop in ('<', '<='):
+			self.__relop = RELOPS.LEQ
+		elif relop in ('>', '>='):
+			self.__relop = RELOPS.GEQ
 		else:
-			ValueError('argument "direction" must be'
-				'one of ("<", "<=", ">", ">=")')
+			raise ValueError(
+					'argument "relop" must be one of ("<", "<=", ">", ">=")')
 
 	@property
 	def upper(self):
-		return self.__direction == DIRECTIONS.LEQ
+		return self.__relop == RELOPS.LEQ
 
 	@property
 	def dose(self):
-		return self.__dose
+		if isinstance(self.__dose, Percent):
+			return self.__dose * self.__prescription_dose
+		else:
+			return self.__dose
 
 	@dose.setter
 	def dose(self, dose):
-		if isinstance(dose, (int, float)):
-			self.__dose = max(float(dose), 0.)
+		if isinstance(dose, (DeliveredDose, Percent)):
+			self.__dose = dose
 		else:
-			TypeError('argument "dose" must be'
-				'of type "int" or "float"')
+			raise TypeError('argument "dose" must be of type {}, {} or '
+							'{}'.format(Percent, type(Gy), type(cGy)))
+
+	@property
+	def rx_dose(self, rx_dose):
+		return self.__prescription_dose
+
+	@rx_dose.setter
+	def rx_dose(self, rx_dose):
+		if isinstance(rx_dose, DeliveredDose):
+			self.__prescription_dose = rx_dose
+		else:
+			raise TypeError('argument "rx_dose" must be of type {}'.format(
+							type(Gy), type(cGy)))
 
 	@property
 	def slack(self):
 	    return self.__slack
-	
+
 	@slack.setter
 	def slack(self, slack):
 		if isinstance(slack, (int, float)):
 			if slack < 0:
-				ValueError('argument "slack" must be '
-					'nonnegative by convention')
+				raise ValueError('argument "slack" must be nonnegative by '
+								 'convention')
 			self.__slack = max(0., float(slack))
 		else:
-			TypeError('argument "slack" must be '
-				'of type float with value >= 0')		
+			raise TypeError('argument "slack" must be of type {} with value '
+					  		'>= 0'.format(float))
 
 	@property
 	def dose_achieved(self):
@@ -88,21 +106,21 @@ class Constraint(object):
 		if isinstance(priority, (int, float)):
 			self.__priority = max(0, min(3, int(priority)))
 			if priority < 0:
-				ValueError('argument "priority" cannot be negative. '
-					'allowed values: {0, 1, 2, 3}')
+				raise ValueError('argument "priority" cannot be negative. '
+								 'allowed values: {0, 1, 2, 3}')
 			elif priority > 3:
-				ValueError('argument "priority" cannot be > 3. '
-					'allowed values: {0, 1, 2, 3}')
+				raise ValueError('argument "priority" cannot be > 3. allowed '
+								 'values: {0, 1, 2, 3}')
 		else:
-			TypeError('argument "priority" must be '
-				'an integer between 0 and 3')
+			raise TypeError('argument "priority" must be an integer between 0 '
+							'and 3')
 
 	@property
 	def symbol(self):
-		return self.__direction.replace('=', '')
+		return self.__relop.replace('=', '')
 
 	def __le__(self, other):
-		self.direction = DIRECTIONS.LEQ
+		self.relop = RELOPS.LEQ
 		self.dose = other
 		return self
 
@@ -110,7 +128,7 @@ class Constraint(object):
 		return self.__le__(other)
 
 	def __ge__(self, other):
-		self.direction = DIRECTIONS.GEQ
+		self.relop = RELOPS.GEQ
 		self.dose = other
 		return self
 
@@ -118,15 +136,14 @@ class Constraint(object):
 		return self.__ge__(other)
 
 	def __str__(self):
-		return str('D{} {} {}Gy'.format(
-			str(self.__threshold),
-			str(self.__direction),
-			str(self.__dose)))
-	
+		thresh = self.__threshold
+		thresh = str(thresh.value) if isinstance(thresh, Percent) else thresh
+		return str('D{} {} {}'.format(thresh, self.__relop, self.__dose))
+
 class PercentileConstraint(Constraint):
-	def __init__(self, percentile = None, direction = None, dose = None):
+	def __init__(self, percentile=None, relop=None, dose=None):
 		Constraint.__init__(self)
-		self.direction = direction
+		self.relop = relop
 		self.dose = dose
 		if percentile is not None:
 			self.percentile = percentile
@@ -138,24 +155,27 @@ class PercentileConstraint(Constraint):
 	@percentile.setter
 	def percentile(self, percentile):
 		if isinstance(percentile, (int, float)):
-			self.threshold = min(100., max(0., float(percentile)))
+			self.threshold = min(100., max(0., float(percentile))) * Percent()
+		elif isinstance(percentile, Percent):
+			self.threshold = percentile
 		else:
-			TypeError('argument "percentile" must be of type int or float')
+			raise TypeError('argument "percentile" must be of type {}, {} or '
+					  '{}'.format(int, float, Percent))
 
 	@property
 	def plotting_data(self):
 		return {'type': 'percentile',
-			'percentile' : 2 * [self.percentile], 
-			'dose' :[self.dose, self.dose_achieved], 
+			'percentile' : 2 * [self.percentile],
+			'dose' :[self.dose, self.dose_achieved],
 			'symbol' : self.symbol}
 
 	def get_maxmargin_fulfillers(self, y, had_slack = False):
-		""" 
+		"""
 		given dose vector y, get the indices of the voxels that
 		fulfill this dose constraint (self) with maximum margin
 
 		given len(y), if m voxels are required to respect the
-		dose constraint exactly, y is assumed to contain 
+		dose constraint exactly, y is assumed to contain
 		at least m entries that respect the constraint
 		(for instance, y is generated by a convex program
 		that includes a convex restriction of the dose constraint)
@@ -163,12 +183,12 @@ class PercentileConstraint(Constraint):
 
 		procedure:
 		- get margins: (y - self.dose_requested)
-		- sort margin indices by margin values 
-		- if upper bound, return indices of p most negative entries 
+		- sort margin indices by margin values
+		- if upper bound, return indices of p most negative entries
 			(first p of sorted indices; numpy.sort sorts small to large)
-		- if lower bound, return indices p most positive entries 
+		- if lower bound, return indices p most positive entries
 			(last p of sorted indices; numpy.sort sorts small to large)
-		
+
 		p = percent non-violating * structure size
 			= percent non-violating * len(y)
 
@@ -185,55 +205,58 @@ class PercentileConstraint(Constraint):
 
 
 class MeanConstraint(Constraint):
-	def __init__(self, direction = None, dose = None):
+	def __init__(self, relop=None, dose=None):
 		Constraint.__init__(self)
-		self.direction = direction
+		self.relop = relop
 		self.dose = dose
 		self.threshold = 'mean'
 
 	@property
 	def plotting_data(self):
 		return {'type': 'mean',
-			'dose' :[self.dose, self.dose_achieved], 
+			'dose' : [self.dose, self.dose_achieved],
 			'symbol' : self.symbol}
 
 class MinConstraint(Constraint):
-	def __init__(self, direction = None, dose = None):
+	def __init__(self, relop=None, dose=None):
 		Constraint.__init__(self)
-		self.direction = direction
+		self.relop = relop
 		self.dose = dose
 		self.threshold = 'min'
 
 	@property
 	def plotting_data(self):
 		return {'type': 'min',
-			'dose' :[self.dose, self.dose_achieved], 
+			'dose' : [self.dose, self.dose_achieved],
 			'symbol' : self.symbol}
 
 class MaxConstraint(Constraint):
-	def __init__(self, direction = None, dose = None):
+	def __init__(self, relop=None, dose=None):
 		Constraint.__init__(self)
-		self.direction = direction
+		self.relop = relop
 		self.dose = dose
 		self.threshold = 'max'
 
 	@property
 	def plotting_data(self):
 		return {'type': 'max',
-			'dose' :[self.dose, self.dose_achieved], 
+			'dose' :[self.dose, self.dose_achieved],
 			'symbol' : self.symbol}
 
-def D(threshold, direction = None, dose = None):
+def D(threshold, relop=None, dose=None):
 	if threshold in ('mean', 'Mean'):
-		return MeanConstraint(direction = direction, dose = dose)
+		return MeanConstraint(relop=relop, dose=dose)
 	elif threshold in ('min', 'Min', 'minimum', 'Minimum') or threshold == 100:
-		return MinConstraint(direction = direction, dose = dose)
+		return MinConstraint(relop=relop, dose=dose)
 	elif threshold in ('max', 'Max', 'maximum', 'Maximum') or threshold == 0:
-		return MaxConstraint(direction = direction, dose = dose)
+		return MaxConstraint(relop=relop, dose=dose)
 	elif isinstance(threshold, (int, float)):
-		return PercentileConstraint(percentile = threshold, direction = direction, dose = dose)
+		return PercentileConstraint(percentile=threshold, relop=relop, dose=dose)
 	else:
 		raise ValueError('constraint unparsable as phrased')
+
+def V(dose, relop=None, threshold=None):
+	pass
 
 class ConstraintList(object):
 	def __init__(self):
@@ -242,10 +265,10 @@ class ConstraintList(object):
 
 	@staticmethod
 	def __keygen(constraint):
-		return sha1(str(time()) + str(constraint.dose) + 
-			str(constraint.threshold) + 
-			str(constraint.direction)).hexdigest()[:6]
-	
+		return sha1(str(time()) + str(constraint.dose) +
+			str(constraint.threshold) +
+			str(constraint.relop)).hexdigest()[:6]
+
 	def __getitem__(self, key):
 		return self.items[key]
 
@@ -273,15 +296,14 @@ class ConstraintList(object):
 				self += constr
 			return self
 		else:
-			TypeError('argument must be of '
-				'type {} or {}'.format(
-					Constraint, ConstraintList))
+			raise TypeError('argument must be of type {} or {}'.format(
+							Constraint, ConstraintList))
 
 	def __isub__(self, other):
 		if isinstance(other, Constraint):
 			for key, constr in self.items.iteritems():
 				if other == constr:
-					del self.items[key] 
+					del self.items[key]
 					return self
 		else:
 			if other in self.items:
@@ -291,7 +313,7 @@ class ConstraintList(object):
 	@property
 	def size(self):
 	    return len(self.items.keys())
-	
+
 	@property
 	def mean_only(self):
 		meantest = lambda c : isinstance(c, MeanConstraint)
@@ -299,7 +321,7 @@ class ConstraintList(object):
 		if self.size == 0:
 			return True
 		else:
-			return all(map(meantest, self.itervalues()))
+			return all(listmap(meantest, self.itervalues()))
 
 	def clear(self):
 		self.items = {}
@@ -315,7 +337,7 @@ class ConstraintList(object):
 		return out
 
 class DVH(object):
-	""" 
+	"""
 	TODO: DVHCurve docstring
 	"""
 
@@ -335,13 +357,13 @@ class DVH(object):
 	@property
 	def data(self):
 	    return self.__doses[1:]
-	
+
 	@data.setter
 	def data(self, y):
 		""" TODO: docstring """
 		if len(y) != self.__dose_buffer.size:
-			ValueError('dimension mismatch: length of argument "y" '
-				'must be {}'.format(self.__dose_buffer.size))
+			raise ValueError('dimension mismatch: length of argument "y" '
+							 'must be {}'.format(self.__dose_buffer.size))
 
 		self.__dose_buffer[:] = y[:]
 		self.__dose_buffer.sort()
@@ -377,7 +399,7 @@ class DVH(object):
 		while (u - l > 5):
 			# percentile sorted descending
 			if self.__percentiles[i] > percentile:
-				l = i				
+				l = i
 			else:
 				u = i
 			i = l + (u - l) / 2
@@ -395,7 +417,7 @@ class DVH(object):
 			return self.__doses[idx]
 		else:
 			# interpolate dose by interpolating percentiles if not close enough
-			alpha = self.__interpolate_percentile(self.__percentiles[i], 
+			alpha = self.__interpolate_percentile(self.__percentiles[i],
 				self.__percentiles[i + 1], percentile)
 			return alpha * self.__doses[i] + (1 - alpha) * self.__doses[i + 1]
 
@@ -410,7 +432,7 @@ class DVH(object):
 		""" TODO: docstring """
 		if self.__doses is None: return nan
 		return self.__doses[-1]
-	
+
 
 	@property
 	def plotting_data(self):

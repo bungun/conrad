@@ -59,13 +59,13 @@ class DVHPlot(object):
 		for label, color in colors_by_structure.items():
 			self.colors_by_structure[label] = color
 
-	def autoset_series_colors(self, structure_order_dict = None, colormap = None):
+	def autoset_series_colors(self, structure_order_dict=None, colormap=None):
 		""" TODO: docstring """
 		if isinstance(colormap, LinearSegmentedColormap):
-			colors = map(colormap, linspace(0.1, 0.9, self.n_structures))
+			colors = listmap(colormap, linspace(0.1, 0.9, self.n_structures))
 		else:
 			cmap = get_cmap('rainbow')
-			colors = map(cmap, linspace(0.9, 0.1, self.n_structures))
+			colors = listmap(cmap, linspace(0.9, 0.1, self.n_structures))
 
 		for idx, label in enumerate(self.panels_by_structure.keys()):
 			if structure_order_dict is not None:
@@ -112,18 +112,19 @@ class DVHPlot(object):
 							constraint[1]['dose'][0],
 							constraint[1]['percentile'][0],
 							constraint[1]['symbol'], alpha=0.55, color=color,
-							markersize=marker_size, label='_nolegend_', **options)
+							markersize=marker_size, label='_nolegend_',
+							**options)
 					plt.plot(
 							constraint[1]['dose'][1],
 							constraint[1]['percentile'][1],
-							constraint[1]['symbol'], label='_nolegend_', color=color,
-							markersize=marker_size, **options)
+							constraint[1]['symbol'], label='_nolegend_',
+							color=color, markersize=marker_size, **options)
 					slack = abs(constraint[1]['dose'][1] -
 								constraint[1]['dose'][0])
 					if slack > 0.1:
 						plt.plot(constraint[1]['dose'],
-								 constraint[1]['percentile'], ls='-', alpha=0.6,
-								 label='_nolegend_', color=color)
+								 constraint[1]['percentile'], ls='-',
+								 alpha=0.6, label='_nolegend_', color=color)
 
 					# So we don't cut off DVH constraint labels
 					max_dose = max(max_dose, constraint[1]['dose'][0])
@@ -147,10 +148,9 @@ class DVHPlot(object):
 		if not suppress_ylabel:
 			plt.ylabel('Percentile')
 		if legend:
-			plt.legend(ncol=1, loc='upper right',
-					   columnspacing=1.0, labelspacing=0.0, handletextpad=0.0,
-           			   handlelength=1.5, fancybox=True, shadow=True)
-
+			plt.legend(ncol=1, loc='upper right', columnspacing=1.0,
+					   labelspacing=0.0, handletextpad=0.0, handlelength=1.5,
+					   fancybox=True, shadow=True)
 
 		if show: SHOW()
 
@@ -166,7 +166,7 @@ class DVHPlot(object):
 		else:
 			try:
 				print "SAVING TO ", filepath
-				plt.savefig(filepath, bbox_inches = 'tight')
+				plt.savefig(filepath, bbox_inches='tight')
 			except:
 				raise RuntimeError('could not save plot to file: {}'.format(
 								   filepath))
@@ -207,7 +207,7 @@ class CasePlotter(object):
 		self.valid_labels = case.structures.keys()
 
 
-	def set_display_groups(self, grouping='together', group_list=None):
+	def set_display_groups(grouping='together', group_list=None):
 		"""
 		Specifies structure-to-panel assignments for display.
 
@@ -235,6 +235,7 @@ class CasePlotter(object):
 				   from the case used to initializes this
 				   :class:`CasePlotter` object.
 		"""
+
 		if not isinstance(grouping, str):
 			raise TypeError('argument "grouping" must be of type {}'.format(
 							str))
@@ -249,9 +250,6 @@ class CasePlotter(object):
 		elif grouping == 'separate':
 			for i, k in enumerate(self.dvh_plot.panels_by_structure):
 				self.dvh_plot.panels_by_structure[k] = i + 1
-			self.dvh_plot.n_panels = max(self.dvh_plot.panels_by_structure.values())
-			self.dvh_plot.cols = panels_to_cols(self.dvh_plot.n_panels)
-			self.dvh_plot.rows = int(ceil(float(self.dvh_plot.n_panels) / self.dvh_plot.cols))
 		elif grouping == 'list':
 			valid &= isinstance(group_list, list)
 			valid &= all(map(lambda x: isinstance(x, tuple), group_list))
@@ -265,14 +263,8 @@ class CasePlotter(object):
 											 'does not correspond to any known'
 											 'structure labels in the current'
 											 'case'.format(label))
-				self.dvh_plot.n_panels = max(self.dvh_plot.panels_by_structure.values())
-				self.dvh_plot.cols = self.dvh_plot.panels_to_cols(self.dvh_plot.n_panels)
-				self.dvh_plot.rows = int(ceil(float(self.dvh_plot.n_panels) / self.dvh_plot.cols))
 			else:
 				raise TypeError('')
-
-
-
 
 
 	def plot(self, case, show=False, clear=True, subset=None, plotfile=None,

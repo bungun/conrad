@@ -1,9 +1,12 @@
-from conrad.prescription import Prescription
-from conrad.problem import PlanningProblem
-from conrad.history import RunRecord, PlanningHistory
 from operator import add
-from numpy import ndarray, array, squeeze, zeros
 from warnings import warn
+from numpy import ndarray, array, squeeze, zeros
+
+from conrad.compat import *
+from conrad.physics import Physics
+from conrad.medicine import Anatomy, Prescription
+from conrad.optimization.problem import PlanningProblem
+from conrad.optimization.history import RunRecord
 
 """
 TODO: case.py docstring
@@ -22,61 +25,88 @@ class Case(object):
 			is_target (bool)
 			dose_constraints (dict, or probably string/tuple list)
 	"""
-	def __init__(self, A, voxel_labels, label_order,
-		prescription_raw, suppress_rx_constraints = False):
-		"""TODO: Case.__init__() docstring"""
+	def __init__(self, physics=None, anatomy=None, prescription=None,
+				 **options):
+		self.__physics = None
+		self.__anatomy = None
+		self.__prescription = None
+		self.__run = None
+
+		if physics:
+			self.physics = physics
+		if anatomy:
+			self.anatomy = anatomy
+		if prescription:
+			self.prescription = prescription
+
 		self.problem = PlanningProblem()
-		self.voxel_labels = voxel_labels
-		self.label_order = label_order
-
-		# digest clinical specification
-		self.prescription = Prescription(prescription_raw)
-
-		# dose matrix
-		self.A = A
-
-		if not (A.shape[0] == len(voxel_labels)):
-			ValueError('length of vector argument "voxel_labels" '
-				'must match number of rows in matrix argument "A"')
-
-		# parse matrix + data into Structure objects
-		self.structures = self.prescription.structure_dict
-		self.__build_structures()
 
 		# append prescription constraints unless suppressed:
+		suppress_rx_constraints = options.pop('suppress_rx_constraints', False)
 		if not suppress_rx_constraints:
-			self.add_all_rx_constraints()
+			self.transfer_constraints_to_anatomy()
 
-		# planning history
-		self.history = PlanningHistory()
+	@property
+	def physics(self):
+		return self.__physics
 
-	def __build_structures(self):
-		"""TODO: docstring
+	@physics.setter
+	def physics(self):
+		if not isinstance(physics, Physics):
+			raise TypeError('argument "physics" must be of type '
+							'{}'.format(Physics))
+		if physics.dose_matrix is None:
+			raise ValueError('argument "physics" must have an attached '
+							 'dose matrix')
 
-		NB: ASSUMES dose_matrix IS SORTED IN SAME ORDER AS LABELS IN voxel_labels
+		self.__physics = physics
+		if self.anatomy:
+			self.anatomy.import_dose_matrix(self.physics)
 
-		(fails if voxel_labels unsorted; TODO: sorting? pre-sort?)
-		"""
-		ptr1 = ptr2 = 0
+	@property
+	def anatomy(self):
+		return self.__anatomy
 
-		for label in self.label_order:
-			# obtain structure size
-			size = reduce(add, map(lambda v : int(v == label), self.voxel_labels))
-			self.structures[label].size = size
-			ptr2 += size
+	@anatomy.setter
+	def anatomy(self, anatomy):
+		if not isinstance(anatomy, Anatomy):
+			raise TypeError('argument "anatomy" must be of type '
+							'{}'.format(Anatomy))
+		self.__anatomy = anatomy
+		if self.physics:
+			self.anatomy.import_dose_matrix(self.physics)
 
-			# assess sorting of label blocks:
-			if not all(map(lambda v: v == label, self.voxel_labels[ptr1:ptr2])):
-				raise ValueError("inputs voxel_labels and dose_matrix are expected "
-								 "to be (block) sorted in the order specified by argument "
-								 "`label_order'. voxel_labels not block sorted.")
 
-			# partition dose matrix	into blocks
-			self.structures[label].A_full = self.A[ptr1:ptr2, :]
-			self.structures[label].A_mean = None
-			ptr1 = ptr2
+	@property
+	def prescription(self):
+		return self.__prescription
 
-	def add_dvh_constraint(self, label, threshold, direction, dose):
+	@prescription.setter
+	def prescription(self, prescription):
+		if not isinstance(physics, Prescription):
+			raise TypeError('argument "prescription" must be of type '
+							'{}'.format(Prescription))
+
+		self.__prescription = prescription
+
+	@property
+	def structures(self):
+		if self.anatomy:
+			return self.anatomy.structures
+		else:
+			raise AttributeError('cannot retrieve field "structures" '
+								 'when case.anatomy is not initialized')
+
+	@property
+	def A(self):
+	    return self.physics.dose_matrix
+
+	def transfer_constraints_to_anatomy(self):
+		constraint_dict = self.prescription.constraints_by_label
+		for label, constr_list in constraint_dict.items():
+			self.structures[label].constraints += constr_list
+
+	def add_constraint(self, label, threshold, direction, dose):
 		""" TODO: docstring """
 		if '<' in direction or '<=' in direction:
 			self.structures[label].constraints += D(threshold) <= dose
@@ -85,58 +115,55 @@ class Case(object):
 
 		return self.structures[label].constraints.last_key
 
-	def drop_dvh_constraint(self, constr_id):
+	def drop_constraint(self, constr_id):
 		""" TODO: docstring """
 		for s in self.structures.itervalues():
 			s.constraints -= constr_id
 
-	# TODO: change name to clear_constraints
-	def drop_all_dvh_constraints(self):
+	def clear_constraints(self):
 		""" TODO: docstring """
-		for s in self.structures.itervalues():
+		for s in self.structures.values():
 			s.constraints.clear()
 
-	def add_all_rx_constraints(self):
-		""" TODO: docstring """
-		constraint_dict = self.prescription.constraints_by_label
-		for label, constr_list in constraint_dict.iteritems():
-			self.structures[label].constraints += constr_list
-
-	def drop_all_but_rx_constraints(self):
-		""" TODO: docstring """
-		self.drop_all_dvh_constraints()
-		self.add_all_rx_constraints()
-
 	def change_constraint(self, constr_id, threshold, direction, dose):
-		for s in self.structures.itervalues():
+		for s in self.structures.values():
 			s.set_constraint(constr_id, threshold, direction, dose)
 
-	def change_objective(self, label, dose = None,
-		w_under = None, w_over = None):
+	def change_objective(self, label, dose=None, w_under=None, w_over=None):
 		""" TODO: docstring """
-		self.structures[label].set_objective(dose, w_under, w_over)
+		if self.structures[label].is_target:
+			self.structures[label].dose = dose
+			self.structures[label].w_under = w_under
+		self.structures[label].w_over = w_over
 
 	def plan(self, **options):
 		""" TODO: docstring """
-		# use 2 pass OFF by default
-		use_2pass = options['dvh_exact'] = options.pop('dvh_exact', False)
+		if self.physics is None:
+			raise AttributeError('case.physics must be intialized '
+								 'before case.plan() can be called')
+		elif self.anatomy is None:
+			raise AttributeError('case.anatomy must be intialized '
+								 'before case.plan() can be called')
+		elif self.prescription is None:
+			raise AttributeError('case.prescription must be intialized '
+								 'before case.plan() can be called')
 
+		# use 2 pass OFF by default
 		# dvh slack ON by default
+		use_2pass = options['dvh_exact'] = options.pop('dvh_exact', False)
 		use_slack = options['dvh_slack'] = options.pop('dvh_slack', True)
 
 		# objective weight for slack minimization
 		gamma = options['gamma'] = options.pop('slack_penalty', None)
 
-		rr = RunRecord(self.structures,
-			use_2pass=use_2pass,
-			use_slack=use_slack,
-			gamma= gamma)
+		self.__run = RunRecord(
+				self.structures,
+				use_2pass=use_2pass,
+				use_slack=use_slack,
+				gamma=gamma)
 
 		# solve problem
-		self.problem.solve(self.structures, rr.output, **options)
-
-		# save output
-		self.history += rr
+		self.problem.solve(self.structures, self.__run.output, **options)
 
 		# update doses
 		if self.feasible:
@@ -146,86 +173,69 @@ class Case(object):
 			warn('Problem infeasible as formulated')
 			return False
 
-	def calc_doses(self, x = None):
+	def calc_doses(self, x=None):
 		""" TODO: docstring """
-		if x is None: x = self.x
-		if x is None:
-			ValueError('optimization must be run at least once '
-				'to calculate doses')
+		x_ = x if x else self.x
+		if x_ is None:
+			raise ValueError('provide a beam intensity vector or run '
+							 'optimization at least once to calculate '
+							 'doses')
 
-		for s in self.structures.itervalues():
-			s.calc_y(x)
+		for s in self.structures.values():
+			s.calc_y(x_)
 
-	def tag_plan(self, tag):
-		self.history.tag_last(tag)
 
-	def x_num_nonzero(self, tolerance = 1e-6):
-		if self.x is None:
-			return None
-		else:
-			return len(self.x) - sum(abs(self.x) <= tolerance)
+	def x_num_nonzero(self, tolerance=1e-6):
+		return sum(self.x > tolerance) if self.x else 0
+
+
+	def property_check(requested):
+		if self.__run is None:
+			raise AttributeError('cannot retrieve property {} without '
+								 'performing at least one optimization '
+								 'run'.format(requested))
 
 	@property
 	def solver_info(self):
-		return self.history.last_info
+		self.property_check('solver_info')
+		return self.__run.info
 
 	@property
 	def x(self):
-		if self.history.last_x_exact is None:
-			return self.history.last_x
-		else:
-			return self.history.last_x_exact
+		self.property_check('x')
+		return self.__run.x_exact if self.__run.x_exact else self.__run.x
 
 	@property
 	def x_pass1(self):
-		return self.history.last_x
+		self.property_check('x_pass1')
+		return self.__run.x
 
 	@property
 	def x_pass2(self):
-		return self.x
+		self.property_check('x_pass2')
+		return self.__run.x_exact
 
 	@property
 	def solvetime(self):
+		self.property_check('solvetime')
 		tm1 = self.solvetime_pass1
 		tm2 = self.solvetime_pass2
-		if tm1 is not None and tm2 is not None:
-			return tm1 + tm2
-		else:
-			return tm1
+		return tm1 + tm2 if (tm1 and tm2) else tm1
 
 	@property
 	def solvetime_pass1(self):
-		return self.history.last_solvetime
+		self.property_check('solvetime_pass1')
+		return self.__run.solvetime
 
 	@property
 	def solvetime_pass2(self):
-		return self.history.last_solvetime_exact
+		self.property_check('solvetime_pass2')
+		return self.__run.solvetime_exact
 
 	@property
 	def feasible(self):
-		return self.history.last_feasible
-
-	def dose_summary_data(self, percentiles = [2, 98]):
-		d = {}
-		for label, s in self.structures.iteritems():
-			d[label] = s.get_dose_summary(percentiles = percentiles)
-		return d
-
-	@property
-	def dose_summary_string(self):
-		out = ''
-		for s in self.structures.itervalues():
-			out += s.summary_string
-		return out
-
-	@property
-	def prescription_report(self):
-		""" TODO: docstring """
-		return self.prescription.report(self.structures)
-
-	@property
-	def prescription_report_string(self):
-		return self.prescription.report_string(self.structures)
+		self.property_check('feasible')
+		return self.__run.feasible
 
 	@property
 	def plotting_data(self):
@@ -256,15 +266,12 @@ class Case(object):
 
 	@property
 	def n_structures(self):
-		""" TODO: docstring """
-		return len(self.structures.keys())
+		return self.anatomy.n_structures
 
 	@property
 	def n_voxels(self):
-		""" TODO: docstring """
-		return self.A.shape[0]
+		return self.physics.voxels
 
 	@property
 	def n_beams(self):
-		""" TODO: docstring """
-		return self.A.shape[1]
+		return self.phsyics.beams
