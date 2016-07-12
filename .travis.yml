@@ -24,11 +24,9 @@ install:
   - conda update -q conda
   - conda info -a
   - if [[ "$PYTHON_VERSION" == "2.6" ]]; then
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy 
-      scipy=0.14 nose coverage gcc argparse cvxpy;
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy=0.14 nose coverage gcc argparse cvxpy;
     else
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy 
-      nose coverage gcc cvxpy;
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose coverage gcc cvxpy;
     fi
   - source activate test-environment
   - conda install -c https://conda.anaconda.org/cyclus lapack
