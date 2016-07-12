@@ -23,14 +23,15 @@ install:
   - conda update -q conda
   - conda info -a
   - if [[ "$PYTHON_VERSION" == "2.6" ]]; then
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy=0.14 nose coverage gcc argparse cvxpy;
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy=0.14 nose coverage gcc argparse;
     else
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose coverage gcc cvxpy;
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose coverage gcc;
     fi
   - source activate test-environment
   - conda install -c https://conda.anaconda.org/cyclus lapack
   - pip install ecos
   - pip install scs 
+  - pip install cvxpy
   - python setup.py install
 script: 
   - nosetests conrad/tests/ --with-cover --cover-package=conrad
