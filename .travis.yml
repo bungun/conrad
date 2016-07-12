@@ -2,15 +2,14 @@ os:
   - linux
   # - osx
 language: python
-python:
-  # - '2.6'
-  - '2.7'
-  # - '3.2'
-  # - '3.3'
-  # - '3.4'
-  - '3.5'
-  # - '3.5-dev' # 3.5 development branch
-  # - 'nightly' # currently points to 3.6-dev
+env:
+  # - PYTHON_VERSION="2.6"
+  - PYTHON_VERSION="2.7"
+  # - PYTHON_VERSION="3.3"
+  # - PYTHON_VERSION="3.4"
+  - PYTHON_VERSION="3.5"
+  # - PYTHON_VERSION="3.5-dev"
+  # - PYTHON_VERSION="nightly"
 install: 
   - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
       wget http://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-x86_64.sh -O miniconda.sh;
