@@ -50,7 +50,7 @@ class Physics(object):
 			raise TypeError('explain')
 		elif len(dose_matrix.shape) != 2:
 			raise ValueError('explain')
-		elif dose_matrix.shape != (self.voxels, self.beams)
+		elif dose_matrix.shape != (self.voxels, self.beams):
 			raise ValueError('explain')
 
 		self.__dose_matrix = dose_matrix
@@ -68,9 +68,13 @@ class BeamSet(object):
 	def beam_count(self):
 		return 0 + reduce(add, listmap(lambda b : b.count, self.__beams))
 
+	@property
+	def beams(self):
+		return self.__beams
+
 	@beams.setter
 	def beams(self, beams):
-		self.beams = beams
+		self.__beams = beams
 
 	# def __iadd__(self, other):
 		# return self
@@ -89,7 +93,8 @@ class AbstractBeam(object):
 	def energy(self):
 		return self.__energy
 
-	@energy.setter(self, energy):
+	@energy.setter
+	def energy(self, energy):
 		self.__energy = float(energy)
 
 		# position (x, y, z, or r, phi, theta)
@@ -116,7 +121,7 @@ class AbstractBeam(object):
 		elif limit <= 0:
 			raise ValueError('beam limit must be positive')
 
-	   self.__limit = float(limit)
+		self.__limit = float(limit)
 
 
 
@@ -135,6 +140,10 @@ class Path(AbstractBeam):
 	def count(self):
 		return len(self.__stations)
 
+	@property
+	def stations(self):
+		return self.__stations
+
 	@stations.setter
 	def stations(self, stations):
 		if not isinstance(stations, (list, tuple)):
@@ -148,8 +157,8 @@ class Path(AbstractBeam):
 		if not isinstance(other, (list, tuple, Aperture, FluenceMap)):
 			raise TypeError('explain')
 
-		if bool(isinstance(self, (list, tuple)):
-			if not all(listmap(self.valid_beam, other))):
+		if bool(isinstance(self, (list, tuple))):
+			if not all(listmap(self.valid_beam, other)):
 				raise TypeError('explain')
 			else:
 				self.stations += list(other)

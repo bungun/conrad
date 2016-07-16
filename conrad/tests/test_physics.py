@@ -2,6 +2,8 @@ import unittest
 from operator import sub
 from numpy import nan
 from numpy.random import rand
+
+from conrad.compat import *
 from conrad.physics.physics import VoxelGrid, BixelGrid
 from conrad.physics.units import cm, mm
 
@@ -22,7 +24,7 @@ class TestPhysics(unittest.TestCase):
 
 		g.set_scale(dx, dy, dz)
 		self.assertTrue(g.total_volume.value is not nan)
-		vol = g.voxels * dx.to_cm().value * dy.to_cm().value * dz.to_cm().value
+		vol = g.voxels * dx.to_cm.value * dy.to_cm.value * dz.to_cm.value
 		self.assertEqual(g.total_volume.value, vol)
 
 		idx = int(m * rand())

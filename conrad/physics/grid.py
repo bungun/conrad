@@ -220,7 +220,7 @@ class Grid3D(AbstractGrid):
 
 	@property
 	def unit_volume(self):
-		return self.__unit_volume.to_cm3()
+		return self.__unit_volume.to_cm3
 
 	@property
 	def total_dimensions(self):

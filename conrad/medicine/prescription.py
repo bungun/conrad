@@ -3,7 +3,8 @@ import json, yaml
 from traceback import format_exc
 
 from conrad.compat import *
-from conrad.medicine import Structure, Anatomy
+from conrad.medicine.structure import Structure
+from conrad.medicine.anatomy import Anatomy
 from conrad.medicine.dose import D, ConstraintList
 
 # TODO: unit test

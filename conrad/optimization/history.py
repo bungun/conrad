@@ -102,7 +102,7 @@ class RunRecord(object):
 		def x(self):
 			return self.output.x
 
-		@property:
+		@property
 		def x_exact(self):
 			return self.output.x_exact
 

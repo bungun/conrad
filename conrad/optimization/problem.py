@@ -34,7 +34,6 @@ class Solver(object):
 		self.__gamma = GAMMA_DEFAULT
 		self.dvh_vars = {}
 		self.slack_vars = {}
-		self.dvh_indices = {}
 		self.feasible = False
 
 	@property
@@ -90,6 +89,8 @@ class SolverCVXPY(Solver):
 		self.__x = Variable(0)
 		self.dvh_vars = {}
 		self.slack_vars = {}
+		self.__constraint_indices = {}
+		self.constraint_dual_vars = {}
 		self.gamma = GAMMA_DEFAULT
 
 	# methods:
@@ -321,7 +322,17 @@ class SolverCVXPY(Solver):
 					self.problem.constraints += [ dvh_constr ]
 
 	def get_slack_value(self, constr_id):
-		return self.slack_vars[constr_id].value if constr_id in self.slack_vars else None
+		if constr_id in self.slack_vars:
+			return self.slack_vars[constr_id].value
+		else:
+			return None
+
+	def get_dual_value(self, constr_id):
+		if constr_id in self.__constraint_indices:
+			return self.problem.constraints[
+					self.__constraint_indices[constr_id]].dual_value[0]
+		else:
+			return None
 
 	def get_dvh_slope(self, constr_id):
 		beta = self.dvh_vars[constr_id].value if constr_id in self.dvh_vars else None
@@ -371,35 +382,34 @@ class SolverCVXPY(Solver):
 		use_indirect = options.pop('use_indirect', INDIRECT_DEFAULT)
 
 		# solve
-		PRINT("running solver...")
+		PRINT('running solver...')
 		if solver == ECOS:
 			ret = self.problem.solve(
-				solver = ECOS,
-				verbose = VERBOSE,
-				max_iters = maxiter,
-				reltol = reltol,
-				reltol_inacc = reltol,
-				feastol = reltol,
-				feastol_inacc = reltol)
+					solver=ECOS,
+					verbose=VERBOSE,
+					max_iters=maxiter,
+					reltol=reltol,
+					reltol_inacc=reltol,
+					feastol=reltol,
+					feastol_inacc=reltol)
 		elif solver == SCS:
 			if use_gpu:
 				ret = self.problem.solve(
-					solver = SCS,
-					verbose = VERBOSE,
-					max_iters = maxiter,
-					eps = reltol,
-					gpu = use_gpu)
+						solver=SCS,
+						verbose=VERBOSE,
+						max_iters=maxiter,
+						eps=reltol,
+						gpu=use_gpu)
 			else:
 				ret = self.problem.solve(
-					solver = SCS,
-					verbose = VERBOSE,
-					max_iters = maxiter,
-					eps = reltol,
-					use_indirect = use_indirect)
+						solver=SCS,
+						verbose=VERBOSE,
+						max_iters=maxiter,
+						eps=reltol,
+						use_indirect=use_indirect)
 		else:
-			Exception('invalid solver specified: {}\n'
-				'no optimization performed'.format(solver))
-			return False
+			raise ValueError('invalid solver specified: {}\n'
+							 'no optimization performed'.format(solver))
 
 		PRINT("status: {}".format(self.problem.status))
 		PRINT("optimal value: {}".format(self.problem.value))
@@ -415,7 +425,7 @@ class PlanningProblem(object):
 		self.use_slack = None
 		self.use_2pass = None
 
-	def __update_dvh_constraint(self, structure):
+	def __update_constraints(self, structure):
 		""" TODO: docstring """
 		for cid in structure.constraints:
 			slack_var = self.solver.slack_vars[cid]
@@ -426,7 +436,7 @@ class PlanningProblem(object):
 		""" TODO: docstring """
 		structure.calc_y(self.solver.x)
 		if not exact:
-			self.__update_dvh_constraint(structure)
+			self.__update_constraints(structure)
 
 	def __gather_solver_info(self, run_output, exact = False):
 		keymod = '_exact' if exact else ''

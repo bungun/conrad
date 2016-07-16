@@ -107,9 +107,11 @@ class Anatomy(object):
 			out += s.summary_string
 		return out
 
-	# def __iadd__(self, other):
-	# 	if isinstance(other, Structure):
-	# 	elif isinstance(other, dict):
-	# 		if
+	def __iadd__(self, other):
+		if isinstance(other, Structure):
+			self.__structures[other.label] = other
+		elif isinstance(other, dict):
+			for key, item in other.items:
+				self.__structures[key] += item
 
-	# 	return self
+		return self

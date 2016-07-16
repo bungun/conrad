@@ -1,0 +1,9 @@
+numpy
+scipy
+toolz
+nose
+coverage
+ecos
+scs
+cvxpy
+matplotlib

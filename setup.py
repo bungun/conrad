@@ -17,6 +17,8 @@ setup(
     install_requires=['cvxpy',
                       'numpy >= 1.8',
 		              'scipy >= 0.16'],
+                      'pyyaml',
+                      'nose'
     test_suite = 'nose.collector',
     tests_require = ['nose'],
     use_2to3=True,

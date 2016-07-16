@@ -18,18 +18,7 @@ class AbstractNonnegativeUnit(object):
 		elif value < 0:
 			raise ValueError('argument "value" must be nonnegative')
 		else:
-			self.__value = value
-
-		self.__value = float(value)
-
-	def __mul__(self, other):
-		pass
-
-	def __rmul__(self, other):
-		pass
-
-	def __str__(self):
-		pass
+			self.__value = float(value)
 
 class Percent(AbstractNonnegativeUnit):
 	def __init__(self, value=nan):
@@ -48,21 +37,34 @@ class Percent(AbstractNonnegativeUnit):
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
 
+	def __add__(self, other):
+		if not isinstance(other, (int, float, Percent)):
+			raise TypeError('addition with {} object only defined when right '
+							'operand is of type {}, {}, or {}'.format(Percent,
+							int, float, Percent))
+		if isinstance(other, (int, float)):
+			self.value += other
+		else:
+			self.value += other.value
+
+		return self
+
+	def __iadd__(self, other):
+		return self.__add__(other)
+
+	def __eq__(self, other):
+		if not isinstance(other, Percent):
+			raise TypeError('equality comparison with {} object only defined '
+							'for objects of same type'.format(Percent))
+		else:
+			return self.value == other.value
+
 	def __str__(self):
-		return '{} \%'.format(self.value)
+		return '{}%'.format(self.value)
 
 class Length(AbstractNonnegativeUnit):
 	def __init__(self, value=nan):
 		AbstractNonnegativeUnit.__init__(self, value=value)
-
-	def __mul__(self, other):
-		pass
-
-	def __rmul__(self, other):
-		pass
-
-	def __str__(self):
-		pass
 
 class MM(Length):
 	def __init__(self, value=nan):
@@ -88,12 +90,21 @@ class MM(Length):
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
 
+	def __eq__(self, other):
+		if not isinstance(other, Length):
+			raise TypeError('equality comparison with {} object only defined '
+							'for objects of type {}'.format(MM, Length))
+		else:
+			return self.value == other.to_mm.value
+
 	def __str__(self):
 		return str('{} mm'.format(self.value))
 
+	@property
 	def to_mm(self):
 		return self
 
+	@property
 	def to_cm(self):
 		return CM(self.value * 1e-1)
 
@@ -112,7 +123,6 @@ class CM(Length):
 				return CM3(self.value * other.value)
 			else:
 				return CM3(self.value * 0.01 * other.value)
-
 		else:
 			raise TypeError('Type {} only supports left multiplication '
 							'of types {} or {}'.format(Length, Length, Area))
@@ -122,27 +132,28 @@ class CM(Length):
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
 
+	def __eq__(self, other):
+		if not isinstance(other, Length):
+			raise TypeError('equality comparison with {} object only defined '
+							'for objects of type {}'.format(CM, Length))
+		else:
+			return self.value == other.to_cm.value
+
+
 	def __str__(self):
 		return str('{} cm'.format(self.value))
 
+	@property
 	def to_mm(self):
 		return MM(self.value * 10)
 
+	@property
 	def to_cm(self):
 		return self
 
 class Area(AbstractNonnegativeUnit):
 	def __init__(self, value=nan):
 		AbstractNonnegativeUnit.__init__(self, value=value)
-
-	def __mul__(self, other):
-		pass
-
-	def __rmul__(self, other):
-		pass
-
-	def __str__(self):
-		pass
 
 class MM2(Area):
 	def __init__(self, value=nan):
@@ -163,9 +174,21 @@ class MM2(Area):
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
 
+	def __eq__(self, other):
+		if not isinstance(other, Area):
+			raise TypeError('equality comparison with {} object only defined '
+							'for objects of type {}'.format(MM2, Area))
+		else:
+			return self.value == other.to_mm2.value
+
 	def __str__(self):
 		return str('{} mm^2'.format(self.value))
 
+	@property
+	def to_mm2(self):
+		return self
+
+	@property
 	def to_cm2(self):
 		return CM2(self.value * 1e-2)
 
@@ -188,11 +211,24 @@ class CM2(Area):
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
 
+	def __eq__(self, other):
+		if not isinstance(other, Area):
+			raise TypeError('equality comparison with {} object only defined '
+							'for objects of type {}'.format(CM2, Area))
+		else:
+			return self.value == other.to_cm2.value
+
 	def __str__(self):
 		return str('{} cm^2'.format(self.value))
 
-	def to_cm3(self):
+	@property
+	def to_cm2(self):
 		return self
+
+	@property
+	def to_mm2(self):
+		return MM2(self.value * 1e2)
+
 
 class Volume(object):
 	def __init__(self, value=nan):
@@ -213,9 +249,6 @@ class Volume(object):
 		else:
 			self.__value = value
 
-	def __rmul__(self, other):
-		pass
-
 class MM3(Volume):
 	def __init__(self, value=nan):
 		Volume.__init__(self, value)
@@ -225,9 +258,21 @@ class MM3(Volume):
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
 
+	def __eq__(self, other):
+		if not isinstance(other, Volume):
+			raise TypeError('equality comparison with {} object only defined '
+							'for objects of type {}'.format(MM3, Volume))
+		else:
+			return self.value == other.to_mm3.value
+
 	def __str__(self):
 		return str('{} mm^3'.format(self.value))
 
+	@property
+	def to_mm3(self):
+		return self
+
+	@property
 	def to_cm3(self):
 		return CM3(self.value * 1e-3)
 
@@ -240,24 +285,27 @@ class CM3(Volume):
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
 
+	def __eq__(self, other):
+		if not isinstance(other, Volume):
+			raise TypeError('equality comparison with {} object only defined '
+							'for objects of type {}'.format(CM3, Volume))
+		else:
+			return self.value == other.to_cm3.value
+
 	def __str__(self):
 		return str('{} cm^3'.format(self.value))
 
+	@property
+	def to_mm3(self):
+		return MM3(self.value * 1e3)
+
+	@property
 	def to_cm3(self):
 		return self
 
 class DeliveredDose(AbstractNonnegativeUnit):
-		def __init__(self, value=nan):
+	def __init__(self, value=nan):
 		AbstractNonnegativeUnit.__init__(self, value=value)
-
-	def __mul__(self, other):
-		pass
-
-	def __rmul__(self, other):
-		pass
-
-	def __str__(self):
-		pass
 
 class Gray(DeliveredDose):
 	def __init__(self, value=nan):
@@ -269,12 +317,33 @@ class Gray(DeliveredDose):
 							'when left operand is of type {}, {} or {}'.format(
 							int, float, Percent))
 
-		other = other.value if isinstance(other, Percent) else other
+		other = other.fraction if isinstance(other, Percent) else other
 
 		ret = Gray(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
 
+	def __add__(self, other):
+		if not isinstance(other, (int, float, DeliveredDose)):
+			raise TypeError('addition with {} object only defined when right '
+							'operand is of type {}, {}, {}, or {}'.format(
+							Gray, int, float, Gray, centiGray))
+		if isinstance(other, (int, float)):
+			self.value += other
+		else:
+			self.value += other.to_Gy.value
+		return self
+
+	def __iadd__(self, other):
+		return self.__add__(other)
+
+	def __eq__(self, other):
+		if not isinstance(other, DeliveredDose):
+			raise TypeError('equality comparison with {} object only defined '
+							'for objects of type {}'.format(Gray,
+							DeliveredDose))
+		else:
+			return self.value == other.to_Gy.value
 
 	def __str__(self):
 		return '{} Gy'.format(self.value)
@@ -285,7 +354,7 @@ class Gray(DeliveredDose):
 
 	@property
 	def to_cGy(self):
-		return self(0.01 * self.value)
+		return centiGray(100 * self.value)
 
 class centiGray(DeliveredDose):
 	def __init__(self, value=nan):
@@ -295,20 +364,43 @@ class centiGray(DeliveredDose):
 		if not isinstance(other, (int, float, Percent)):
 			raise TypeError('right multiplication by {} object only defined '
 							'when left operand is of type {}, {} or {}'.format(
-							int, float, Percent))
+							centiGray, int, float, Percent))
 
-		other = other.value if isinstance(other, Percent) else other
+		other = other.fraction if isinstance(other, Percent) else other
 
 		ret = centiGray(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
+
+	def __add__(self, other):
+		if not isinstance(other, (int, float, DeliveredDose)):
+			raise TypeError('addition with {} object only defined when right '
+							'operand is of type {}, {}, {}, or {}'.format(
+							centiGray, int, float, Gray, centiGray))
+		if isinstance(other, (int, float)):
+			self.value += other
+		else:
+			self.value += other.to_cGy.value
+
+		return self
+
+	def __iadd__(self, other):
+		return self.__add__(self)
+
+	def __eq__(self, other):
+		if not isinstance(other, DeliveredDose):
+			raise TypeError('equality comparison with {} object only defined '
+							'for objects of type {}'.format(centiGray,
+							DeliveredDose))
+		else:
+			return self.value == other.to_cGy.value
 
 	def __str__(self):
 		return '{} cGy'.format(self.value)
 
 	@property
 	def to_Gy(self):
-	    return Gray(100. * self.value)
+	    return Gray(0.01 * self.value)
 
 	@property
 	def to_cGy(self):

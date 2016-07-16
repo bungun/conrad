@@ -111,7 +111,7 @@ class Case(object):
 		if '<' in direction or '<=' in direction:
 			self.structures[label].constraints += D(threshold) <= dose
 		else:
-			self.structures[label].constraints -= D(threshold) <= dose
+			self.structures[label].constraints += D(threshold) >= dose
 
 		return self.structures[label].constraints.last_key
 
@@ -156,34 +156,28 @@ class Case(object):
 		# objective weight for slack minimization
 		gamma = options['gamma'] = options.pop('slack_penalty', None)
 
-		self.__run = RunRecord(
+		run = RunRecord(
 				self.structures,
 				use_2pass=use_2pass,
 				use_slack=use_slack,
 				gamma=gamma)
 
 		# solve problem
-		self.problem.solve(self.structures, self.__run.output, **options)
+		self.problem.solve(self.structures, run.output, **options)
+		self.__run = run
 
 		# update doses
-		if self.feasible:
-			self.calc_doses()
+		if run.feasible:
+			self.calc_doses(run.x)
 			return True
 		else:
 			warn('Problem infeasible as formulated')
 			return False
 
-	def calc_doses(self, x=None):
+	def calc_doses(self, x):
 		""" TODO: docstring """
-		x_ = x if x else self.x
-		if x_ is None:
-			raise ValueError('provide a beam intensity vector or run '
-							 'optimization at least once to calculate '
-							 'doses')
-
 		for s in self.structures.values():
 			s.calc_y(x_)
-
 
 	def x_num_nonzero(self, tolerance=1e-6):
 		return sum(self.x > tolerance) if self.x else 0
@@ -245,14 +239,14 @@ class Case(object):
 			d[label] = s.plotting_data
 		return d
 
-	def get_plotting_data(self, **options):
+	def get_plotting_data(self, calc=False, firstpass=False, x=None, **options):
 		""" TODO: docstring """
+		calc = bool(calc)
+		firstpass = bool(firstpass)
 		calc = options.pop('calc', False)
-		firstpass = options.pop('firstpass', False)
-		x = options.pop('x', None)
 
  		if calc and isinstance(x, ndarray):
-			if x.size == self.n_beams:
+			if len() == self.n_beams:
 				self.calc_doses(squeeze(x))
 			else:
 				raise ValueError('argument "x" must be a numpy.ndarray'

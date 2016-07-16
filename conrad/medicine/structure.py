@@ -2,8 +2,10 @@ from numpy import ndarray, array, squeeze, zeros, nan
 from scipy.sparse import csr_matrix, csc_matrix
 
 from conrad.compat import *
-from conrad.dose import Constraint, MeanConstraint, ConstraintList, DVH, RELOPS
-from conrad.defs import CONRAD_DEBUG_PRINT
+from conrad.defs import CONRAD_DEBUG_PRINT, positive_real_valued, \
+						sparse_or_dense, vec
+from conrad.medicine.dose import Constraint, MeanConstraint, ConstraintList, \
+								 DVH, RELOPS
 
 """
 TODO: structure.py docstring
@@ -21,7 +23,7 @@ class Structure(object):
 		self.label = label
 		self.name = name
 		self.is_target = bool(is_target)
-		self.__size = nan
+		self.__size = None
 		self.__dose = 0.
 		self.__boost = 1.
 		self.__w_under = nan
@@ -30,10 +32,12 @@ class Structure(object):
 		self.__A_mean = None
 		self.__y = None
 		self.__y_mean = nan
+		self.dvh = None
+		self.constraints = ConstraintList()
 
-		if 'size' in options:
-			self.size = options['size']
-		self.dose = options.pop('dose', 0.)
+		self.size = options.pop('size', None)
+		if is_target:
+			self.dose = options.pop('dose', 1.)
 		self.A_full = options.pop('A', None)
 		self.A_mean = options.pop('A_mean', None)
 
@@ -43,8 +47,18 @@ class Structure(object):
 		self.w_under = options.pop('w_under', WU_DEFAULT)
 		self.w_over = options.pop('w_over', WO_DEFAULT)
 
-		self.constraints = ConstraintList()
-		self.dvh = DVH(self.size) if self.size is not None else None
+	@property
+	def plannable(self):
+		size_set = positive_real_valued(self.size)
+		full_mat_usable = sparse_or_dense(self.A_full)
+		if full_mat_usable:
+			full_mat_usable &= self.size == self.A_full.shape[0]
+
+		collapsed_mat_usable = bool(
+				isinstance(self.A_mean, ndarray) and self.collapsable)
+
+		usable_matrix_loaded = full_mat_usable or collapsed_mat_usable
+		return size_set and usable_matrix_loaded
 
 	@property
 	def size(self):
@@ -52,14 +66,15 @@ class Structure(object):
 
 	@size.setter
 	def size(self, size):
-		if isinstance(size, (int, float)):
-			if size <= 0:
-				ValueError('argument "size" must be a positive int')
-			else:
-				self.__size = int(size)
-				self.dvh = DVH(self.size)
+		if not positive_real_valued(size):
+			raise ValueError('argument "size" must be a positive int')
 		else:
-			TypeError('argument "size" must be a positive int')
+			self.__size = int(size)
+			self.dvh = DVH(self.size)
+
+	def reset_matrices(self):
+		self.__A_full = None
+		self.__A_mean = None
 
 	@property
 	def collapsable(self):
@@ -71,21 +86,31 @@ class Structure(object):
 
 	@A_full.setter
 	def A_full(self, A_full):
+		if A_full is None:
+			return
+
 		# verify type of A_full
-		if A_full is not None and not isinstance(A_full,
-			(ndarray, csr_matrix, csc_matrix)):
-			TypeError("input A must by a numpy or "
-				"scipy csr/csc sparse matrix")
+		if not sparse_or_dense(A_full):
+			raise TypeError('input A must by a numpy or scipy csr/csc '
+							'sparse matrix')
+
+		if self.size is not None:
+			if A_full.shape[0] != self.size:
+				raise ValueError('# rows of "A_full" must correspond to value '
+								 ' of property size ({}) of {} object'.format(
+								 self.size, Structure))
+		else:
+			self.size = A_full.shape[0]
 
 		self.__A_full = A_full
-
+		self.A_mean = None
 
 	@property
 	def A_mean(self):
 		return self.__A_mean
 
 	@A_mean.setter
-	def A_mean(self, A_mean = None):
+	def A_mean(self, A_mean=None):
 		if A_mean is not None:
 			if not isinstance(A_mean, ndarray):
 				raise TypeError('if argument "A_mean" is provided, it must be '
@@ -95,8 +120,16 @@ class Structure(object):
 								 ' a row or column vector. shape of argument: '
 								 '{}'.format(A_mean.shape))
 			else:
-				self.__A_mean = squeee(array(A_mean))
-		elif self.A_full is not None:
+				if self.__A_full is not None:
+					if len(A_mean) != self.__A_full.shape[1]:
+						raise ValueError('field "A_full" already set; '
+										 'proposed value for "A_mean" '
+										 'must have same number of entries '
+										 '({}) as columns in A_full ({})'
+										 ''.format(len(A_mean),
+										 self.__A_full.shape[1]))
+				self.__A_mean = vec(A_mean)
+		elif self.__A_full is not None:
 			if not isinstance(self.A_full, (ndarray, csc_matrix, csr_matrix)):
 				raise TypeError('cannot calculate structure.A_mean from'
 								'structure.A_full: A_full must be one of'
@@ -105,7 +138,7 @@ class Structure(object):
 			else:
 				self.__A_mean = self.A_full.sum(0) / self.A_full.shape[0]
 				if not isinstance(self.A_full, ndarray):
-					self.__A_mean = squeeze(array(self.__A_mean))
+					self.__A_mean = vec(self.__A_mean)
 
 	@property
 	def A(self):
@@ -128,21 +161,39 @@ class Structure(object):
 	def dose(self):
 		return self.__dose * self.__boost
 
+	@dose_rx.setter
+	def dose_rx(self, dose):
+		if not self.is_target: return
+		if isinstance(dose, (int, float)):
+			if dose <= 0:
+				raise ValueError('negative doses are unphysical and '
+								 'not allowed in dose constraints')
+			self.__dose = max(0., float(dose))
+			self.__boost = 1.
+		else:
+			raise TypeError('argument "dose" must be a float with value >= 0')
+
 	@dose.setter
 	def dose(self, dose):
 		if not self.is_target: return
 		if isinstance(dose, (int, float)):
-			self.__boost = max(0., float(dose)) / self.__dose
-			if dose < 0:
-				ValueError('negative doses are unphysical and '
-					'not allowed in dose constraints')
+			if dose <= 0:
+				raise ValueError('negative doses are unphysical and '
+								 'not allowed in dose constraints')
+			if self.__dose is None or self.__dose is nan or self.__dose == 0.:
+				self.__dose = float(dose)
+				self.__boost = 1.
+			else:
+				self.__boost = max(0., float(dose)) / self.__dose
 		else:
-			TypeError('argument "weight" must be a float '
-				'with value >= 0')
+			raise TypeError('argument "dose" must be a float with value >= 0')
 
 	@property
 	def w_under(self):
 		""" TODO: docstring """
+		if not positive_real_valued(self.size):
+			return nan
+
 		if isinstance(self.__w_under, (float, int)):
 		    return self.__w_under / float(self.size)
 		else:
@@ -154,6 +205,10 @@ class Structure(object):
 
 	@w_under.setter
 	def w_under(self, weight):
+		if not self.is_target:
+			self.__w_under = 0.
+			return
+
 		if isinstance(weight, (int, float)):
 			self.__w_under = max(0., float(weight))
 			if weight < 0:
@@ -164,6 +219,9 @@ class Structure(object):
 	@property
 	def w_over(self):
 		""" TODO: docstring """
+		if not positive_real_valued(self.size):
+			return nan
+
 		if isinstance(self.__w_over, (float, int)):
 		    return self.__w_over / float(self.size)
 		else:
@@ -213,11 +271,15 @@ class Structure(object):
 	@property
 	def min_dose(self):
 		""" TODO: docstring """
+		if self.dvh is None:
+			return nan
 		return self.dvh.min_dose
 
 	@property
 	def max_dose(self):
 		""" TODO: docstring """
+		if self.dvh is None:
+			return nan
 		return self.dvh.max_dose
 
 	def satisfies(self, constraint):
