@@ -2,9 +2,9 @@
 	"name" : "PTV_JSON",
 	"label" : 1,
 	"is_target" : true,
-	"dose" : 1.0,
+	"dose" : "1 Gy",
 	"constraints" : [
-		"D85 > 0.8 Gy",
+		"D85 > 0.8 rx",
 		"D1 < 1.2 Gy"
 	]
 }, {

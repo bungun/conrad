@@ -6,7 +6,7 @@ from conrad.compat import *
 from conrad.physics import Physics
 from conrad.medicine import Anatomy, Prescription
 from conrad.optimization.problem import PlanningProblem
-from conrad.optimization.history import RunRecord
+from conrad.optimization.history import RunRecord, PlanningHistory
 
 """
 TODO: case.py docstring
@@ -25,21 +25,20 @@ class Case(object):
 			is_target (bool)
 			dose_constraints (dict, or probably string/tuple list)
 	"""
-	def __init__(self, physics=None, anatomy=None, prescription=None,
+	def __init__(self, anatomy=None, physics=None, prescription=None,
 				 **options):
 		self.__physics = None
 		self.__anatomy = None
 		self.__prescription = None
-		self.__run = None
+		self.__problem = None
 
-		if physics:
-			self.physics = physics
-		if anatomy:
-			self.anatomy = anatomy
-		if prescription:
-			self.prescription = prescription
+		self.physics = physics
+		self.anatomy = anatomy
+		self.prescription = prescription
+		self.__problem = PlanningProblem()
 
-		self.problem = PlanningProblem()
+		if self.anatomy.is_empty:
+			self.anatomy.structures = self.prescription.structure_dict
 
 		# append prescription constraints unless suppressed:
 		suppress_rx_constraints = options.pop('suppress_rx_constraints', False)
@@ -52,16 +51,7 @@ class Case(object):
 
 	@physics.setter
 	def physics(self):
-		if not isinstance(physics, Physics):
-			raise TypeError('argument "physics" must be of type '
-							'{}'.format(Physics))
-		if physics.dose_matrix is None:
-			raise ValueError('argument "physics" must have an attached '
-							 'dose matrix')
-
-		self.__physics = physics
-		if self.anatomy:
-			self.anatomy.import_dose_matrix(self.physics)
+		self.__physics = Physics(physics)
 
 	@property
 	def anatomy(self):
@@ -69,13 +59,7 @@ class Case(object):
 
 	@anatomy.setter
 	def anatomy(self, anatomy):
-		if not isinstance(anatomy, Anatomy):
-			raise TypeError('argument "anatomy" must be of type '
-							'{}'.format(Anatomy))
-		self.__anatomy = anatomy
-		if self.physics:
-			self.anatomy.import_dose_matrix(self.physics)
-
+		self.__anatomy = Anatomy(anatomy)
 
 	@property
 	def prescription(self):
@@ -83,19 +67,15 @@ class Case(object):
 
 	@prescription.setter
 	def prescription(self, prescription):
-		if not isinstance(physics, Prescription):
-			raise TypeError('argument "prescription" must be of type '
-							'{}'.format(Prescription))
+		self.__prescription = Prescription(prescription)
 
-		self.__prescription = prescription
+	@property
+	def problem(self):
+		return self.__problem
 
 	@property
 	def structures(self):
-		if self.anatomy:
-			return self.anatomy.structures
-		else:
-			raise AttributeError('cannot retrieve field "structures" '
-								 'when case.anatomy is not initialized')
+		return self.anatomy.structures
 
 	@property
 	def A(self):
@@ -104,16 +84,16 @@ class Case(object):
 	def transfer_constraints_to_anatomy(self):
 		constraint_dict = self.prescription.constraints_by_label
 		for label, constr_list in constraint_dict.items():
-			self.structures[label].constraints += constr_list
+			self.antomy[structure_label].constraints += constr_list
 
-	def add_constraint(self, label, threshold, direction, dose):
+	def add_constraint(self, structure_label, threshold, direction, dose):
 		""" TODO: docstring """
 		if '<' in direction or '<=' in direction:
-			self.structures[label].constraints += D(threshold) <= dose
+			self.anatomy[structure_label].constraints += D(threshold) <= dose
 		else:
-			self.structures[label].constraints += D(threshold) >= dose
+			self.anatomy[structure_label].constraints += D(threshold) >= dose
 
-		return self.structures[label].constraints.last_key
+		return self.anatomy[structure_label].constraints.last_key
 
 	def drop_constraint(self, constr_id):
 		""" TODO: docstring """
@@ -132,25 +112,50 @@ class Case(object):
 	def change_objective(self, label, dose=None, w_under=None, w_over=None):
 		""" TODO: docstring """
 		if self.structures[label].is_target:
-			self.structures[label].dose = dose
-			self.structures[label].w_under = w_under
-		self.structures[label].w_over = w_over
+			if dose:
+				self.structures[label].dose = dose
+			if w_under:
+				self.structures[label].w_under = w_under
+		if w_over:
+			self.structures[label].w_over = w_over
+
+	def load_physics_to_anatomy(self):
+		if self.anatomy.plannable and self.physics.data_loaded:
+			raise ValueError('case.anatomy already has valid dose '
+							 'matrix data loaded to each structure.\n'
+							 'call this method with option '
+							 '"overwrite=True" to load new dose matrix '
+							 'data')
+		if self.physics.data_loaded:
+			return
+
+		for structure in self.anatomy:
+			label = structure.label
+			structure.A_full = self.physics.dose_matrix_by_label(label)
+			structure.voxel_weights = self.physics.voxel_weights_by_label(
+					label)
+			self.physics.mark_data_as_loaded()
 
 	def plan(self, **options):
-		""" TODO: docstring """
-		if self.physics is None:
-			raise AttributeError('case.physics must be intialized '
-								 'before case.plan() can be called')
-		elif self.anatomy is None:
-			raise AttributeError('case.anatomy must be intialized '
-								 'before case.plan() can be called')
-		elif self.prescription is None:
-			raise AttributeError('case.prescription must be intialized '
-								 'before case.plan() can be called')
+		plannable = True
+		if not self.physics.plannable:
+			plannable &= False
+		elif not self.anatomy.plannable:
+			self.load_physics_to_anatomy()
+			plannable &= self.anatomy.plannable
+		if not plannable:
+			raise ValueError('case not plannable in current state.\n'
+							 'minimum requirements:\n'
+							 '---------------------\n'
+							 '-"case.physics.dose_matrix" is set\n'
+							 '-"case.physics.voxel_labels" is set\n'
+							 '-"case.anatomy" contains at least one '
+							 'structure marked as target')
 
-		# use 2 pass OFF by default
-		# dvh slack ON by default
+
+		# two pass planning for DVH constraints: OFF by default
 		use_2pass = options['dvh_exact'] = options.pop('dvh_exact', False)
+		# dose constraint slack: ON by default
 		use_slack = options['dvh_slack'] = options.pop('dvh_slack', True)
 
 		# objective weight for slack minimization
@@ -163,100 +168,32 @@ class Case(object):
 				gamma=gamma)
 
 		# solve problem
-		self.problem.solve(self.structures, run.output, **options)
-		self.__run = run
+		self.problem.solve(self.anatomy, run.output, **options)
 
 		# update doses
 		if run.feasible:
-			self.calc_doses(run.x)
-			return True
+			run.plotting_data[0] = self.plotting_data(run.x)
+			if use_2pass:
+				run.plotting_data['exact'] = self.plotting_data(run.x_exact)
+			return True, run
 		else:
 			warn('Problem infeasible as formulated')
-			return False
+			return False, run
 
-	def calc_doses(self, x):
+	def calculate_doses(self, x):
 		""" TODO: docstring """
-		for s in self.structures.values():
-			s.calc_y(x_)
-
-	def x_num_nonzero(self, tolerance=1e-6):
-		return sum(self.x > tolerance) if self.x else 0
-
-
-	def property_check(requested):
-		if self.__run is None:
-			raise AttributeError('cannot retrieve property {} without '
-								 'performing at least one optimization '
-								 'run'.format(requested))
+		self.anatomy.calculate_doses(x)
 
 	@property
-	def solver_info(self):
-		self.property_check('solver_info')
-		return self.__run.info
-
-	@property
-	def x(self):
-		self.property_check('x')
-		return self.__run.x_exact if self.__run.x_exact else self.__run.x
-
-	@property
-	def x_pass1(self):
-		self.property_check('x_pass1')
-		return self.__run.x
-
-	@property
-	def x_pass2(self):
-		self.property_check('x_pass2')
-		return self.__run.x_exact
-
-	@property
-	def solvetime(self):
-		self.property_check('solvetime')
-		tm1 = self.solvetime_pass1
-		tm2 = self.solvetime_pass2
-		return tm1 + tm2 if (tm1 and tm2) else tm1
-
-	@property
-	def solvetime_pass1(self):
-		self.property_check('solvetime_pass1')
-		return self.__run.solvetime
-
-	@property
-	def solvetime_pass2(self):
-		self.property_check('solvetime_pass2')
-		return self.__run.solvetime_exact
-
-	@property
-	def feasible(self):
-		self.property_check('feasible')
-		return self.__run.feasible
-
-	@property
-	def plotting_data(self):
+	def plotting_data(self, x=None):
 		""" TODO: docstring """
+		if x:
+			self.calculate_doses(x)
+
  		d = {}
-		for label, s in self.structures.iteritems():
-			d[label] = s.plotting_data
+		for structure in self.anatomy:
+			d[structure.label] = structure.plotting_data
 		return d
-
-	def get_plotting_data(self, calc=False, firstpass=False, x=None, **options):
-		""" TODO: docstring """
-		calc = bool(calc)
-		firstpass = bool(firstpass)
-		calc = options.pop('calc', False)
-
- 		if calc and isinstance(x, ndarray):
-			if len() == self.n_beams:
-				self.calc_doses(squeeze(x))
-			else:
-				raise ValueError('argument "x" must be a numpy.ndarray'
-								 'of length {}, ignoring argument'.format(
-								 self.n_beams))
-		elif calc and firstpass:
-			self.calc_doses(self.x_pass1)
-		elif calc:
-			self.calc_doses(self.x)
-		return self.plotting_data
 
 	@property
 	def n_structures(self):

@@ -346,7 +346,7 @@ class Gray(DeliveredDose):
 			return self.value == other.to_Gy.value
 
 	def __str__(self):
-		return '{} Gy'.format(self.value)
+		return '{:.1f} Gy'.format(self.value)
 
 	@property
 	def to_Gy(self):

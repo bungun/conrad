@@ -461,8 +461,12 @@ class ConstraintList(object):
 			self.items[key] =  other
 			self.last_key = key
 			return self
-		elif isinstance(other, ConstraintList):
-			for constr in other.items.itervalues():
+		elif isinstance(other, (list, tuple, ConstraintList)):
+			for constr in other:
+				self += constr
+			return self
+		elif isinstance(other, dict):
+			for constr in other.values():
 				self += constr
 			return self
 		else:
@@ -482,7 +486,11 @@ class ConstraintList(object):
 
 	@property
 	def size(self):
-	    return len(self.items)
+		return len(self.items)
+
+	@property
+	def keys(self):
+		return self.items.keys()
 
 	@property
 	def mean_only(self):
@@ -563,6 +571,9 @@ class DVH(object):
 
 	def dose_at_percentile(self, percentile):
 		""" TODO: docstring """
+		if isinstance(percentile, Percent):
+			percentile = percentile.value
+
 		if self.__doses is None: return nan
 
 		if percentile == 100: return self.min_dose

@@ -1,6 +1,6 @@
 from conrad.compat import *
 from conrad.physics.units import *
-from conrad.tests.base import ConradTestCase
+from conrad.tests.base import *
 
 class TestUnits(ConradTestCase):
 	def test_percent(self):

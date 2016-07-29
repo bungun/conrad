@@ -1,9 +1,9 @@
-- name : PTV_JSON
+- name : PTV_YAML
   label : 1
   is_target : Yes
-  dose : 1.0
+  dose : 1 Gy 
   constraints :
-  - D85 > 0.8 Gy
+  - D85 > 0.8 rx
   - D1 < 1.2 Gy
 
 - name : OAR_RESILIENT
@@ -19,5 +19,5 @@
   is_target : No
   dose :
   constraints :
-  - D50 < 0.2 Gy
+  - D50 < 0.3 Gy
   - D2 < 0.6 Gy

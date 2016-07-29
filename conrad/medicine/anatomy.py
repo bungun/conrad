@@ -1,103 +1,94 @@
+from numpy import nan
+
 from conrad.compat import *
 from conrad.medicine.structure import Structure
 
 class Anatomy(object):
 	def __init__(self, structures=None, **options):
 		self.__structures = {}
-		self.__labels = None
-		if structures:
+
+		if isinstance(structures, Anatomy):
+			self.__structures = structures._Anatomy__structures
+		elif structures:
 			self.structures = structures
 
-		# intialize from prescription object
-		rx = options.pop('prescription', None)
-		if rx:
-			self.structures = rx.structure_dict
+	def __getitem__(self, key):
+		if key in self.__structures:
+			return self.__structures[key]
+		else:
+			for s in self:
+				if s.name == key:
+					return s
+		raise KeyError('key {} does not correspond to a structure label'
+					   ' or name in this {} object'.format(key, Anatomy))
 
-		# use labels if provided
-		labels = options.pop('label_vector', None)
-		if labels:
-			self.labels = labels
+
+		return self.__structures[key]
+
+	def __iter__(self):
+		return self.__structures.values().__iter__()
 
 	@property
 	def structures(self):
 		return self.__structures
 
 	@structures.setter
-	def structures(self):
-		if not isinstance(structures, (dict)):
-			raise TypeError('argument "structures" must be of type '
-							'{}'.format(dict))
+	def structures(self, structures):
+		# check iterability
+		try:
+			_  = (s for s in structures)
+		except TypeError:
+			raise TypeError('argument "structures" must be iterable')
 
-		if not all(listmap(
-				lambda s: isinstance(s, Structure), structures.values())):
-			raise TypeError('argument "structures" must be a dict of {}'
-							'objects'.format(Structure))
+		if isinstance(structures, dict):
+			structures = structures.values()
 
-		self.__structures = structures
+		for s in structures:
+			if not isinstance(s, Structure):
+				raise ValueError('each element of argument "structures"'
+								 'must be of type {}'.format(Structure))
+			self += s
+
+	@property
+	def is_empty(self):
+		return self.n_structures == 0
 
 	@property
 	def n_structures(self):
-		return len(self.structures.keys())
+		return len(self.structures)
 
 	@property
 	def size(self):
-		return sum(listmap(lambda s: s.size, self.structures.values()))
-
-	@property
-	def label_set(self):
-	    return self.structures.keys()
+		if self.is_empty:
+			return 0
+		elif any([s.size is None for s in self]):
+			return nan
+		else:
+			return sum([s.size for s in self])
 
 	@property
 	def labels(self):
-	    return self.__labels
+	    return self.structures.keys()
 
-	@labels.setter
-	def labels(self, label_vector):
-		for label in self.label_set:
-			size = sum(listmap(lambda l: int(l == label), label_vector))
-			self.structures[label].size = size
+	@property
+	def plannable(self):
+		if self.is_empty:
+			return False
 
-		if self.size != len(label_vector):
-			for label in self.label_set:
-				self.structures[label].size = nan
+		# at least one target
+		status = any([structure.is_target for structure in self])
+		# at least one target
+		status &= all([structure.plannable for structure in self])
+		return status
 
-			diff = len(label_vector) - self.size
-			err = 'unused' if diff > 0 else 'repeated'
-			raise ValueError('error digesting label vector: {} '
-							 '{} entries'.format(err, diff))
-
-		self.__labels = label_vector
-
-	def import_dose_matrix(self, physics):
-		if self.size is None:
-			raise RuntimeError('cannot import dose matrix to {} object '
-							   'before setting structure labels'.format(
-							   type(self)))
-
-		if not isinstance(physics, Physics):
-			raise TypeError('argument "Physics" must be of type '
-							'{}'.format(Physics))
-
-		if physics.voxels != self.size:
-			raise ValueError('number of voxels in argument "physics" '
-							 '({}) must match size of patient geometry '
-							 '({})'.format(physics.voxels, self.size))
-
-		if physics.dose_matrix is None:
-			raise ValueError('field "dose_matrix" of argument "physics"'
-							 ' must be initialized before calling {}'
-							 '.import_dose_matrix()'.format(type(self)))
-
-		for label in self.label_set:
-			indices = listmap(lambda x: x[0], listfilter(lambda x: x[1]==label,
-												 enumerate(a)))
-			self.structures[label].A_full = self.A[indices, :]
-			self.structures[label].A_mean = None
+	def calculate_doses(self, beam_intensities):
+		for s in self:
+			s.calculate_dose(beam_intensities)
 
 	def dose_summary_data(self, percentiles = [2, 98]):
 		d = {}
-		for label, s in self.structures.items():
-			d[label] = s.summary(percentiles=percentiles)
+		for s in self:
+			d[s.label] = s.summary(percentiles=percentiles)
 		return d
 
 	@property
@@ -113,5 +104,20 @@ class Anatomy(object):
 		elif isinstance(other, dict):
 			for key, item in other.items:
 				self.__structures[key] += item
+
+		return self
+
+	def __isub__(self, other):
+		key = other
+		for s in self:
+			if s.name == other:
+				key = s.label
+				break
+
+		s = self.__structures.pop(key, None)
+		if s is None:
+			print('argument "other"={} does not correspond to the label '
+				  'or name of a {} in this {} object. no operation '
+				  'performed'.format(other, Structure, Anatomy))
 
 		return self

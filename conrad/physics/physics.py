@@ -1,72 +1,117 @@
-from operator import add
-from numpy import nan, ndarray
-from scipy.sparse import isspmatrix
+from numpy import ndarray, ones
 
 from conrad.compat import *
-from conrad.physics.grid import Grid2D, Grid3D
+from conrad.defs import vec, sparse_or_dense, CONRAD_MATRIX_TYPES
+from conrad.physics.beams import BeamSet
+from conrad.physics.voxels import VoxelGrid
 
-class BeamTypes(object):
-	ELECTRON = 'electron'
-	PARTICLE = 'particle'
-	PHOTON = 'photon'
-	PROTON = 'proton'
-	__types = (ELECTRON, PARTICLE, PHOTON, PROTON)
+class DoseFrame(object):
+	def __init__(self, voxels, beams, data, voxel_labels=None,
+				 beam_labels=None, voxel_weights=None,
+				 beam_weights=None):
+		self.__voxels = None
+		self.__beams = None
+		self.__data = None
+		self.__voxel_labels = None
+		self.__beam_labels = None
+		self.__voxel_weights = None
+		self.__beam_weights = None
 
-	def validate(self, beamtype):
-		return beamtype in self.__types
+		if isinstance(beams, BeamSet):
+			beams = beams.count
 
-BEAM_TYPES = BeamTypes()
+		if data is not None:
+			self.data = data
+			if voxels is not None:
+				if self.voxels != voxels:
+					raise ValueError('when arguments "voxels" and "data"'
+									 ' are both provided, the size'
+									 ' specified by "voxels" must match '
+									 ' first dimension of "data"\n'
+									 ' {} != {}'.format(voxels, self.voxels))
+			if beams is not None:
+				if self.beams != beams:
+					raise ValueError('when arguments "beams" and "data"'
+									 ' are both provided, the size'
+									 ' specified by "beams" must match '
+									 ' second dimension of "data"\n'
+									 ' {} != {}'.format(beams, self.beams))
+		else:
+			self.voxels = voxels
+			self.beams = beams
 
-class Physics(object):
-	def __init__(self, voxels, beams, dose_matrix=None):
-		self.__dose_grid = None
-		self.__beam_set = None
-		self.__dose_matrix = None
+		if voxel_labels is not None:
+			self.voxel_labels = voxel_labels
+		if beam_labels is not None:
+			self.beam_labels = beam_labels
 
-		if not isinstance(voxels, VoxelGrid):
-			raise TypeError('explain')
+		if voxel_weights is not None:
+			self.voxel_weights = voxel_weights
+		elif self.voxels is not None:
+			self.voxel_weights = ones(self.voxels, dtype=int)
 
-		if not isinstance(beams, BeamSet):
-			raise TypeError('explain')
+		if beam_weights is not None:
+			self.beam_weights = beam_weights
+		elif self.beams is not None:
+			self.beam_weights = ones(self.beams, dtype=int)
 
-		self.__dose_grid = voxels
-		self.__beam_set = beams
+		if self.voxels is None or self.beams is None:
+			raise ValueError('minimal requirements for initialization:'
+							 '\n-argument "data" is a matrix OR '
+							 '\n-other arguments combine to '
+							 'specify/imply the VOXELS x BEAMS '
+							 'dimensions of the {}'
+							 ''.format(DoseFrame))
 
 	@property
-	def beams(self):
-		return self.__beam_set.beam_count
+	def plannable(self):
+		return self.data is not None and self.voxel_labels is not None
+
+	@property
+	def shape(self):
+		if self.voxels is None or self.beams is None:
+			return None
+		else:
+			return self.voxels, self.beams
+
+	@property
+	def data(self):
+		return self.__data
+
+	@data.setter
+	def data(self, data):
+		if not sparse_or_dense(data):
+			raise TypeError('argument "data" must be a dense or sparse '
+							'matrix, in the form of a {}, {}, or {}'
+							''.format(*CONRAD_MATRIX_TYPES))
+
+		if self.voxels:
+			if data.shape[0] != self.voxels:
+				raise ValueError('argument "data" must be a matrix '
+								 'with {} rows'.format(self.voxels))
+		else:
+			self.voxels = data.shape[0]
+
+		if self.beams:
+			if data.shape[1] != self.beams:
+				raise ValueError('argument "data" must be a matrix '
+								 'with {} columns'.format(self.beams))
+		else:
+			self.beams = data.shape[1]
+
+		self.__data = data
 
 	@property
 	def voxels(self):
-	    return self.__dose_grid.voxels
+		return self.__voxels
 
-	@property
-	def dose_matrix(self):
-		return self.__dose_matrix
-
-	@dose_matrix.setter
-	def dose_matrix(self, dose_matrix):
-		if not (isinstance(dose_matrix, ndarray) or isspmatrix(dose_matrix)):
-			raise TypeError('explain')
-		elif len(dose_matrix.shape) != 2:
-			raise ValueError('explain')
-		elif dose_matrix.shape != (self.voxels, self.beams):
-			raise ValueError('explain')
-
-		self.__dose_matrix = dose_matrix
-
-class BeamSet(object):
-	def __init__(self, beams=None, n_beams=None):
-		self.__beams = []
-		if beams:
-			self.beams = beams
-
-		if isinstance(n_beams, int):
-			self.beams = max(0, n_beams) * [Beam()]
-
-	@property
-	def beam_count(self):
-		return 0 + reduce(add, listmap(lambda b : b.count, self.__beams))
+	@voxels.setter
+	def voxels(self, voxels):
+		if self.voxels:
+			raise ValueError('{} property "voxels" cannot be changed '
+							 'once set'.format(DoseFrame))
+		if voxels:
+			self.__voxels = int(voxels)
 
 	@property
 	def beams(self):
@@ -74,176 +119,215 @@ class BeamSet(object):
 
 	@beams.setter
 	def beams(self, beams):
-		self.__beams = beams
-
-	# def __iadd__(self, other):
-		# return self
-
-class AbstractBeam(object):
-	def __init__(self):
-		self.__type = '<unknown beam type>'
-		self.__energy = nan
-		self.__limit = nan
+		if self.beams:
+			raise ValueError('{} property "beams" cannot be changed '
+							 'once set'.format(DoseFrame))
+		if beams:
+			self.__beams = int(beams)
 
 	@property
-	def count(self):
-		return 1
+	def voxel_labels(self):
+		return self.__voxel_labels
+
+	@voxel_labels.setter
+	def voxel_labels(self, voxel_labels):
+		if self.voxels is None:
+			self.voxels = len(voxel_labels)
+		if len(voxel_labels) != self.voxels:
+			raise ValueError('length of "voxel labels" ({}) must match '
+							 'number of voxels in frame ({})'
+							 ''.format(len(voxel_labels), self.voxels))
+		self.__voxel_labels = vec(voxel_labels).astype(int)
 
 	@property
-	def energy(self):
-		return self.__energy
+	def beam_labels(self):
+		return self.__beam_labels
 
-	@energy.setter
-	def energy(self, energy):
-		self.__energy = float(energy)
-
-		# position (x, y, z, or r, phi, theta)
-		# unit normal (orientation, cartesian?)
-
-	@property
-	def type(self):
-		return self.__type
-
-	@type.setter
-	def type(self, beam_type):
-		if  BEAM_TYPES.validate(beam_type):
-			self.__type = beam_type
+	@beam_labels.setter
+	def beam_labels(self, beam_labels):
+		if self.beams is None:
+			self.beams = len(beam_labels)
+		if len(beam_labels) != self.beams:
+			raise ValueError('length of "beam labels" ({}) must match '
+							 'number of beams in frame ({})'
+							 ''.format(len(beam_labels), self.beams))
+		self.__beam_labels = vec(beam_labels).astype(int)
 
 	@property
-	def limit(self):
-	    return self.__limit
+	def voxel_weights(self):
+		return self.__voxel_weights
 
-	@limit.setter
-	def limit(self, limit):
-		if not isinstance(limit, (int, float)):
-			raise TypeError('beam limit must be an {} or {}'.format(
-							int, float))
-		elif limit <= 0:
-			raise ValueError('beam limit must be positive')
+	@voxel_weights.setter
+	def voxel_weights(self, voxel_weights):
+		if self.voxels is None:
+			self.voxels = len(voxel_weights)
+		if len(voxel_weights) != self.voxels:
+			raise ValueError('length of "voxel_weights" ({}) must match '
+							 'number of voxels in frame ({})'
+							 ''.format(len(voxel_weights), self.voxels))
+		self.__voxel_weights = vec(voxel_weights).astype(float)
 
-		self.__limit = float(limit)
+	@property
+	def beam_weights(self):
+		return self.__beam_weights
 
-
-
-class Path(AbstractBeam):
-	def __init__(self, stations=None):
-		AbstractBeam.__init__(self)
-		self.__stations = []
-
-		stations if stations else []
+	@beam_weights.setter
+	def beam_weights(self, beam_weights):
+		if self.beams is None:
+			self.beams = len(beam_weights)
+		if len(beam_weights) != self.beams:
+			raise ValueError('length of "beam_weights" ({}) must match '
+							 'number of beams in frame ({})'
+							 ''.format(len(beam_weights), self.beams))
+		self.__beam_weights = vec(beam_weights).astype(float)
 
 	@staticmethod
-	def valid_beam(beam):
-		return isinstance(b, (Aperture, FluenceMap))
+	def indices_by_label(label_vector, label, vector_name):
+		if label_vector is None:
+			raise ValueError('{} object field "{}" must be '
+							 'set to perform retrieval by label'
+							 ''.format(DoseFrame, name))
+
+		indices = listmap(lambda x: x[0], listfilter(
+				lambda x: x[1] == label, enumerate(label_vector)))
+		if len(indices) == 0:
+			raise KeyError('label {} not found in entries of field '
+						   '"{}"'.format(label, name))
+
+		return vec(indices)
+
+	def voxel_lookup_by_label(self, label):
+		indices = self.indices_by_label(
+				self.voxel_labels, label, 'voxel_labels')
+		return indices
+
+	def beam_lookup_by_label(self, label):
+		indices = self.indices_by_label(self.beam_labels, label, 'beam_labels')
+		return indices
+
+
+	def __str__(self):
+		return str('Dose Frame: {} VOXELS by {} BEAMS'.format(
+				self.voxels, self.beams))
+
+class Physics(object):
+	def __init__(self, voxels=None, beams=None, dose_matrix=None,
+				 dose_grid=None, voxel_labels=None, **options):
+		self.__frames = {}
+		self.__dose_grid = None
+		self.__dose_frame = None
+		self.__beams = None
+		self.__FRAME_LOAD_FLAG = False
+
+		# copy constructor
+		if isinstance(voxels, Physics):
+			self.__frames = voxels._Physics__frames
+			self.__dose_grid = voxels._Physics__dose_grid
+			self.__dose_frame = voxels._Physics__dose_frame
+			self.__beams = voxels._Physics__beams
+			self.__FRAME_LOAD_FLAG = voxels._Physics__FRAME_LOAD_FLAG
+			return
+
+		# normal initialization
+		if dose_grid is not None:
+			self.dose_grid = dose_grid
+
+		if voxels is None and self.dose_grid is not None:
+			voxels = self.dose_grid.voxels
+
+		f = DoseFrame(voxels, beams, dose_matrix, voxel_labels=voxel_labels,
+					  **options)
+
+		if self.__beams is None:
+			self.__beams = BeamSet(f.beams)
+
+		self.__dose_frame = f
+		self.__frames[0] = f
+		self.__frames['full'] = f
+
+		if self.dose_grid is not None:
+			if self.dose_grid.voxels == self.voxels:
+				self.__frames['geometric'] = f
 
 	@property
-	def count(self):
-		return len(self.__stations)
+	def frame(self):
+		return self.__dose_frame
 
 	@property
-	def stations(self):
-		return self.__stations
+	def data_loaded(self):
+		return self.__FRAME_LOAD_FLAG
 
-	@stations.setter
-	def stations(self, stations):
-		if not isinstance(stations, (list, tuple)):
-			raise TypeError('explain')
-		elif not all(listmap(self.valid_beam, stations)):
-			raise TypeError('explain')
-		else:
-			self.__stations = list(stations)
+	def mark_data_as_loaded(self):
+		self.__FRAME_LOAD_FLAG = True
 
-	def __iadd__(self, other):
-		if not isinstance(other, (list, tuple, Aperture, FluenceMap)):
-			raise TypeError('explain')
+	def add_dose_frame(self, key):
+		if key in self.frames:
+			raise ValueError('key "{}" already exists in {} frame '
+							 'dictionary'.format(key, Physics))
 
-		if bool(isinstance(self, (list, tuple))):
-			if not all(listmap(self.valid_beam, other)):
-				raise TypeError('explain')
-			else:
-				self.stations += list(other)
-		else:
-			self.stations.append(other)
-
-		return self
-
-class Arc(Path):
-	def __init__(self, stations=None):
-		Path.__init__(self, stations)
-
-
-class Beam(AbstractBeam):
-	def __init__(self):
-		AbstractBeam.__init__(self)
+	def change_dose_frame(self, key):
+		if not key in self.frames:
+			raise KeyError('no dose data frame found for key {}')
+		self.__dose_frame = self.__frames[key]
+		self.__FRAME_LOAD_FLAG = False
 
 	@property
-	def count(self):
-		return 1
-
-	# convert between this and fluence map
-
-class Beamlet(AbstractBeam):
-	def __init__(self):
-		AbstractBeam.__init__(self)
+	def available_frames(self):
+		return self.__frames.keys()
 
 	@property
-	def count(self):
-		return 1
+	def plannable(self):
+		return self.frame.plannable
 
-class Aperture(AbstractBeam):
-	def __init__(self):
-		AbstractBeam.__init__(self)
-
-	# convert between this and fluence map
-
-class FluenceMap(AbstractBeam):
-	def __init__(self, size1, size2):
-		AbstractBeam.__init__(self)
-		self.__bixel_grid = BixelGrid(size1, size2)
-
-	# active
-	# banned
-	# methods for converting to aperture
-
-class VoxelGrid(Grid3D):
-	def __init__(self, x_voxels=None, y_voxels=None, z_voxels=None):
-		Grid3D.__init__(self, x=x_voxels, y=y_voxels, z=z_voxels)
+	@property
+	def beams(self):
+		return self.frame.beams
 
 	@property
 	def voxels(self):
-		return self.x_voxels * self.y_voxels * self.z_voxels
+		return self.frame.voxels
 
 	@property
-	def total_volume(self):
-		if self.unit_volume.value is nan:
-			return nan * self.unit_volume
+	def dose_grid(self):
+		return self.__dose_grid
+
+	@dose_grid.setter
+	def dose_grid(self, grid):
+		self.__dose_grid = VoxelGrid(grid=grid)
+
+	@property
+	def dose_matrix(self):
+		return self.frame.data
+
+	@dose_matrix.setter
+	def dose_matrix(self, dose_matrix):
+		self.frame.data = dose_matrix
+
+	@property
+	def voxel_labels(self):
+		return self.frame.voxel_labels
+
+	@voxel_labels.setter
+	def voxel_labels(self, voxel_labels):
+		self.frame.voxel_labels = voxel_labels
+
+	def dose_matrix_by_label(self, voxel_label=None, beam_label=None):
+		if voxel_label is not None:
+			v_indices = self.frame.voxel_lookup_by_label(voxel_label)
 		else:
-			return self.voxels * self.unit_volume
+			v_indices = xrange(self.frame.voxels)
 
-	@property
-	def x_voxels(self):
-		return self._AbstractGrid__x
+		if beam_label is not None:
+			b_indices = self.frame.beam_lookup_by_label(beam_label)
+		else:
+			b_indices = xrange(self.frame.beams)
 
-	@property
-	def y_voxels(self):
-		return self._AbstractGrid__y
+		return self.dose_matrix[v_indices, :][:, b_indices]
 
-	@property
-	def z_voxels(self):
-		return self._AbstractGrid__z
+	def voxel_weights_by_label(self, label):
+		indices = self.frame.voxel_lookup_by_label(label)
+		return self.frame.voxel_weights[indices]
 
-class BixelGrid(Grid2D):
-	def __init__(self, x_bixels=None, y_bixels=None):
-		Grid2D.__init__(self, x=x_bixels, y=y_bixels)
-
-	@property
-	def bixels(self):
-		return self.x_bixels * self.y_bixels
-
-	@property
-	def x_bixels(self):
-		return self._AbstractGrid__x
-
-	@property
-	def y_bixels(self):
-		return self._AbstractGrid__y
+	def beam_weights_by_label(self, label):
+		indices = self.frame.beam_lookup_by_label(label)
+		return self.frame.beam_weights[indices]

@@ -1,11 +1,12 @@
-from numpy import ndarray, array, squeeze, zeros, nan
+from numpy import ndarray, array, squeeze, zeros, ones, nan
 from scipy.sparse import csr_matrix, csc_matrix
 
 from conrad.compat import *
 from conrad.defs import CONRAD_DEBUG_PRINT, positive_real_valued, \
 						sparse_or_dense, vec
+from conrad.physics.units import cm3, Gy, DeliveredDose
 from conrad.medicine.dose import Constraint, MeanConstraint, ConstraintList, \
-								 DVH, RELOPS
+								 PercentileConstraint, DVH, RELOPS
 
 """
 TODO: structure.py docstring
@@ -17,27 +18,32 @@ W_NONTARG_DEFAULT = 0.025
 
 class Structure(object):
 	""" TODO: docstring """
-	def __init__(self, label, name, is_target, **options):
+	def __init__(self, label, name, is_target, size=None, **options):
 		""" TODO: docstring """
 		# basic information
+		if not isinstance(label, (int, str)):
+			raise TypeError('argument "label" must be of type {} or {}'
+							''.format(int, str))
 		self.label = label
-		self.name = name
+		self.name = str(name)
 		self.is_target = bool(is_target)
 		self.__size = None
-		self.__dose = 0.
+		self.__dose = 0. * Gy
 		self.__boost = 1.
 		self.__w_under = nan
 		self.__w_over = nan
 		self.__A_full = None
 		self.__A_mean = None
+		self.__voxel_weights = None
 		self.__y = None
 		self.__y_mean = nan
 		self.dvh = None
 		self.constraints = ConstraintList()
 
-		self.size = options.pop('size', None)
+		if size is not None:
+			self.size = size
 		if is_target:
-			self.dose = options.pop('dose', 1.)
+			self.dose = options.pop('dose', 1. * Gy)
 		self.A_full = options.pop('A', None)
 		self.A_mean = options.pop('A_mean', None)
 
@@ -71,6 +77,9 @@ class Structure(object):
 		else:
 			self.__size = int(size)
 			self.dvh = DVH(self.size)
+
+			# default to uniformly weighted voxels
+			self.voxel_weights = ones(self.size)
 
 	def reset_matrices(self):
 		self.__A_full = None
@@ -144,14 +153,37 @@ class Structure(object):
 	def A(self):
 		return self.__A_full
 
-	def set_constraint(self, constr_id, threshold, relop, dose):
-		if self.has_constraint(constr_id):
-			c = self.constraints.items[constr_id]
-			if isinstance(c, PercentileConstraint):
-				c.percentile = threshold
-			c.relop = relop
-			c.dose = dose
-			self.constraints.items[constr_id] = c
+	@property
+	def voxel_weights(self):
+		return self.__voxel_weights
+
+	@voxel_weights.setter
+	def voxel_weights(self, weights):
+		if self.size in (None, nan, 0):
+			raise ValueError('structure size must be defined to add '
+							 'voxel weights')
+		if len(weights) != self.size:
+			raise ValueError('length of input "weights" ({}) does not '
+							 'match structure size ({}) of this {} '
+							 'object'
+							 ''.format(len(weights), self.size, Structure))
+		if any(weights < 0):
+			raise ValueError('negative voxel weights not allowed')
+		self.__voxel_weights = vec(weights)
+
+	def set_constraint(self, constr_id, threshold=None, relop=None, dose=None):
+		if constr_id in self.constraints.items:
+			if isinstance(self.constraints[constr_id], PercentileConstraint) \
+					and threshold is not None:
+				self.constraints[constr_id].percentile = threshold
+			if relop is not None:
+				self.constraints[constr_id].relop = relop
+			if dose is not None:
+				self.constraints[constr_id].dose = dose
+		else:
+			raise ValueError('contraint with ID {} not found in constraints '
+							 'attached to this {}'.format(constr_id,
+							 Structure))
 
 	@property
 	def dose_rx(self):
@@ -159,34 +191,36 @@ class Structure(object):
 
 	@property
 	def dose(self):
-		return self.__dose * self.__boost
+		return self.__boost * self.__dose
 
 	@dose_rx.setter
 	def dose_rx(self, dose):
 		if not self.is_target: return
-		if isinstance(dose, (int, float)):
-			if dose <= 0:
-				raise ValueError('negative doses are unphysical and '
-								 'not allowed in dose constraints')
-			self.__dose = max(0., float(dose))
-			self.__boost = 1.
-		else:
-			raise TypeError('argument "dose" must be a float with value >= 0')
+		if not isinstance(dose, DeliveredDose):
+			raise TypeError('argument "dose" must be of type {}'
+							''.format(DeliveredDose))
+		self.__dose = dose
+		self.__boost = 1.
 
 	@dose.setter
 	def dose(self, dose):
 		if not self.is_target: return
-		if isinstance(dose, (int, float)):
-			if dose <= 0:
-				raise ValueError('negative doses are unphysical and '
-								 'not allowed in dose constraints')
-			if self.__dose is None or self.__dose is nan or self.__dose == 0.:
-				self.__dose = float(dose)
-				self.__boost = 1.
-			else:
-				self.__boost = max(0., float(dose)) / self.__dose
+		if not isinstance(dose, DeliveredDose):
+			raise TypeError('argument "dose" must be of type {}'
+							''.format(DeliveredDose))
+		if dose.value == 0:
+			raise ValueError('zero dose invalid for target structure')
+		if self.__dose.value == 0:
+			self.__dose = dose
+			self.__boost = 1.
 		else:
-			raise TypeError('argument "dose" must be a float with value >= 0')
+			self.__boost = dose.to_Gy.value / self.__dose.to_Gy.value
+
+	@property
+	def dose_unit(self):
+		u = 1 * self.__dose
+		u.value = 1
+		return u
 
 	@property
 	def w_under(self):
@@ -240,6 +274,9 @@ class Structure(object):
 		else:
 			raise TypeError('argument "weight" must be a float >= 0')
 
+	def calculate_dose(self, beam_intensities):
+		self.calc_y(beam_intensities)
+
 	def calc_y(self, x):
 		""" TODO: docstring """
 
@@ -266,66 +303,87 @@ class Structure(object):
 	@property
 	def mean_dose(self):
 		""" TODO: docstring """
-		return self.__y_mean
+		return self.__y_mean * self.dose_unit
 
 	@property
 	def min_dose(self):
 		""" TODO: docstring """
 		if self.dvh is None:
-			return nan
-		return self.dvh.min_dose
+			return nan * Gy
+		return self.dvh.min_dose * self.dose_unit
 
 	@property
 	def max_dose(self):
 		""" TODO: docstring """
 		if self.dvh is None:
-			return nan
-		return self.dvh.max_dose
+			return nan * Gy
+		return self.dvh.max_dose * self.dose_unit
 
 	def satisfies(self, constraint):
+		if self.dvh is None:
+			raise ValueError('structure DVH does not exist, cannot evaluate '
+							 'constraint satisfaction.\n(assign structure '
+							 'size explicitly by setting field "{}.size"\nor '
+							 'impicitly by assigning a dose matrix with '
+							 'field "{}.A_full"\nto trigger DVH instantiation)'
+							 ''.format(Structure, Structure))
+		if not self.dvh.populated:
+			raise ValueError('structure DVH not populated by dose data, '
+							 'cannot evaluate constraint satisfaction\n'
+							 '(assign dose by setting field "{}.y")'
+							 ''.format(Structure))
+
 		if not isinstance(constraint, Constraint):
 			raise TypeError('argument "constraint" must be of type '
 				'conrad.dose.Constraint')
 
-		dose = constraint.dose
+		dose = constraint.dose.value
 		relop = constraint.relop
 
-		if constraint.threshold == 'mean':
-			dose_achieved = self.mean_dose
-		elif constraint.threshold == 'min':
-			dose_achieved = self.min_dose
-		elif constraint.threshold == 'max':
-			dose_achieved = self.max_dose
+		if isinstance(constraint.threshold, str):
+			if constraint.threshold == 'mean':
+				dose_achieved = self.mean_dose
+			elif constraint.threshold == 'min':
+				dose_achieved = self.min_dose
+			elif constraint.threshold == 'max':
+				dose_achieved = self.max_dose
 		else:
 			dose_achieved = self.dvh.dose_at_percentile(
 				constraint.threshold)
 
-		if relop == DIRECTIONS.LEQ:
+		if relop == RELOPS.LEQ:
 			status = dose_achieved <= dose
-		elif relop == DIRECTIONS.GEQ:
+		elif relop == RELOPS.GEQ:
 			status = dose_achieved >= dose
 
 		return (status, dose_achieved)
 
 	@property
 	def plotting_data(self):
-		""" TODO: docstring """
+		""" return plotting data from DVH curve and constraints, as well
+	 		as the prescribed dose
+	 	"""
 		return {'curve': self.dvh.plotting_data,
 				'constraints': self.constraints.plotting_data,
-				'rx': self.dose_rx}
+				'rx': self.dose_rx,
+				'target': self.is_target}
 
 	@property
 	def __header_string(self):
-		""" TODO: docstring """
-		out = 'Structure: {}'.format(self.label)
+		""" return header string for structure, comprising name and
+			label
+		"""
+		out = '\nStructure: '
 		if self.name != '':
-			out += ' ({})'.format(self.name)
-			out += '\n'
+			out += '{}'.format(self.name)
+		else:
+			out += '<unnamed>'
+		out += ' (label = {})\n'.format(self.label)
 		return out
 
 	@property
 	def __obj_string(self):
-		""" TODO: docstring """
+		""" return string of objectives attached to Structure object """
 		out = 'target? {}\n'.format(self.is_target)
 		out += 'rx dose: {}\n'.format(self.dose)
 		if self.is_target:
@@ -338,46 +396,54 @@ class Structure(object):
 
 	@property
 	def __constr_string(self):
-		""" TODO: docstring """
+		""" return string of constraints attached to Structure object """
 		out = ''
-		for dc in self.constraints.itervalues():
-			out += dc.__str__()
-		out += '\n'
+		for key in self.constraints.items:
+			out += self.constraints[key].__str__()
+			out += '\n'
 		return out
 
 	def summary(self, percentiles=[2, 25, 75, 98]):
+		""" given list- or array-like argument percentiles, retrieve and
+			return a dictionary of doses at each percentile, as well as
+			the MEAN, MIN and MAX doses
+		"""
 		s = {}
 		s['mean'] = self.mean_dose
 		s['min'] = self.min_dose
 		s['max'] = self.max_dose
 		for p in percentiles:
-			s['D' + str(p)] = self.dvh.dose_at_percentile(p)
+			s['D' + str(p)] = self.dvh.dose_at_percentile(p) * self.dose_unit
 		return s
 
 	@property
 	def __summary_string(self):
+		""" return string of MEAN, MIN, and MAX doses, as well as doses
+			at several default percentiles: 98%, 75%, 25%, 2%
+		"""
 		summary = self.summary()
-		hdr = 'mean | min  | max  | D98  | D75  | D25  | D2   \n'
-		vals = str('{:0.2f} | {:0.2f} | {:0.2f} '
-			'| {:0.2f} | {:0.2f} | {:0.2f} | {:0.2f}\n'.format(
-			summary['mean'], summary['min'], summary['max'],
-			summary['D98'], summary['D75'], summary['D25'], summary['D2']))
+		hdr = '{:^10}|{:^10}|{:^10}|{:^10}|{:^10}|{:^10}|{:^10}\n'.format(
+				'mean', 'min', 'max', 'D98', 'D75', 'D25', 'D2')
+		vals = str('{:^10}|{:^10}|{:^10}|{:^10}|{:^10}|{:^10}|{:^10}\n'.format(
+				summary['mean'], summary['min'], summary['max'],
+				summary['D98'], summary['D75'], summary['D25'], summary['D2']))
 		return hdr + vals
 
 	@property
 	def objective_string(self):
-		""" TODO: docstring """
+		""" print structure header and objectives """
 		return self.__header_string + self.__obj_string
 
 	@property
 	def constraints_string(self):
-		""" TODO: docstring """
+		""" prinst structure header and constraints """
 		return self.__header_string + self.__constr_string
 
 	@property
 	def summary_string(self):
-		""" TODO: docstring """
+		""" print structure header and dose summary """
 		return self.__header_string + self.__summary_string
 
 	def __str__(self):
+		""" print structure header, objectives, and constraints """
 		return self.__header_string + self.__obj_string + self.__constr_string

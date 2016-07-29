@@ -3,11 +3,12 @@ import json, yaml
 from traceback import format_exc
 
 from conrad.compat import *
+from conrad.physics.units import percent, Gy, cGy, cm3, Gray, DeliveredDose
+from conrad.physics.string import *
 from conrad.medicine.structure import Structure
 from conrad.medicine.anatomy import Anatomy
 from conrad.medicine.dose import D, ConstraintList
 
-# TODO: unit test
 """
 TODO: prescription.py docstring
 
@@ -60,11 +61,14 @@ Python list of dictionaries (JSON approximately same)
 	- null instead of None )
 """
 
+def v_strip(input_string):
+	return input_string.replace('to', '').replace('V', '').replace('v', '')
+
+def d_strip(input_string):
+	return input_string.replace('D', '').replace('d', '')
 
 def string2constraint(string_constraint, rx_dose=None):
-	""" TODO: docstring
-
-	convert input string to standard form dose constraint:
+	""" convert input string to standard form dose constraint:
 
 		D{p} <= {d} Gy (dose @ pth percentile <= d Gy)
 
@@ -81,19 +85,20 @@ def string2constraint(string_constraint, rx_dose=None):
 	- "min > x Gy"
 
 		variants: "Min", "min"
-		meaning: minimum dose no less than x Gy
+		meaning: minimum dose greater than x Gy
 
 
 	- "mean < x Gy"
+	- "mean > x Gy"
 
 		variants: "Mean, mean"
-		meaning: mean dose no more than x Gy
+		meaning: mean dose less than (more than) than x Gy
 
 
 	- "max < x Gy"
 
 		variants: "Max", "max"
-		meaning: maximum dose no more than x Gy
+		meaning: maximum dose less than x Gy
 
 
 	- "D__ < x Gy"
@@ -106,15 +111,14 @@ def string2constraint(string_constraint, rx_dose=None):
 	- "V__ Gy < p %"
 	- "V__ Gy > p %"
 
-		variants: "V__", "v__", "__ to", "__ to"
+		variants: "V__", "v__", "__ Gy to", "__ to"
 		meaning: no more than (at least) __ Gy to p percent of volume
-
 
 	relative dose constraints
 	-------------------------
 
-	- "V__ < p %"
-	- "V__ > p %"
+	- "V__ %rx < p %"
+	- "V__ %rx > p %"
 
 		variants: "V__%", "v__%", "V__", "v__"
 		meaning: volume receiving __ percent of rx dose less than
@@ -125,24 +129,34 @@ def string2constraint(string_constraint, rx_dose=None):
 	 - "D__ > {frac} rx"
 
 		variants: "D__%", "d__%", "D__", "d__"
-		meaning: dose at to __ percent of volume less than (greater than)
+		meaning: dose to __ percent of volume less than (greater than)
 			frac * rx
 
 
 	absolute volume constraints:
 	----------------------------
-	- "volume @ b Gy < x cc"
-	- "volume @ b Gy < x cm3"
+	- "V_ Gy > x cm3"
+	- "V_ Gy < x cm3"
+	- "V_ rx > x cm3"
+	- "V_ rx < x cm3"
 
+		variants: "cc" vs. "cm3" vs. "cm^3"; "V__ _" vs. "v___ _"
 		error: convert to relative volume terms
+
 	"""
+	string_constraint = str(string_constraint)
 
+	if not isinstance(rx_dose, (type(None), DeliveredDose)):
+		raise TypeError(
+				'if provided, argument "rx_dose" must be of type {}, '
+				'e.g., {} or {}'
+				''.format(DeliveredDose, type(Gy), type(cGy)))
 
-	for token in ['cm3', 'cc', 'CC', 'cm^3']:
-		if token in string_constraint:
-			ValueError("Detected dose volume constraint with "
-			"absolute volume units. Convert to percentage."
-			"\n(input = {})".format(string_constraint))
+	if volume_unit_from_string(string_constraint) is not None:
+		raise ValueError(
+				'Detected dose volume constraint with absolute volume '
+				'units. Convert to percentage.\n(input = {})'
+				''.format(string_constraint))
 
 	leq = '<' in string_constraint
 	if leq:
@@ -150,38 +164,40 @@ def string2constraint(string_constraint, rx_dose=None):
 	else:
 		left, right = string_constraint.replace('=', '').split('>')
 
-	rdose = 'Gy' in right
-	ldose = 'Gy' in left
+	rdose = dose_unit_from_string(right) is not None
+	ldose = dose_unit_from_string(left) is not None
 
 	if rdose and ldose:
-		ValueError("Dose constraint cannot have "
-			"a dose value on both sides of inequality."
-			"\n(input = {})".format(string_constraint))
+		raise ValueError(
+				'Dose constraint cannot have a dose value on both '
+				'sides of inequality.\n(input = {})'
+				''.format(string_constraint))
 
 	if rdose:
-		tokens = ['mean', 'min', 'max', 'D']
+		tokens = ['mean', 'Mean', 'min', 'Min', 'max', 'Max', 'D', 'd']
 		if not any(listmap(lambda t : t in left, tokens)):
-			ValueError('If dose specified on right side '
-				'of inequality, left side must contain one '
-				' of the following strings: \n.\ninput={}'.format(
-					tokens, string_constraint))
+			raise ValueError(
+					'If dose specified on right side of inequality, '
+					'left side must contain one of the following '
+					'strings: \n.\ninput={}'
+					''.format(tokens, string_constraint))
 
 	relative = not rdose and not ldose
 	relative &= rx_dose is not None
 
 	if relative and (rdose or ldose):
-		ValueError("Dose constraint mixes relative "
-			"and absolution volume constraint syntax."
-			"\n(input = {})".format(string_constraint))
+		raise ValueError(
+				'Dose constraint mixes relative and absolute volume '
+				'constraint syntax. \n(input = {})'
+				''.format(string_constraint))
 
-	if not rdose or ldose or relative:
-		ValueError("Dose constraint dose not "
-			"specify a dose level in Gy or cGy, "
-			"and no prescription dose was provided "
-			"(argument rx_dose) for parsing "
-			"a relative dose constraint."
-			"\n(input = {})".format(string_constraint))
-
+	if not (rdose or ldose or relative):
+		raise ValueError(
+				'Dose constraint dose not specify a dose level in Gy '
+				'or cGy, and no prescription\ndose was provided '
+				'(argument "rx_dose") for parsing a relative dose '
+				'constraint. \n(input = {})'
+				''.format(string_constraint))
 
 	try:
 		# cases:
@@ -199,10 +215,7 @@ def string2constraint(string_constraint, rx_dose=None):
 			#-----------------------------------------------------#
 
 			# parse dose
-			if 'cGy' in right:
-				dose = float(right.replace('cGy', '')) / 100.
-			else:
-				dose = float(right.replace('Gy', ''))
+			dose = dose_from_string(right)
 
 			# parse threshold (min, mean, max or percentile)
 			if 'mean' in left or 'Mean' in left:
@@ -212,10 +225,7 @@ def string2constraint(string_constraint, rx_dose=None):
 			elif 'max' in left or 'Max' in left:
 				threshold = 'max'
 			else:
-				threshold = float(left.replace('%', '').replace('d', '').replace('D', ''))
-
-			# parse relop:
-			# (inequality direction preserved, nothing to do)
+				threshold = percent_from_string(d_strip(left))
 
 		# cases:
 		# - "V__ Gy < p %" ( == "x Gy to < p %")
@@ -225,23 +235,40 @@ def string2constraint(string_constraint, rx_dose=None):
 			# constraint in form "V{x} Gy <> {p} %"
 			#
 			# conversion to canonical form:
-			# {x} Gy < {p} % ---> D{p} > {x} Gy
-			# {x} Gy > {p} % ---> D{p} < {x} Gy
-			# (inequality direction flips)
+			# {x} Gy < {p} % ---> D{100 - p} < {x} Gy
+			# {x} Gy > {p} % ---> D{p} > {x} Gy
 			#-----------------------------------------------------#
 
 			# parse dose
-			left = left.replace('to', '').replace('v', '').replace('V', '')
-			if 'cGy' in left:
-				dose = float(left.replace('cGy', '')) / 100.
-			else:
-				dose = float(left.replace('Gy', ''))
+			dose = dose_from_string(v_strip(left))
 
 			# parse percentile
-			threshold = float(right.replace('%', ''))
+			threshold = percent_from_string(right)
 
-			# parse relop: (inequality direction flips)
-			leq = not leq
+			# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+			# VOLUME AT X GY < P % of STRUCTURE
+			#
+			# 	~equals~
+			#
+			# X Gy to < P% of structure
+			#
+			# 	~equivalent to~
+			#
+			# D(100 - P) < X Gy
+			# <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
+			# VOLUME AT X GY > P% of STRUCTURE
+			#
+			# 	~equals~
+			#
+			# X Gy to > P% of structure
+			#
+			# 	~equivalent to~
+			#
+			# D(P) > X Gy
+			# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+			if leq:
+				threshold.value = 100 - threshold.value
+
 
 		# cases:
 		# - "V__% < p %"
@@ -253,38 +280,36 @@ def string2constraint(string_constraint, rx_dose=None):
 			# constraint in form "V__% <> p%"
 			#
 			# conversion to canonical form:
-			# V{x}% < {p} % ---> D{p} > {x/100} * {rx_dose} Gy
-			# V{x}% > {p} % ---> D{p} < {x/100} * {rx_dose} Gy
-			# (inequality direction flips)
+			# V{x}% < {p} % ---> D{100 - p} < {x/100} * {rx_dose} Gy
+			# V{x}% > {p} % ---> D{p} > {x/100} * {rx_dose} Gy
 			#-----------------------------------------------------#
 			if not 'rx' in right:
 				# parse dose
-				reldose = float(left.replace('%', '').replace('v', '').replace('V', ''))
-				dose = reldose / 100. * rx_dose
+				reldose = fraction_or_percent_from_string(
+						v_strip(left.replace('rx', '')))
+				dose = reldose * rx_dose
 
 				# parse percentile
-				threshold = float(right.replace('%', ''))
+				threshold = percent_from_string(right)
 
-				# parse relop: (inequality direction flips)
-				leq = not leq
+				if leq:
+					threshold.value = 100 - threshold.value
 
 			#-----------------------------------------------------#
-			# constraint in form "D__% <> {frac} rx"
+			# constraint in form "D{p}% <> {frac} rx" OR
+			#					 "D{p}% <> {100 * frac}% rx"
 			#
 			# conversion to canonical form:
 			# D{p}% < {frac} rx ---> D{p} < {frac} * {rx_dose} Gy
 			# D{p}% >{frac} rx ---> D{p} > {frac} * {rx_dose} Gy
-			# (inequality direction preserved)
 			#-----------------------------------------------------#
 			else:
 				# parse dose
-				dose = rx_dose * float(right.replace('rx', ''))
+				dose = fraction_or_percent_from_string(
+						right.replace('rx', '')) * rx_dose
 
 				# parse percentile
-				threshold = float(left.replace('%', '').replace('d', '').replace('D', ''))
-
-				# parse relop:
-				# (inequality direction preserved, nothing to do)
+				threshold = percent_from_string(d_strip(left))
 
 		if leq:
 			return D(threshold) <= dose
@@ -304,8 +329,19 @@ class Prescription(object):
 		self.constraint_dict = {}
 		self.structure_dict = {}
 		self.rx_list = []
-		if prescription_data is not None:
+		if isinstance(prescription_data, Prescription):
+			self.constraint_dict = prescription_data.constraint_dict
+			self.structure_dict = prescription_data.structure_dict
+			self.rx_list = prescription_data.rx_list
+		elif prescription_data:
 			self.digest(prescription_data)
+
+	def add_structure_to_dictionaries(self, structure):
+		if not isinstance(structure, Structure):
+			raise TypeError('argumet "Structure" must be of type {}'
+							''.format(Structure))
+		self.structure_dict[structure.label] = structure
+		self.constraint_dict[structure.label] = ConstraintList()
 
 	def digest(self, prescription_data):
 		""" TODO: docstring """
@@ -313,10 +349,13 @@ class Prescription(object):
 		err = None
 		data_valid = False
 		rx_list = []
+
+		# read prescription data from list
 		if isinstance(prescription_data, list):
 			rx_list = prescription_data
 			data_valid = True
 
+		# read presription data from file
 		if isinstance(prescription_data, str):
 			if path.exists(prescription_data):
 				try:
@@ -331,28 +370,37 @@ class Prescription(object):
 					err = format_exc()
 
 		if not data_valid:
-			if err is not None: print err
-			raise TypeError('input prescription_data expected to be '
-							'a list or the path to a valid JSON or YAML file.')
+			if err is not None:
+				print err
+			raise TypeError(
+					'input prescription_data expected to be a list or '
+					'the path to a valid JSON or YAML file.')
 
 		try:
 			for item in rx_list:
+				rx_dose = None
 				label = item['label']
-				self.structure_dict[label] = Structure(
-						label=item['label'],
-						name=item['name'],
-						is_target=bool(item['is_target']),
-						dose=float(item['dose']) if item['dose'] else 0.)
-				self.constraint_dict[label] = ConstraintList()
+				name = item['name']
+				is_target = bool(item['is_target'])
+				if isinstance(item['dose'], (float, int)):
+					rx_dose = dose = float(item['dose']) * Gy
+				elif item['dose'] is not None:
+					rx_dose = dose = dose_from_string(item['dose'])
+				else:
+					dose = 0 * Gy
+
+				s = Structure(label, name, is_target, dose=dose)
+				self.add_structure_to_dictionaries(s)
 
 				if item['constraints'] is not None:
 					for string in item['constraints']:
-						self.constraint_dict[label] += string2constraint(string)
+						self.constraint_dict[label] += string2constraint(
+								string, rx_dose=rx_dose)
 			self.rx_list = rx_list
 
 		except:
 			print str('Unknown error: prescription_data could not be '
-				'converted to conrad.Prescription() datatype.')
+					  'converted to conrad.Prescription() datatype.')
 			raise
 
 	@property
@@ -401,7 +449,8 @@ class Prescription(object):
 			sname = structures[label].name
 			sname = '' if sname is None else ' ({})\n'.format(sname)
 			for item in replist:
-				out += str('{}\tachieved? {}\tdose at level: {}\n'.format(
-						   str(item['constraint']), item['status'],
-						   item['dose_achieved']))
+				out += str(
+						'{}\tachieved? {}\tdose at level: {}\n'.format(
+						 str(item['constraint']), item['status'],
+						 item['dose_achieved']))
 		return out

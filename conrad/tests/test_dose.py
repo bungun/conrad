@@ -5,7 +5,7 @@ from conrad.compat import *
 from conrad.defs import CONRAD_DEBUG_PRINT
 from conrad.physics.units import DeliveredDose, Gy, cGy, percent, mm3, cm3
 from conrad.medicine.dose import *
-from conrad.tests.base import ConradTestCase
+from conrad.tests.base import *
 
 class ConstraintTestCase(ConradTestCase):
 	def test_relops(self):
@@ -18,7 +18,7 @@ class ConstraintTestCase(ConradTestCase):
 		""" test Constraint object intialization and properties """
 		c = Constraint()
 		self.assertFalse( c.resolved )
-		self.assertTrue( c.dose is nan )
+		self.assert_nan( c.dose )
 		self.assertTrue( c.relop == RELOPS.INDEFINITE )
 		self.assertTrue( c.threshold == None )
 
@@ -30,7 +30,7 @@ class ConstraintTestCase(ConradTestCase):
 			self.assertTrue( True )
 
 		self.assertTrue( isinstance(c.rx_dose, DeliveredDose) )
-		self.assertTrue( c.rx_dose.value is nan )
+		self.assert_nan( c.rx_dose.value )
 
 		# expect exception, since dual_value is nan
 		try:
@@ -39,7 +39,7 @@ class ConstraintTestCase(ConradTestCase):
 		except:
 			self.assertTrue( True )
 
-		self.assertTrue( c.dual_value is nan )
+		self.assert_nan( c.dual_value )
 		self.assertTrue( c.slack == 0. )
 
 		# expect exception, since constraint direction indefinite
@@ -60,7 +60,7 @@ class ConstraintTestCase(ConradTestCase):
 		c.dose = 30 * cGy
 		self.assertTrue( c.dose.to_Gy.value == 0.3 )
 		c.dose = 40 * percent
-		self.assertTrue( c.dose.value is nan )
+		self.assert_nan( c.dose.value )
 		c.rx_dose = 50 * Gy
 		self.assertTrue( c.rx_dose.value == 50 )
 		self.assertTrue( c.dose.value == 0.4 * 50 )
@@ -188,7 +188,7 @@ class PercentileConstraintTestCase(ConradTestCase):
 	def test_percentile_constraint(self):
 		pc = PercentileConstraint()
 		self.assertTrue( pc.relop == RELOPS.INDEFINITE )
-		self.assertTrue( pc.dose is nan )
+		self.assert_nan( pc.dose )
 		self.assertTrue( pc.percentile is None )
 		pc.percentile = 12
 		self.assertTrue( isinstance(pc.percentile, type(percent)) )
@@ -374,7 +374,7 @@ class DTestCase(ConradTestCase):
 
 		c = D(80) < 95 * percent
 		self.assertTrue( isinstance(c, PercentileConstraint) )
-		self.assertTrue( c.dose.value is nan )
+		self.assert_nan( c.dose.value )
 		self.assertTrue( isinstance(c.threshold, Percent) )
 		self.assertTrue( c.threshold.value == 80 )
 		self.assertTrue( c.relop == RELOPS.LEQ )
@@ -383,7 +383,7 @@ class DTestCase(ConradTestCase):
 
 		c = D(80) > 95 * percent
 		self.assertTrue( isinstance(c, PercentileConstraint) )
-		self.assertTrue( c.dose.value is nan )
+		self.assert_nan( c.dose.value )
 		self.assertTrue( isinstance(c.threshold, Percent) )
 		self.assertTrue( c.threshold.value == 80 )
 		self.assertTrue( c.relop == RELOPS.GEQ )
@@ -420,7 +420,7 @@ class DTestCase(ConradTestCase):
 
 		c = D('mean') < 95 * percent
 		self.assertTrue( isinstance(c, MeanConstraint) )
-		self.assertTrue( c.dose.value is nan )
+		self.assert_nan( c.dose.value )
 		self.assertTrue( c.threshold == 'mean' )
 		self.assertTrue( c.relop == RELOPS.LEQ )
 		c.rx_dose = 10 * Gy
@@ -429,7 +429,7 @@ class DTestCase(ConradTestCase):
 
 		c = D('mean') > 95 * percent
 		self.assertTrue( isinstance(c, MeanConstraint) )
-		self.assertTrue( c.dose.value is nan )
+		self.assert_nan( c.dose.value )
 		self.assertTrue( c.threshold == 'mean' )
 		self.assertTrue( c.relop == RELOPS.GEQ )
 		c.rx_dose = 10 * Gy
@@ -452,7 +452,7 @@ class DTestCase(ConradTestCase):
 
 		c = D('min') > 90 * percent
 		self.assertTrue( isinstance(c, MinConstraint) )
-		self.assertTrue( c.dose.value is nan )
+		self.assert_nan( c.dose.value )
 		self.assertTrue( c.threshold == 'min' )
 		self.assertTrue( c.relop == RELOPS.GEQ )
 		c.rx_dose = 10 * Gy
@@ -482,7 +482,7 @@ class DTestCase(ConradTestCase):
 
 		c = D('max') < 110 * percent
 		self.assertTrue( isinstance(c, MaxConstraint) )
-		self.assertTrue( c.dose.value is nan )
+		self.assert_nan( c.dose.value )
 		self.assertTrue( c.threshold == 'max' )
 		self.assertTrue( c.relop == RELOPS.LEQ )
 		c.rx_dose = 10 * Gy
@@ -527,7 +527,9 @@ class ConstraintListTestCase(ConradTestCase):
 		cl += D('mean') > 0.2 * Gy
 		self.assertTrue( cl.size > 0 )
 		last_key = cl.last_key
-		self.assertTrue( last_key in cl.items )
+		self.assertTrue( last_key in cl )
+		self.assertTrue( isinstance(cl[cl.last_key], Constraint) )
+		self.assertTrue( isinstance(cl[cl.last_key], MeanConstraint) )
 
 		# test constraint removal by key
 		cl -= last_key
@@ -544,14 +546,20 @@ class ConstraintListTestCase(ConradTestCase):
 		# test that constraints are mean only
 		self.assertTrue( cl.mean_only )
 		cl += D('min') > 0.1 * Gy
+		self.assertTrue( isinstance(cl[cl.last_key], Constraint) )
+		self.assertTrue( isinstance(cl[cl.last_key], MinConstraint) )
 		self.assertFalse( cl.mean_only )
 		cl -= cl.last_key
 		self.assertTrue( cl.mean_only )
 		cl += D('max') < 1 * Gy
+		self.assertTrue( isinstance(cl[cl.last_key], Constraint) )
+		self.assertTrue( isinstance(cl[cl.last_key], MaxConstraint) )
 		self.assertFalse( cl.mean_only )
 		cl -= cl.last_key
 		self.assertTrue( cl.mean_only )
 		cl += D(80) < 1 * Gy
+		self.assertTrue( isinstance(cl[cl.last_key], Constraint) )
+		self.assertTrue( isinstance(cl[cl.last_key], PercentileConstraint) )
 		self.assertFalse( cl.mean_only )
 
 		cl += D('min') > 0.1 * Gy
