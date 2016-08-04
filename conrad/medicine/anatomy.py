@@ -32,6 +32,10 @@ class Anatomy(object):
 	def structures(self):
 		return self.__structures
 
+	@property
+	def list(self):
+		return self.structures.values()
+
 	@structures.setter
 	def structures(self, structures):
 		# check iterability
@@ -80,6 +84,10 @@ class Anatomy(object):
 		# at least one target
 		status &= all([structure.plannable for structure in self])
 		return status
+
+	def clear_constraints():
+		for s in self:
+			s.constraints.clear()
 
 	def calculate_doses(self, beam_intensities):
 		for s in self:

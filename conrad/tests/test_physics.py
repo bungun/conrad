@@ -13,7 +13,7 @@ class DoseFrameTestCase(ConradTestCase):
 		m, n = 100, 50
 
 		# dose frame initialization needs a VOXELS x BEAMS size
-		self.assert_exception(call=DoseFrame, args=(None, None, None))
+		self.assert_exception( call=DoseFrame, args=[None, None, None] )
 
 		d = DoseFrame(m, n, None)
 		self.assertTrue( d.voxels == m )
@@ -29,10 +29,10 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assertTrue( d.voxels == m )
 		self.assertTrue( d.beams == n )
 		# size mismatches
-		self.assert_exception( call=DoseFrame, args=(None, n + 1, A) )
-		self.assert_exception( call=DoseFrame, args=(m + 1, None, A) )
-		self.assert_exception( call=DoseFrame, args=(m, n + 1, A) )
-		self.assert_exception( call=DoseFrame, args=(m + 1, n, A) )
+		self.assert_exception( call=DoseFrame, args=[None, n + 1, A] )
+		self.assert_exception( call=DoseFrame, args=[m + 1, None, A] )
+		self.assert_exception( call=DoseFrame, args=[m, n + 1, A] )
+		self.assert_exception( call=DoseFrame, args=[m + 1, n, A] )
 
 		A = sprand(m, n, 0.2, 'csr')
 		self.assertTrue( d.voxels == m )
@@ -43,28 +43,28 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assertTrue( d.beams == n )
 
 		A = sprand(m, n, 0.2) # COO sparse storage, not supported
-		self.assert_exception( call=DoseFrame, args=(None, None, A) )
+		self.assert_exception( call=DoseFrame, args=[None, None, A] )
 
 	def test_doseframe_properties(self):
 		m, n = 100, 50
 		d = DoseFrame(m, n, None)
 
 		# frame dimensions immutable once set
-		self.assert_exception( call=d.voxels, args=(m) )
-		self.assert_exception( call=d.beams, args=(m) )
+		self.assert_exception( call=d.voxels, args=[m] )
+		self.assert_exception( call=d.beams, args=[m] )
 
 		d.data = rand(m, n)
 		self.assertTrue( isinstance(d.data, ndarray) )
 
 		# matrix with wrong size fails
-		self.assert_exception( call=d.data, args=(rand(m + 1, n)) )
+		self.assert_exception( call=d.data, args=[rand(m + 1, n)] )
 
 		d.data = sprand(m, n, 0.2, 'csr')
 		self.assertTrue( isspmatrix(d.data) )
 		d.data = sprand(m, n, 0.2, 'csc')
 
 		# coo matrix fails
-		self.assert_exception( call=d.data, args=(sprand(m, n, 0.2)) )
+		self.assert_exception( call=d.data, args=[sprand(m, n, 0.2)] )
 
 		# voxel labels
 		vl = (10 * rand(m)).astype(int)
@@ -72,7 +72,7 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assertTrue( sum(vl - d.voxel_labels) == 0 )
 
 		vl_missized = (10 * rand(m + 1)).astype(int)
-		self.assert_exception( call=d.voxel_labels, args=(vl_missized) )
+		self.assert_exception( call=d.voxel_labels, args=[vl_missized] )
 
 		# beam labels
 		bl = (4 * rand(n)).astype(int)
@@ -80,7 +80,7 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assertTrue( sum(bl - d.beam_labels) == 0 )
 
 		bl_missized = (10 * rand(n + 1)).astype(int)
-		self.assert_exception( call=d.beam_labels, args=(bl_missized) )
+		self.assert_exception( call=d.beam_labels, args=[bl_missized] )
 
 		# voxel weights
 		self.assertTrue( isinstance(d.voxel_weights, ndarray) )
@@ -91,7 +91,7 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assert_vector_equal( vw, d.voxel_weights )
 
 		vw_missized = (5 * rand(m + 1)).astype(int).astype(float)
-		self.assert_exception( call=d.voxel_weights, args=(vw_missized) )
+		self.assert_exception( call=d.voxel_weights, args=[vw_missized] )
 
 		# beam weights
 		self.assertTrue( isinstance(d.beam_weights, ndarray) )
@@ -102,7 +102,7 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assert_vector_equal( bw, d.beam_weights )
 
 		bw_missized = (5 * rand(n + 1)).astype(int).astype(float)
-		self.assert_exception( call=d.beam_weights, args=(bw_missized) )
+		self.assert_exception( call=d.beam_weights, args=[bw_missized] )
 
 	def test_doseframe_init_options(self):
 		m, n = 100, 50
@@ -139,10 +139,10 @@ class DoseFrameTestCase(ConradTestCase):
 		indices_calculated.sort()
 		self.assert_vector_equal( indices, indices_calculated )
 
-		self.assert_exception( d.indices_by_label, args=(None, label, 'test') )
+		self.assert_exception( d.indices_by_label, args=[None, label, 'test'] )
 
 		self.assert_exception(
-					d.indices_by_label, args=(None, maxlabel + 2, 'test') )
+					d.indices_by_label, args=[None, maxlabel + 2, 'test'] )
 
 	def test_lookup_by_label(self):
 		m, n = 100, 50
@@ -179,7 +179,7 @@ class DoseFrameTestCase(ConradTestCase):
 
 class PhysicsTestCase(ConradTestCase):
 	def test_physics_init(self):
-		self.assert_exception( call=Physics, args=(None) )
+		self.assert_exception( call=Physics, args=[None] )
 
 		m, n = 100, 50
 		A = rand(m, n)

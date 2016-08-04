@@ -6,7 +6,10 @@ class VisualizationTestCase(ConradTestCase):
 	def test_dvh_plot_init(self):
 		pass
 
-	def test_case_plotter(self):
+	def test_case_plotter_init(self):
+		pass
+
+	def test_case_plotter_plot(self):
 		pass
 
 
@@ -106,3 +109,4 @@ class VisualizationTestCase(ConradTestCase):
 # 			p.plot(case, show=False, file='test_plotting.pdf')
 # 		else:
 # 			warn(Warning('plan infeasible, no plotting performed'))
+

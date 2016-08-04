@@ -1,6 +1,6 @@
 from time import clock
 from hashlib import sha1
-from numpy import zeros, linspace, nan
+from numpy import zeros, linspace, nan, ceil
 
 from conrad.compat import *
 from conrad.physics.units import DeliveredDose, cGy, Gy, Percent, Volume, cm3
@@ -247,7 +247,7 @@ class PercentileConstraint(Constraint):
 
 		fraction = self.percentile.fraction
 		non_viol = (1 - fraction) if self.upper else fraction
-		n_returned = int(non_viol * len(y))
+		n_returned = int(ceil(non_viol * len(y)))
 
 		start = 0 if self.upper else -n_returned
 		end = n_returned if self.upper else None
@@ -445,7 +445,9 @@ class ConstraintList(object):
 	def __iter__(self):
 		return self.items.__iter__()
 
-	# TODO: __next__ for python 3.x
+	def __next__(self):
+		return self.items.__next__()
+
 	def next(self):
 		return self.items.next()
 

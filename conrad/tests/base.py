@@ -24,16 +24,23 @@ class ConradTestCase(unittest.TestCase):
 		condition |= str(value) == 'nan'
 		self.assertTrue( condition )
 
-	# def assert_exception(self, call, *args):
-	# 	try:
-	# 		call(*args)
-	# 		self.assertTrue( False )
-	# 	except:
-	# 		self.assertTrue( True )
-
 	def assert_exception(self, call=None, args=None):
 		try:
 			call(*args)
+			self.assertTrue( False )
+		except:
+			self.assertTrue( True )
+
+	def assert_no_exception(self, call=None, args=None):
+		if call is None or args is None:
+			return
+
+		call(*args)
+		self.assertTrue( True )
+
+	def assert_property_exception(self, obj=None, property_name=None):
+		try:
+			val = obj.__dict__[str(property_name)]
 			self.assertTrue( False )
 		except:
 			self.assertTrue( True )

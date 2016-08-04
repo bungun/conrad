@@ -1,3 +1,4 @@
+from numpy import diff, zeros
 from conrad.compat import *
 
 GAMMA_DEFAULT = 1e-2
@@ -32,7 +33,7 @@ class Solver(object):
 			self.__gamma = float(gamma)
 
 	@staticmethod
-	def get_cd_from_wts(wt_over, wt_under):
+	def get_cd_from_wts(wt_under, wt_over):
 		""" TODO: docstring """
 		c = (wt_over + wt_under) / 2.
 		d = (wt_over - wt_under) / 2.
@@ -60,27 +61,28 @@ class Solver(object):
 	def clear(self):
 		raise RuntimeError('solver method "clear" not implemented')
 
-		def __check_dimensions(self, structures):
-			columns = [s.A.shape[1] for s in structures]
-			if not all([col == self.n_beams for col in columns]):
-				raise ValueError('all structures in plan must have full dose '
-								 'matrices with # columns that match # beams in '
-								 'the plan. \n # beams: {}\n provided matrix '
-								 'shapes: {}'.format(n_beams,
-								 [(s.name, s.A.shape) for s in structures]))
-			columns = [s.A_mean.size for s in structures]
-			if not all([col == self.n_beams for col in columns]):
-				raise ValueError('all structures in plan must have mean dose '
-								 'vectors with # columns that match # beams in the'
-								 ' plan. \n # beams: {}\n provided matrix shapes: '
-								 '{}'.format(n_beams,
-								 [(s.name, s.A_mean.sisze) for s in structures]))
+	def __check_dimensions(self, structures):
+		cols = [0] * len(structures)
+		for i, s in enumerate(structures):
+			if s.A is not None:
+				cols[i] = s.A.shape[1]
+			elif s.A_mean is not None:
+				cols[i] = s.A_mean.size
+			else:
+				raise ValueError('structure {} does not have a dose '
+								 'matrix or mean dose vector assigned'
+								 ''.format(s.name))
+		if sum(diff(cols) != 0) > 0:
+			raise ValueError('all structures in plan must have a dose '
+							 'matrix with same number of beams:\n'
+							 'either M x N dose matrix or N x 1 mean '
+							 'dose vector, with N = # beams\nSizes: {}'
+							 ''.format(cols))
+		return cols[0]
 
 	def __gather_matrix_and_coefficients(self, structures):
-		self.__check_dimensions(structures)
-
+		cols = self.__check_dimensions(structures)
 		rows = sum([s.size if not s.collapsable else 1 for s in structures])
-		cols = self.n_beams
 		A = zeros((rows, cols))
 		dose = zeros(rows)
 		weight_abs = zeros(rows)
@@ -96,8 +98,8 @@ class Solver(object):
 			else:
 				A[ptr : ptr + s.size, :] += s.A_full
 				if s.is_target:
-					c_, d_ = self.get_cd_from_wts(s.w_over, s.w_under)
-					dose[ptr : ptr + s.size] = s.dose
+					c_, d_ = self.get_cd_from_wts(s.w_under, s.w_over)
+					dose[ptr : ptr + s.size] = s.dose.value
 					weight_abs[ptr : ptr + s.size] = c_ * s.voxel_weights
 					weight_lin[ptr : ptr + s.size] = d_ * s.voxel_weights
 				else:

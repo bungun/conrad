@@ -81,6 +81,18 @@ class Case(object):
 	def A(self):
 	    return self.physics.dose_matrix
 
+	@property
+	def n_structures(self):
+		return self.anatomy.n_structures
+
+	@property
+	def n_voxels(self):
+		return self.physics.voxels
+
+	@property
+	def n_beams(self):
+		return self.phsyics.beams
+
 	def transfer_constraints_to_anatomy(self):
 		constraint_dict = self.prescription.constraints_by_label
 		for label, constr_list in constraint_dict.items():
@@ -97,17 +109,18 @@ class Case(object):
 
 	def drop_constraint(self, constr_id):
 		""" TODO: docstring """
-		for s in self.structures.itervalues():
-			s.constraints -= constr_id
+		for s in self.anatomy:
+			if constr_id in s.constraints:
+				s.constraints -= constr_id
 
 	def clear_constraints(self):
 		""" TODO: docstring """
-		for s in self.structures.values():
-			s.constraints.clear()
+		self.anatomy.clear_constraints()
 
 	def change_constraint(self, constr_id, threshold, direction, dose):
-		for s in self.structures.values():
-			s.set_constraint(constr_id, threshold, direction, dose)
+		for s in self.anatomy:
+			if constr_id in s.constraints:
+				s.set_constraint(constr_id, threshold, direction, dose)
 
 	def change_objective(self, label, dose=None, w_under=None, w_over=None):
 		""" TODO: docstring """
@@ -135,6 +148,10 @@ class Case(object):
 			structure.voxel_weights = self.physics.voxel_weights_by_label(
 					label)
 			self.physics.mark_data_as_loaded()
+
+	def calculate_doses(self, x):
+		""" TODO: docstring """
+		self.anatomy.calculate_doses(x)
 
 	def plan(self, **options):
 		plannable = True
@@ -180,10 +197,6 @@ class Case(object):
 			warn('Problem infeasible as formulated')
 			return False, run
 
-	def calculate_doses(self, x):
-		""" TODO: docstring """
-		self.anatomy.calculate_doses(x)
-
 	@property
 	def plotting_data(self, x=None):
 		""" TODO: docstring """
@@ -194,15 +207,3 @@ class Case(object):
 		for structure in self.anatomy:
 			d[structure.label] = structure.plotting_data
 		return d
-
-	@property
-	def n_structures(self):
-		return self.anatomy.n_structures
-
-	@property
-	def n_voxels(self):
-		return self.physics.voxels
-
-	@property
-	def n_beams(self):
-		return self.phsyics.beams

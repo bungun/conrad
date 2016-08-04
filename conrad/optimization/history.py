@@ -53,10 +53,10 @@ class RunOutput(object):
 	def __init__(self):
 		""" TODO: docstring """
 		# x (beams), y (dose)
-		# lambda (dual variable for x>= 0)
+		# mu (dual variable for x>= 0), nu (dual variable for Ax == y)
 		self.optimal_variables = {'x': None, 'x_exact': None}
 		self.optimal_dvh_slopes = {}
-		self.solver_info = {}
+		self.solver_info = {'time': None, 'time_exact': None}
 		self.feasible = False
 
 	@property
@@ -69,11 +69,11 @@ class RunOutput(object):
 
 	@property
 	def solvetime(self):
-		return self.solver_info.pop('time', None)
+		return self.solver_info['time']
 
 	@property
 	def solvetime_exact(self):
-		return self.solver_info.pop('time_exact', None)
+		return self.solver_info['time_exact']
 
 
 class RunRecord(object):

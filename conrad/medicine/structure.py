@@ -282,7 +282,7 @@ class Structure(object):
 
 		# calculate dose from input vector x:
 		# 	y = Ax
-		x = squeeze(array(x))
+		x = vec(x)
 		if isinstance(self.A, (csr_matrix, csc_matrix)):
 			self.__y = squeeze(self.A * x)
 		elif isinstance(self.A, ndarray):

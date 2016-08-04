@@ -224,7 +224,7 @@ class PercentileConstraintTestCase(ConradTestCase):
 		dose_vec = 10 * np.random.rand(200)
 
 		# without slack, upper limit
-		n_fulfilled = int((1 - pc.percentile.fraction) * len(dose_vec))
+		n_fulfilled = int(np.ceil((1 - pc.percentile.fraction) * len(dose_vec)))
 		maxmargin_fulfillers = pc.get_maxmargin_fulfillers(dose_vec)
 		self.assertTrue( len(maxmargin_fulfillers) == n_fulfilled )
 		dose_sub = dose_vec[maxmargin_fulfillers]
@@ -234,7 +234,7 @@ class PercentileConstraintTestCase(ConradTestCase):
 
 		# without slack, lower limit
 		pc >= 5 * Gy
-		n_fulfilled = int(pc.percentile.fraction * len(dose_vec))
+		n_fulfilled = int(np.ceil(pc.percentile.fraction * len(dose_vec)))
 		maxmargin_fulfillers = pc.get_maxmargin_fulfillers(dose_vec)
 		self.assertTrue( len(maxmargin_fulfillers) == n_fulfilled )
 		dose_sub = dose_vec[maxmargin_fulfillers]

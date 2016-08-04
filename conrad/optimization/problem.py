@@ -1,9 +1,9 @@
-from time import clock
 from os import getenv
 from numpy import inf, array, squeeze, ones, zeros, copy as np_copy
 from cvxpy import *
 
 from conrad.compat import *
+from conrad.medicine.dose import PercentileConstraint
 from conrad.optimization.solver_cvxpy import SolverCVXPY
 from conrad.optimization.solver_optkit import SolverOptkit
 
@@ -18,19 +18,30 @@ class PlanningProblem(object):
 		""" TODO: docstring """
 		self.solver_cvxpy = SolverCVXPY()
 		self.solver_pogs = SolverOptkit()
-		self.solver = None
-		self.use_slack = None
-		self.use_2pass = None
+		self.__solver = None
 
-	def __update_constraints(self, structure):
+	@property
+	def solver(self):
+		if self.__solver is None:
+			if self.solver_cvxpy is not None:
+				return self.solver_cvxpy
+			elif self.solver_pogs is not None:
+				return self.solver_pogs
+			else:
+				raise ValueError('no solvers avaialable')
+		else:
+			return self.__solver
+
+	def __update_constraints(self, structure, slack_tol=1e-3):
 		""" TODO: docstring """
-
-		# STUB: for now, avoid doing anything when using pogs solver
-
 		for cid in structure.constraints:
-			slack_var = self.solver.get_slack_value(cid)
-			slack = 0 if slack_var is None else slack_var.value
-			structure.constraints[cid].slack = slack
+			slack = self.solver.get_slack_value(cid)
+			if slack is not None:
+				# dead zone between (-slack_tol, +slack_tol) set to 0
+				# positive slacks get updated
+				# negative slacks get rejected
+				if slack < -slack_tol or slack > slack_tol:
+					structure.constraints[cid].slack = slack
 
 	def __update_structure(self, structure, exact=False):
 		""" TODO: docstring """
@@ -48,7 +59,12 @@ class PlanningProblem(object):
 	def __gather_solver_vars(self, run_output, exact=False):
 		keymod = '_exact' if exact else ''
 		run_output.optimal_variables['x' + keymod] = self.solver.x
-		run_output.optimal_variables['lambda' + keymod] = self.solver.x_dual
+		run_output.optimal_variables['mu' + keymod] = self.solver.x_dual
+		if self.solver == self.solver_pogs:
+			run_output.optimal_variables['nu' + keymod] = self.solver.y_dual
+		else:
+			run_output.optimal_variables['nu' + keymod] = None
+
 
 	def __gather_dvh_slopes(self, run_output, structures):
 		# recover dvh constraint slope variables
@@ -58,16 +74,26 @@ class PlanningProblem(object):
 						self.solver.get_dvh_slope(cid)
 
 	def __set_solver_fastest_available(self, structures):
-		if self.solver_pogs:
+		if self.solver_pogs is not None:
 			if self.solver_pogs.can_solve(structures):
-				self.solver = self.solver_pogs
+				self.__solver = self.solver_pogs
 				return
-		elif self.solver_cvxpy:
-			self.solver = self.solver_cvxpy
-		else:
-			raise Exception('no solvers available')
+		if self.solver_cvxpy is not None:
+			self.__solver = self.solver_cvxpy
+			return
 
-	def solve(self, structures, run_output, **options):
+		raise Exception('no solvers available')
+
+	def __verify_2pass_applicable(self, structures):
+		percentile_constraints_included = False
+		for s in structures:
+			for key in s.constraints:
+				percentile_constraints_included |= isinstance(
+						s.constraints[key], PercentileConstraint)
+		return percentile_constraints_included
+
+	def solve(self, structures, run_output, slack=True,
+			  exact_constraints=False, **options):
 		""" TODO: docstring """
 		if self.solver_cvxpy is None and self.solver_pogs is None:
 			raise Exception('at least one of packages\n-cvxpy\n'
@@ -85,11 +111,12 @@ class PlanningProblem(object):
 			break
 
 		# initialize problem with size and options
-		self.use_slack = options.pop('dvh_slack', True)
-		self.use_2pass = options.pop('dvh_exact', False)
+		use_slack = options.pop('dvh_slack', slack)
+		use_2pass = options.pop('dvh_exact', exact_constraints)
+		use_2pass &= self.__verify_2pass_applicable(structures)
 		self.__set_solver_fastest_available(structures)
-		self.solver.init_problem(n_beams, use_slack=self.use_slack,
-								 use_2pass=self.use_2pass, **options)
+		self.solver.init_problem(n_beams, use_slack=use_slack,
+								 use_2pass=use_2pass, **options)
 
 		# build problem
 		construction_report = self.solver.build(structures)
@@ -100,36 +127,33 @@ class PlanningProblem(object):
 				print(cr)
 
 		# solve
-		start = clock()
 		run_output.feasible = self.solver.solve(**options)
-		runtime = clock() - start
 
 		# relay output to run_output object
 		self.__gather_solver_info(run_output)
 		self.__gather_solver_vars(run_output)
-		self.__gather_dvh_slopes(run_output, structure_dict)
-		run_output.solver_info['time'] = runtime
+		self.__gather_dvh_slopes(run_output, structures)
+		run_output.solver_info['time'] = self.solver.solvetime
 
 		if not run_output.feasible:
-			return
+			return 0
 
 		# relay output to structures
 		for s in structures:
 			self.__update_structure(s)
 
 		# second pass, if applicable
-		if self.use_2pass and run_output.feasible:
-
-			self.solver.clear()
-			self.solver.build(structure_dict.values(), exact=True)
-
-			start = clock()
+		if use_2pass and run_output.feasible:
+			self.solver.build(structures, exact=True)
 			self.solver.solve(**options)
-			runtime = clock() - start
 
-			self.__gather_solver_info(run_output, exact = True)
-			self.__gather_solver_vars(run_output, exact = True)
-			run_output.solver_info['time_exact'] = runtime
+			self.__gather_solver_info(run_output, exact=True)
+			self.__gather_solver_vars(run_output, exact=True)
+			run_output.solver_info['time_exact'] = self.solver.solvetime
 
-			for s in structure_dict.values():
-				self.__update_structure(s, exact = True)
+			for s in structures:
+				self.__update_structure(s, exact=True)
+
+			return 2
+		else:
+			return 1
