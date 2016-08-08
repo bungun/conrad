@@ -252,7 +252,7 @@ class PlanningProblemTestCase(ConradTestCase):
 		feasible = p.solve(self.anatomy.list, ro, slack=False, verbose=0)
 		self.assertTrue( feasible == 1 )
 		self.assertTrue( ro.solvetime > 0 )
-		self.assertTrue( ro.solvetime_exact is None )
+		self.assert_nan( ro.solvetime_exact )
 
 		# constrained, no slack
 		#	- return code = 1
@@ -262,7 +262,7 @@ class PlanningProblemTestCase(ConradTestCase):
 		feasible = p.solve(self.anatomy.list, ro, slack=False, verbose=0)
 		self.assertTrue( feasible == 1 )
 		self.assertTrue( ro.solvetime > 0 )
-		self.assertTrue( ro.solvetime_exact is None )
+		self.assert_nan( ro.solvetime_exact )
 
 		# add infeasible constraint
 		#	- return code = 0 (0 feasible problems solved)
@@ -271,7 +271,7 @@ class PlanningProblemTestCase(ConradTestCase):
 		feasible = p.solve(self.anatomy.list, ro, slack=False, verbose=0)
 		self.assertTrue( feasible == 0 )
 		self.assertTrue( ro.solvetime > 0 )
-		self.assertTrue( ro.solvetime_exact is None )
+		self.assert_nan( ro.solvetime_exact )
 		self.anatomy['tumor'].constraints -= self.anatomy[
 			'tumor'].constraints.last_key
 
@@ -283,7 +283,7 @@ class PlanningProblemTestCase(ConradTestCase):
 						   exact_constraints=True)
 		self.assertTrue( feasible == 1 )
 		self.assertTrue( ro.solvetime > 0 )
-		self.assertTrue( ro.solvetime_exact is None )
+		self.assert_nan( ro.solvetime_exact )
 
 		# 	- +DVH constraint: request *and* perform 2-pass method
 		#	- return code = 2 (2 feasible problems solved)
@@ -310,7 +310,7 @@ class PlanningProblemTestCase(ConradTestCase):
 		feasible = p.solve(self.anatomy.list, ro, slack=True, verbose=0)
 		self.assertTrue( feasible == 1 )
 		self.assertTrue( ro.solvetime > 0 )
-		self.assertTrue( ro.solvetime_exact is None )
+		self.assert_nan( ro.solvetime_exact )
 
 		# slack, 2-pass
 		#	- return code = 2

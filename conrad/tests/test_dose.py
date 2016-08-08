@@ -567,7 +567,7 @@ class ConstraintListTestCase(ConradTestCase):
 		cl += D(80) < 1 * Gy
 		self.assertTrue( cl.contains(D('min') > 0.1 * Gy) )
 		self.assertTrue( cl.contains(D('max') < 1 * Gy) )
-		self.assertTrue( cl.contains(D(80) > 1 * Gy) )
+		self.assertTrue( cl.contains(D(80) < 1 * Gy) )
 		self.assertTrue( cl.size == 4 )
 		cl.clear()
 		self.assertTrue( cl.size == 0 )

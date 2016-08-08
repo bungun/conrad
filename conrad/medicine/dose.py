@@ -175,6 +175,10 @@ class Constraint(object):
 							'when both operands of type {}'.format(Constraint,
 							Constraint))
 
+		# filter out mixed comparisons between percentile vs. mean/min/max
+		if type(self.threshold) != type(other.threshold):
+			return False
+
 		equal = self.dose == other.dose
 		equal &= self.relop == other.relop
 		equal &= self.threshold == other.threshold

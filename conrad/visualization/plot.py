@@ -168,7 +168,7 @@ class DVHPlot(object):
 		if show:
 			SHOW()
 
-	def save(self, filepath, overwrite=True):
+	def save(self, filepath, overwrite=True, verbose=False):
 		filepath = path.abspath(filepath)
 		directory = path.dirname(filepath)
 		if not path.isdir(path.dirname(filepath)):
@@ -179,7 +179,8 @@ class DVHPlot(object):
 							 'and argument "overwrite" is set to False')
 		else:
 			try:
-				print "SAVING TO ", filepath
+				if verbose:
+					print "SAVING TO ", filepath
 				plt.savefig(filepath, bbox_inches='tight')
 			except:
 				raise RuntimeError('could not save plot to file: {}'.format(
