@@ -26,9 +26,3 @@ DEBUG: 2-pass (python)
 TODO: allow plotting of 1st pass when 2-pass is enabled
 TODO: plotting (browser)
 TODO: __str__ method for RunRecord	
-TODO: prescription unit tests
-TODO: solver generic unit tests
-TODO: solver cvxpy unit tests
-TODO: solver optkit unit tests
-TODO: problem unit tests
-TODO: visualization unit tests

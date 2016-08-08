@@ -13,7 +13,7 @@ setup(
               'conrad.medicine',
               'conrad.physics',
               'conrad.optimization',
-              'conrad.visualization'
+              'conrad.visualization',
               'conrad.tests'],
     license='GPLv3',
     zip_safe=False,
