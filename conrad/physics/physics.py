@@ -1,4 +1,4 @@
-from numpy import ndarray, ones
+from numpy import ndarray, ones, nan
 
 from conrad.compat import *
 from conrad.defs import vec, sparse_or_dense, CONRAD_MATRIX_TYPES
@@ -6,11 +6,10 @@ from conrad.physics.beams import BeamSet
 from conrad.physics.voxels import VoxelGrid
 
 class DoseFrame(object):
-	def __init__(self, voxels, beams, data, voxel_labels=None,
-				 beam_labels=None, voxel_weights=None,
-				 beam_weights=None):
-		self.__voxels = None
-		self.__beams = None
+	def __init__(self, voxels=None, beams=None, data=None, voxel_labels=None,
+				 beam_labels=None, voxel_weights=None, beam_weights=None):
+		self.__voxels = nan
+		self.__beams = nan
 		self.__data = None
 		self.__voxel_labels = None
 		self.__beam_labels = None
@@ -47,21 +46,8 @@ class DoseFrame(object):
 
 		if voxel_weights is not None:
 			self.voxel_weights = voxel_weights
-		elif self.voxels is not None:
-			self.voxel_weights = ones(self.voxels, dtype=int)
-
 		if beam_weights is not None:
 			self.beam_weights = beam_weights
-		elif self.beams is not None:
-			self.beam_weights = ones(self.beams, dtype=int)
-
-		if self.voxels is None or self.beams is None:
-			raise ValueError('minimal requirements for initialization:'
-							 '\n-argument "data" is a matrix OR '
-							 '\n-other arguments combine to '
-							 'specify/imply the VOXELS x BEAMS '
-							 'dimensions of the {}'
-							 ''.format(DoseFrame))
 
 	@property
 	def plannable(self):
@@ -85,14 +71,14 @@ class DoseFrame(object):
 							'matrix, in the form of a {}, {}, or {}'
 							''.format(*CONRAD_MATRIX_TYPES))
 
-		if self.voxels:
+		if self.voxels not in (None, nan):
 			if data.shape[0] != self.voxels:
 				raise ValueError('argument "data" must be a matrix '
 								 'with {} rows'.format(self.voxels))
 		else:
 			self.voxels = data.shape[0]
 
-		if self.beams:
+		if self.beams not in (None, nan):
 			if data.shape[1] != self.beams:
 				raise ValueError('argument "data" must be a matrix '
 								 'with {} columns'.format(self.beams))
@@ -107,11 +93,13 @@ class DoseFrame(object):
 
 	@voxels.setter
 	def voxels(self, voxels):
-		if self.voxels:
+		if self.voxels not in (None, nan):
 			raise ValueError('{} property "voxels" cannot be changed '
 							 'once set'.format(DoseFrame))
-		if voxels:
+		if voxels is not None:
 			self.__voxels = int(voxels)
+			if self.voxel_weights is None:
+				self.voxel_weights = ones(self.voxels, dtype=int)
 
 	@property
 	def beams(self):
@@ -119,11 +107,13 @@ class DoseFrame(object):
 
 	@beams.setter
 	def beams(self, beams):
-		if self.beams:
+		if self.beams not in (None, nan):
 			raise ValueError('{} property "beams" cannot be changed '
 							 'once set'.format(DoseFrame))
-		if beams:
+		if beams is not None:
 			self.__beams = int(beams)
+			if self.beam_weights is None:
+				self.beam_weights = ones(self.beams, dtype=int)
 
 	@property
 	def voxel_labels(self):
@@ -131,7 +121,7 @@ class DoseFrame(object):
 
 	@voxel_labels.setter
 	def voxel_labels(self, voxel_labels):
-		if self.voxels is None:
+		if self.voxels in (None, nan):
 			self.voxels = len(voxel_labels)
 		if len(voxel_labels) != self.voxels:
 			raise ValueError('length of "voxel labels" ({}) must match '
@@ -145,7 +135,7 @@ class DoseFrame(object):
 
 	@beam_labels.setter
 	def beam_labels(self, beam_labels):
-		if self.beams is None:
+		if self.beams in (None, nan):
 			self.beams = len(beam_labels)
 		if len(beam_labels) != self.beams:
 			raise ValueError('length of "beam labels" ({}) must match '
@@ -159,7 +149,7 @@ class DoseFrame(object):
 
 	@voxel_weights.setter
 	def voxel_weights(self, voxel_weights):
-		if self.voxels is None:
+		if self.voxels in (None, nan):
 			self.voxels = len(voxel_weights)
 		if len(voxel_weights) != self.voxels:
 			raise ValueError('length of "voxel_weights" ({}) must match '
@@ -173,7 +163,7 @@ class DoseFrame(object):
 
 	@beam_weights.setter
 	def beam_weights(self, beam_weights):
-		if self.beams is None:
+		if self.beams in (None, nan):
 			self.beams = len(beam_weights)
 		if len(beam_weights) != self.beams:
 			raise ValueError('length of "beam_weights" ({}) must match '
@@ -186,13 +176,13 @@ class DoseFrame(object):
 		if label_vector is None:
 			raise ValueError('{} object field "{}" must be '
 							 'set to perform retrieval by label'
-							 ''.format(DoseFrame, name))
+							 ''.format(DoseFrame, vector_name))
 
 		indices = listmap(lambda x: x[0], listfilter(
 				lambda x: x[1] == label, enumerate(label_vector)))
 		if len(indices) == 0:
 			raise KeyError('label {} not found in entries of field '
-						   '"{}"'.format(label, name))
+						   '"{}"'.format(label, vector_name))
 
 		return vec(indices)
 
@@ -221,11 +211,12 @@ class Physics(object):
 
 		# copy constructor
 		if isinstance(voxels, Physics):
-			self.__frames = voxels._Physics__frames
-			self.__dose_grid = voxels._Physics__dose_grid
-			self.__dose_frame = voxels._Physics__dose_frame
-			self.__beams = voxels._Physics__beams
-			self.__FRAME_LOAD_FLAG = voxels._Physics__FRAME_LOAD_FLAG
+			physics_in = voxels
+			self.__frames = physics_in._Physics__frames
+			self.__dose_grid = physics_in._Physics__dose_grid
+			self.__dose_frame = physics_in._Physics__dose_frame
+			self.__beams = physics_in._Physics__beams
+			self.__FRAME_LOAD_FLAG = physics_in._Physics__FRAME_LOAD_FLAG
 			return
 
 		# normal initialization
@@ -238,7 +229,7 @@ class Physics(object):
 		f = DoseFrame(voxels, beams, dose_matrix, voxel_labels=voxel_labels,
 					  **options)
 
-		if self.__beams is None:
+		if self.__beams is None and isinstance(f.beams, int):
 			self.__beams = BeamSet(f.beams)
 
 		self.__dose_frame = f
@@ -302,6 +293,8 @@ class Physics(object):
 	@dose_matrix.setter
 	def dose_matrix(self, dose_matrix):
 		self.frame.data = dose_matrix
+		if self.__beams is None and isinstance(self.frame.beams, int):
+			self.__beams = BeamSet(self.frame.beams)
 
 	@property
 	def voxel_labels(self):

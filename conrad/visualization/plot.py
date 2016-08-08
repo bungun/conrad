@@ -14,6 +14,8 @@ else:
 
 from matplotlib.pyplot import get_cmap
 from matplotlib.colors import LinearSegmentedColormap
+
+from conrad.compat import *
 from conrad.case import Case
 
 """
@@ -27,7 +29,7 @@ def panels_to_cols(n_panels):
 		n_cols += 1
 	if n_panels > 4:
 		n_cols += 1
-	if n_panels > 7:
+	if n_panels > 6:
 		n_cols += 1
 	return n_cols
 
@@ -37,27 +39,40 @@ class DVHPlot(object):
 	def __init__(self, panels_by_structure, names_by_structure):
 		""" TODO: docstring """
 		self.fig = plt.figure()
-		self.n_structures = len(panels_by_structure.keys())
-		self.panels_by_structure = panels_by_structure
+		self.n_structures = len(panels_by_structure)
+		self.__panels_by_structure = panels_by_structure
 		self.n_panels = max(panels_by_structure.values())
 		self.cols = panels_to_cols(self.n_panels)
 		self.rows = int(ceil(float(self.n_panels) / self.cols))
-		self.names_by_structure = names_by_structure
-		self.colors_by_structure = {}
+		self.__names_by_structure = names_by_structure
+		self.__colors_by_structure = {}
 
 		# set colors to something to start
 		self.autoset_series_colors()
 
+	@property
+	def series_panels(self):
+		return self.__panels_by_structure
 
-	def set_series_names(self, names_by_structure):
+	@property
+	def series_names(self):
+		return self.__names_by_structure
+
+	@series_names.setter
+	def series_names(self, names_by_structure):
 		""" TODO: docstring """
-		self.names_by_structure = names_by_structure
+		for label, name in names_by_structure.items():
+			self.__names_by_structure[label] = color
 
+	@property
+	def series_colors(self):
+		return self.__colors_by_structure
 
+	@series_colors.setter
 	def set_series_colors(self, colors_by_structure):
 		""" TODO: docstring """
 		for label, color in colors_by_structure.items():
-			self.colors_by_structure[label] = color
+			self.__colors_by_structure[label] = color
 
 	def autoset_series_colors(self, structure_order_dict=None, colormap=None):
 		""" TODO: docstring """
@@ -67,11 +82,11 @@ class DVHPlot(object):
 			cmap = get_cmap('rainbow')
 			colors = listmap(cmap, linspace(0.9, 0.1, self.n_structures))
 
-		for idx, label in enumerate(self.panels_by_structure.keys()):
+		for idx, label in enumerate(self.series_panels.keys()):
 			if structure_order_dict is not None:
-				self.colors_by_structure[label] = colors[structure_order_dict[label]]
+				self.series_colors[label] = colors[structure_order_dict[label]]
 			else:
-				self.colors_by_structure[label] = colors[idx]
+				self.series_colors[label] = colors[idx]
 
 
 	def plot(self, plot_data, show=False, clear=True, xmax=None, legend=False,
@@ -80,17 +95,17 @@ class DVHPlot(object):
 			 suppress_yticks=False, suppress_xlabel=True, suppress_ylabel=True,
 			 **options):
 		""" TODO: docstring """
-		if clear: self.fig.clf()
+		if clear:
+			self.fig.clf()
 
 		max_dose = max([data['curve']['dose'].max() for data in plot_data.values()])
 		marker_size = 16 if large_markers else 12
 
-
 		for label, data in plot_data.items():
-			plt.subplot(self.rows, self.cols, self.panels_by_structure[label])
+			plt.subplot(self.rows, self.cols, self.series_panels[label])
 
-			color = self.colors_by_structure[label]
-			name = self.names_by_structure[label] if legend else '_nolegend_'
+			color = self.series_colors[label]
+			name = self.series_names[label] if legend else '_nolegend_'
 			plt.plot(data['curve']['dose'], data['curve']['percentile'],
 				color=color, label=name, **options)
 			if self_title:
@@ -130,8 +145,6 @@ class DVHPlot(object):
 					max_dose = max(max_dose, constraint[1]['dose'][0])
 
 		xlim_upper = xmax if xmax is not None else 1.1 * max_dose
-		print "ARG XMAX", xmax
-		print "XLIM_UPPER", xlim_upper
 
 		plt.xlim(0, xlim_upper)
 		plt.ylim(0, 103)
@@ -152,7 +165,8 @@ class DVHPlot(object):
 					   labelspacing=0.0, handletextpad=0.0, handlelength=1.5,
 					   fancybox=True, shadow=True)
 
-		if show: SHOW()
+		if show:
+			SHOW()
 
 	def save(self, filepath, overwrite=True):
 		filepath = path.abspath(filepath)
@@ -197,17 +211,20 @@ class CasePlotter(object):
 			TypeError('argument "case" must be of type conrad.Case')
 
 		# plot setup
-		panels_by_structure = {}
-		names_by_structure = {}
-		for idx, label in enumerate(case.label_order):
-			# place all curves on one panel by default (clinicians' preference)
-			panels_by_structure[label] = 1
-			names_by_structure[label] = case.structures[label].name
+		panels_by_structure = {label: 1 for label in case.anatomy.label_order}
+		names_by_structure = {
+				label: case.anatomy[label].name for
+				label in case.anatomy.label_order}
 		self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
-		self.valid_labels = case.structures.keys()
+		self.__labels = {}
+		for s in case.anatomy:
+			self.__labels[s.label] = s.label
+			self.__labels[s.name] = s.label
 
+	def label_is_valid(self, label):
+		return label in self.__labels
 
-	def set_display_groups(grouping='together', group_list=None):
+	def set_display_groups(self, grouping='together', group_list=None):
 		"""
 		Specifies structure-to-panel assignments for display.
 
@@ -245,37 +262,37 @@ class CasePlotter(object):
 							 'or "list")')
 
 		if grouping == 'together':
-			for k in self.dvh_plot.panels_by_structure:
-				self.dvh_plot.panels_by_structure[k] = 1
+			for k in self.dvh_plot.series_panels:
+				self.dvh_plot.series_panels[k] = 1
 		elif grouping == 'separate':
-			for i, k in enumerate(self.dvh_plot.panels_by_structure):
-				self.dvh_plot.panels_by_structure[k] = i + 1
+			for i, k in enumerate(self.dvh_plot.series_panels):
+				self.dvh_plot.series_panels[k] = i + 1
 		elif grouping == 'list':
-			valid &= isinstance(group_list, list)
+			valid = isinstance(group_list, list)
 			valid &= all(map(lambda x: isinstance(x, tuple), group_list))
 			if valid:
 				for i, group in enumerate(group_list):
 					for label in group:
-						if label in self.valid_labels:
-							self.dvh_plot.panels_by_structure[label] = i + 1
+						if label in self.__labels:
+							self.dvh_plot.series_panels[
+									self.__labels[label]] = i + 1
 						else:
 							raise ValueError('specified label {} in tuple {} '
 											 'does not correspond to any known'
 											 'structure labels in the current'
-											 'case'.format(label))
+											 'case'.format(label, group))
 			else:
-				raise TypeError('')
+				raise TypeError('TODO: explain error')
 
 
-	def plot(self, case, show=False, clear=True, subset=None, plotfile=None,
+	def plot(self, data, show=False, clear=True, subset=None, plotfile=None,
 		  	 **options):
 		"""
 		Plots dose data given current state of argument "case".
 
 
 		Args:
-			case: A :class:`Case` instance. case.plotting_data is used
-				to build the DVH curves.
+			data: dict, used to build the DVH curves.
 			show: bool, toggles whether plot is displayed.
 			clear: bool, toggles whether plot is cleared before data
 				from "case" is appended.
@@ -300,7 +317,7 @@ class CasePlotter(object):
 				instance.
 		"""
 		plotfile = options.pop('file', None)
-		data_ = case.plotting_data
+		data_ = data
 
 		# filter data to only plot DVH for structures with requested labels
 		if subset is None:

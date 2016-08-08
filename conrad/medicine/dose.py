@@ -463,9 +463,12 @@ class ConstraintList(object):
 			self.items[key] =  other
 			self.last_key = key
 			return self
-		elif isinstance(other, (list, tuple, ConstraintList)):
+		elif isinstance(other, (list, tuple)):
 			for constr in other:
 				self += constr
+			return self
+		elif isinstance(other, ConstraintList):
+			self += other.items
 			return self
 		elif isinstance(other, dict):
 			for constr in other.values():
@@ -495,12 +498,20 @@ class ConstraintList(object):
 		return self.items.keys()
 
 	@property
+	def list(self):
+		return self.items.values()
+
+
+	@property
 	def mean_only(self):
 		meantest = lambda c : isinstance(c, MeanConstraint)
 		if self.size == 0:
 			return True
 		else:
 			return all(listmap(meantest, self.itervalues()))
+
+	def contains(self, constr):
+		return constr in self.items.values()
 
 	def clear(self):
 		self.items = {}

@@ -1,0 +1,12 @@
+#!/bin/sh
+export INSTALL_OPTKIT=0
+
+if $(( INSTALL_OPTKIT > 0 )); then
+	cd ..;
+	git clone https://github.com/bungun/optkit.git;
+	cd ./optkit;
+	./install;
+	cd ../conrad;
+fi
+
+python setup.py install

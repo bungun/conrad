@@ -365,7 +365,7 @@ class Structure(object):
 	 	"""
 		return {'curve': self.dvh.plotting_data,
 				'constraints': self.constraints.plotting_data,
-				'rx': self.dose_rx,
+				'rx': self.dose_rx.value,
 				'target': self.is_target}
 
 	@property

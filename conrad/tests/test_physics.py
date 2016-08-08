@@ -12,8 +12,9 @@ class DoseFrameTestCase(ConradTestCase):
 	def test_doseframe_init_basic(self):
 		m, n = 100, 50
 
-		# dose frame initialization needs a VOXELS x BEAMS size
-		self.assert_exception( call=DoseFrame, args=[None, None, None] )
+		d = DoseFrame()
+		self.assert_nan( d.voxels )
+		self.assert_nan( d.beams )
 
 		d = DoseFrame(m, n, None)
 		self.assertTrue( d.voxels == m )

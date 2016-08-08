@@ -1,112 +1,99 @@
+from os import remove as os_remove
+from matplotlib.figure import Figure
+
 from conrad.compat import *
+from conrad.defs import vec
+from conrad.medicine import Anatomy, Structure
 from conrad.visualization.plot import *
 from conrad.tests.base import *
 
 class VisualizationTestCase(ConradTestCase):
+	@classmethod
+	def setUpClass(self):
+		self.beams = 50
+		self.anatomy = Anatomy([
+				Structure(0, 'PTV', True, A=rand(100, self.beams)),
+				Structure(1, 'OAR1', False, A=rand(300, self.beams)),
+				Structure(2, 'OAR2', False, A=rand(250, self.beams))
+			])
+		self.panels = {0: 1, 1: 1, 2: 1}
+		self.names = {0: 'PTV', 1: 'OAR1', 2: 'OAR2'}
+		self.case = Case(anatomy=self.anatomy)
+
+	def test_panels_to_cols(self):
+		self.assertTrue( panels_to_cols(1) == 1 )
+		self.assertTrue( panels_to_cols(2) == 2 )
+		self.assertTrue( panels_to_cols(3) == 2 )
+		self.assertTrue( panels_to_cols(4) == 2 )
+		self.assertTrue( panels_to_cols(5) == 3 )
+		self.assertTrue( panels_to_cols(6) == 3 )
+		self.assertTrue( panels_to_cols(7) == 4 )
+		self.assertTrue( panels_to_cols(8) == 4 )
+		self.assertTrue( panels_to_cols(12) == 4 )
+		self.assertTrue( panels_to_cols(15) == 4 )
+		self.assertTrue( panels_to_cols(25) == 4 )
+
 	def test_dvh_plot_init(self):
-		pass
+		d = DVHPlot(self.panels, self.names)
+
+		self.assertTrue( isinstance(d.fig, Figure) )
+		self.assertTrue( d.n_structures == 3 )
+		self.assertTrue( d._DVHPlot__panels_by_structure == self.panels )
+		self.assertTrue( d.n_panels == 1 )
+		self.assertTrue( d.cols == 1 )
+		self.assertTrue( d.rows == 1 )
+		self.assertTrue( d._DVHPlot__names_by_structure == self.names )
+		self.assertTrue( isinstance(d._DVHPlot__colors_by_structure, dict) )
+		self.assertTrue( len(d._DVHPlot__colors_by_structure) == 3 )
+
+	def test_dvh_plot_plot(self):
+		d = DVHPlot(self.panels, self.names)
+		self.anatomy.calculate_doses(rand(self.beams))
+		d.plot(self.anatomy.plotting_data)
+		self.assertTrue( isinstance(d.fig, Figure) )
+
+		# TODO: test options
+
+	def test_dvh_plot_save(self):
+		d = DVHPlot(self.panels, self.names)
+
+		filename = path.join(path.abspath(path.dirname(__file__)), 'test.pdf')
+
+		self.assertFalse( path.exists(filename) )
+		d.save(filename)
+		self.assertTrue( path.exists(filename) )
+		os_remove(filename)
+		self.assertFalse( path.exists(filename) )
 
 	def test_case_plotter_init(self):
-		pass
+		cp = CasePlotter(self.case)
+		self.assertTrue( isinstance(cp.dvh_plot, DVHPlot) )
+
+		label_list = [0, 1, 2, 'PTV', 'OAR1', 'OAR2']
+		self.assertTrue( all(
+			[cp.label_is_valid(label) for label in label_list]) )
+
+	def test_case_plotter_set_display_groups(self):
+		self.case.anatomy.label_order = [0, 1, 2]
+
+		cp = CasePlotter(self.case)
+		cp.set_display_groups('together')
+		self.assert_vector_equal(
+				vec(cp.dvh_plot.series_panels.values()), vec([1, 1, 1]) )
+
+		cp.set_display_groups('separate')
+		self.assert_vector_equal(
+				vec(cp.dvh_plot.series_panels.values()), vec([1, 2, 3]) )
+
+		cp.set_display_groups('list', [('PTV',), ('OAR1', 'OAR2')])
+		self.assert_vector_equal(
+				vec(cp.dvh_plot.series_panels.values()), vec([1, 2, 2]) )
+
 
 	def test_case_plotter_plot(self):
-		pass
+		cp = CasePlotter(self.case)
+		self.anatomy.calculate_doses(rand(self.beams))
+		cp.plot(self.anatomy.plotting_data)
+		self.assertTrue( isinstance(cp.dvh_plot.fig, Figure) )
 
-
-# import numpy as np
-# import cvxpy
-# from os import path, remove as os_remove
-# from warnings import warn
-
-# from conrad.compat import *
-# from conrad import *
-# from conrad.test.base import ConradTestCase
-
-# class TestExamples(ConradTestCase):
-# 	""" Unit tests using example problems. """
-# 	def setUp(self):
-# 		# Construct dose matrix
-# 		A_targ = 1.2 * np.random.rand(self.m_targ, self.n)
-# 		A_oar = 0.3 * np.random.rand(self.m_oar, self.n)
-# 		self.A = np.vstack((A_targ, A_oar))
-
-# 	# Runs once before all unit tests
-# 	def setUpClass(self):
-# 		mx = 10
-# 		my = 10
-# 		mz = 5
-# 		self.m = mx * my * mz
-# 		self.m_targ = 100
-# 		self.m_oar = self.m - self.m_targ
-# 		self.n = 200
-
-# 		self.voxels = VoxelGrid(mx, my, mz)
-# 		self.beams = BeamSet(n_beams=self.n)
-# 		self.physics = Physics(beams=self.beams, dose_grid=self.voxels)
-
-# 		# Structure labels
-# 		self.lab_tum = 0
-# 		self.lab_oar = 1
-
-# 		# Prescription for each structure
-# 		self.rx = [
-# 				{
-# 					'label': self.lab_tum,
-# 					'name': 'tumor',
-# 					'is_target': True,
-# 					'dose': 1.,
-# 					'constraints': None
-# 				},{
-# 					'label': self.lab_oar,
-# 					'name': 'oar',
-# 					'is_target': False,
-# 					'dose': 0.,
-# 					'constraints': None
-# 				}]
-
-# 		# Voxel labels on beam matrix
-# 		self.label_order = [self.lab_tum, self.lab_oar]
-# 		self.voxel_labels = [self.lab_tum] * self.m_targ + \
-# 							[self.lab_oar] * self.m_oar
-
-# 		self.anatomy = Anatomy()
-# 		for s in self.rx:
-# 			self.anatomy += Structure(s['label'], s['name'], s['is_target'],
-# 									  dose=s['dose'])
-
-# 		self.physics.voxel_labels = self.voxel_labels
-
-# 	# Runs once after all unit tests
-# 	def tearDownClass(self):
-# 		files_to_delete = ['test_plotting.pdf']
-# 		for fname in files_to_delete:
-# 			fpath = path.join(path.abspath(path.dirname(__file__)), fname)
-# 			if path.isfile(fpath): os_remove(fpath)
-
-# 	setUpClass = classmethod(setUpClass)
-# 	tearDownClass = classmethod(tearDownClass)
-
-# 	def test_plotting(self):
-# 		# Construct unconstrained case
-# 		case = Case(physics=self.physics, anatomy=self.anatomy,
-# 					prescription=self.rx)
-
-# 		p = CasePlotter(case)
-
-# 		# Add DVH constraints
-# 		case.structures['tumor'].constraints += D(20) <= 1.15
-# 		case.structures['tumor'].constraints += D(80) >= 0.95
-# 		case.structures['oar'].constraints += D(50) < 0.30
-
-# 		# This constraint makes no-slack problem infeasible
-# 		case.structures['oar'].constraints += D(99) < 0.05
-
-# 		# Add a DVH mean constraint
-# 		case.structures['tumor'].constraints += D('mean') <= 1.0
-
-# 		# Solve and plot resulting DVH curves
-# 		if case.plan(solver='ECOS'):
-# 			p.plot(case, show=False, file='test_plotting.pdf')
-# 		else:
-# 			warn(Warning('plan infeasible, no plotting performed'))
-
+		# TODO: test options

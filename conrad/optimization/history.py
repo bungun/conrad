@@ -1,4 +1,5 @@
-from warnings import warn
+from numpy import nan
+
 from conrad.compat import *
 
 # TODO: unit test
@@ -28,9 +29,11 @@ class RunProfile(object):
 
 	def pull_objectives(self, structures):
 		""" TODO: docstring """
-		for label, s in structures.items():
-			self.objectives[label] = {
-				'label' : label,
+		if isinstance(structures, dict):
+			structures = structures.values()
+		for s in structures:
+			self.objectives[s.label] = {
+				'label' : s.label,
 				'name' : s.name,
 				'dose' : s.dose,
 				'w_under' : s.w_under_raw,
@@ -39,12 +42,14 @@ class RunProfile(object):
 
 	def pull_constraints(self, structures):
 		""" TODO: docstring """
-		for label, s in structures.iteritems():
-			for cid, dc in s.constraints.iteritems():
+		if isinstance(structures, dict):
+			structures = structures.values()
+		for s in structures:
+			for cid in s.constraints:
 				self.constraints[cid] = {
-					'label' : label,
+					'label' : s.label,
 					'constraint_id' : cid,
-					'constraint' : str(dc)
+					'constraint' : str(s.constraints[cid])
 				}
 
 class RunOutput(object):
@@ -56,7 +61,7 @@ class RunOutput(object):
 		# mu (dual variable for x>= 0), nu (dual variable for Ax == y)
 		self.optimal_variables = {'x': None, 'x_exact': None}
 		self.optimal_dvh_slopes = {}
-		self.solver_info = {'time': None, 'time_exact': None}
+		self.solver_info = {'time': nan, 'time_exact': nan}
 		self.feasible = False
 
 	@property
@@ -90,37 +95,37 @@ class RunRecord(object):
 		self.output = RunOutput()
 		self.plotting_data = {0: None, 'exact': None}
 
-		@property
-		def feasible(self):
-			return self.output.feasible
+	@property
+	def feasible(self):
+		return self.output.feasible
 
-		@property
-		def info(self):
-			return self.output.solver_info
+	@property
+	def info(self):
+		return self.output.solver_info
 
-		@property
-		def x(self):
-			return self.output.x
+	@property
+	def x(self):
+		return self.output.x
 
-		@property
-		def x_exact(self):
-			return self.output.x_exact
+	@property
+	def x_exact(self):
+		return self.output.x_exact
 
-		@property
-		def nonzero_beam_count(self, tol=1e-6):
-			return sum(self.x > tol)
+	@property
+	def nonzero_beam_count(self, tol=1e-6):
+		return sum(self.x > tol)
 
-		@property
-		def nonzero_beam_count_exact(self, tol=1e-6):
-			return sum(self.x_exact > tol)
+	@property
+	def nonzero_beam_count_exact(self, tol=1e-6):
+		return sum(self.x_exact > tol)
 
-		@property
-		def solvetime(self):
-			return self.output.solvetime
+	@property
+	def solvetime(self):
+		return self.output.solvetime
 
-		@property
-		def solvetime_exact(self):
-			return self.output.solvetime
+	@property
+	def solvetime_exact(self):
+		return self.output.solvetime
 
 class PlanningHistory(object):
 	def __init__(self):
