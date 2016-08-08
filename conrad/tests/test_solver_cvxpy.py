@@ -427,7 +427,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		x = Variable(self.n)
 		p = Problem(Minimize(0), [])
 		p.constraints += [ x >= 0 ]
-		p.objective += Minimize( weight_abs.T * abs(A * x) + weight_lin.T * (A * x) )
+		p.objective += Minimize(
+				weight_abs.T * abs(A * x) +
+				weight_lin.T * (A * x) )
 
 		s.use_slack = False
 		s.build(structure_list, exact=False)

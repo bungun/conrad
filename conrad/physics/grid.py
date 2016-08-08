@@ -138,6 +138,7 @@ class Grid2D(AbstractGrid):
 		raise AttributeError('2D grids have no "z" dimension')
 
 	def index2position(self, index):
+		index = int(index)
 		self.validate_nonnegative_int(index, 'index')
 
 		gridsize = reduce(mul, self.shape)
@@ -235,6 +236,7 @@ class Grid3D(AbstractGrid):
 		return self._AbstractGrid__z * self._AbstractGrid__z_unit_length
 
 	def index2position(self, index):
+		index = int(index)
 		self.validate_nonnegative_int(index, 'index')
 
 		gridsize = reduce(mul, self.shape)

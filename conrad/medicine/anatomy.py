@@ -14,17 +14,11 @@ class Anatomy(object):
 			self.structures = structures
 
 	def __getitem__(self, key):
-		if key in self.__structures:
-			return self.__structures[key]
-		else:
-			for s in self:
-				if s.name == key:
-					return s
+		for s in self:
+			if key in (s.name, s.label):
+				return s
 		raise KeyError('key {} does not correspond to a structure label'
 					   ' or name in this {} object'.format(key, Anatomy))
-
-
-		return self.__structures[key]
 
 	def __iter__(self):
 		return self.__structures.values().__iter__()
@@ -35,7 +29,7 @@ class Anatomy(object):
 
 	@property
 	def list(self):
-		return self.structures.values()
+		return list(self.structures.values())
 
 	@property
 	def label_order(self):

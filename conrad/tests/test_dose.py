@@ -613,7 +613,7 @@ class DVHTestCase(ConradTestCase):
 		self.assertTrue( len(dvh._DVH__doses) > dvh.MAX_LENGTH + 1 )
 
 		dvh = DVH(1000, maxlength=1000)
-	 	self.assertTrue( dvh._DVH__stride == 1 )
+		self.assertTrue( dvh._DVH__stride == 1 )
 		dvh = DVH(2000, maxlength=1000)
 		self.assertTrue( dvh._DVH__stride == 2 )
 		dvh = DVH(3000, maxlength=1000)

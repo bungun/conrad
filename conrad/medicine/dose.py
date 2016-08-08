@@ -439,9 +439,12 @@ class ConstraintList(object):
 
 	@staticmethod
 	def __keygen(constraint):
-		return sha1(str(clock()) + str(constraint.dose) +
-			str(constraint.threshold) +
-			str(constraint.relop)).hexdigest()[:7]
+		return sha1(str(
+				str(clock()) +
+				str(constraint.dose) +
+				str(constraint.threshold) +
+				str(constraint.relop)
+			).encode('utf-8')).hexdigest()[:7]
 
 	def __getitem__(self, key):
 		return self.items[key]
@@ -456,10 +459,10 @@ class ConstraintList(object):
 		return self.items.next()
 
 	def iteritems(self):
-		return self.items.iteritems()
+		return self.items.items()
 
 	def itervalues(self):
-		return self.items.itervalues()
+		return self.items.values()
 
 	def __iadd__(self, other):
 		if isinstance(other, Constraint):
@@ -484,7 +487,7 @@ class ConstraintList(object):
 
 	def __isub__(self, other):
 		if isinstance(other, Constraint):
-			for key, constr in self.items.iteritems():
+			for key, constr in self.items.items():
 				if other == constr:
 					del self.items[key]
 					return self
@@ -522,11 +525,11 @@ class ConstraintList(object):
 
 	@property
 	def plotting_data(self):
-		return [(key, dc.plotting_data) for key, dc in self.items.iteritems()]
+		return [(key, dc.plotting_data) for key, dc in self.items.items()]
 
 	def __str__(self):
 		out = '(keys):\t (constraints)\n'
-		for key, constr in self.items.iteritems():
+		for key, constr in self.items.items():
 			out += key + ':\t' + str(constr) + '\n'
 		return out
 
