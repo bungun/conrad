@@ -598,7 +598,7 @@ class DVH(object):
 
 		# bisection retrieval of index @ percentile
 		# ----------------------------------------
- 		u = len(self.__percentiles) - 1
+		u = len(self.__percentiles) - 1
 		l = 1
 		i = int(l + (u - l) / 2)
 

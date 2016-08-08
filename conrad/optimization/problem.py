@@ -1,6 +1,5 @@
 from os import getenv
 from numpy import inf, array, squeeze, ones, zeros, copy as np_copy
-from cvxpy import *
 
 from conrad.compat import *
 from conrad.medicine.dose import PercentileConstraint

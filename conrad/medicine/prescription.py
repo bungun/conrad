@@ -317,8 +317,8 @@ def string2constraint(string_constraint, rx_dose=None):
 			return D(threshold) >= dose
 
 	except:
-		print str("Unknown parsing error. Input = {}".format(
-			string_constraint))
+		print(str(
+				'Unknown parsing error. Input = {}'.format(string_constraint)))
 		raise
 
 class Prescription(object):
@@ -371,7 +371,7 @@ class Prescription(object):
 
 		if not data_valid:
 			if err is not None:
-				print err
+				print(err)
 			raise TypeError(
 					'input prescription_data expected to be a list or '
 					'the path to a valid JSON or YAML file.')
@@ -399,8 +399,8 @@ class Prescription(object):
 			self.rx_list = rx_list
 
 		except:
-			print str('Unknown error: prescription_data could not be '
-					  'converted to conrad.Prescription() datatype.')
+			print(str('Unknown error: prescription_data could not be '
+					  'converted to conrad.Prescription() datatype.'))
 			raise
 
 	@property

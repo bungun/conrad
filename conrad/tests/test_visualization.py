@@ -1,11 +1,14 @@
 from os import remove as os_remove
-from matplotlib.figure import Figure
 
 from conrad.compat import *
 from conrad.defs import vec
 from conrad.medicine import Anatomy, Structure
 from conrad.visualization.plot import *
 from conrad.tests.base import *
+
+if PLOTTING_INSTALLED:
+	from matplotlib.figure import Figure
+
 
 class VisualizationTestCase(ConradTestCase):
 	@classmethod
@@ -35,6 +38,8 @@ class VisualizationTestCase(ConradTestCase):
 
 	def test_dvh_plot_init(self):
 		d = DVHPlot(self.panels, self.names)
+		if d is None:
+			return
 
 		self.assertTrue( isinstance(d.fig, Figure) )
 		self.assertTrue( d.n_structures == 3 )
@@ -48,6 +53,9 @@ class VisualizationTestCase(ConradTestCase):
 
 	def test_dvh_plot_plot(self):
 		d = DVHPlot(self.panels, self.names)
+		if d is None:
+			return
+
 		self.anatomy.calculate_doses(rand(self.beams))
 		d.plot(self.anatomy.plotting_data)
 		self.assertTrue( isinstance(d.fig, Figure) )
@@ -56,6 +64,8 @@ class VisualizationTestCase(ConradTestCase):
 
 	def test_dvh_plot_save(self):
 		d = DVHPlot(self.panels, self.names)
+		if d is None:
+			return
 
 		filename = path.join(path.abspath(path.dirname(__file__)), 'test.pdf')
 
@@ -67,6 +77,9 @@ class VisualizationTestCase(ConradTestCase):
 
 	def test_case_plotter_init(self):
 		cp = CasePlotter(self.case)
+		if cp is None:
+			return
+
 		self.assertTrue( isinstance(cp.dvh_plot, DVHPlot) )
 
 		label_list = [0, 1, 2, 'PTV', 'OAR1', 'OAR2']
@@ -77,6 +90,9 @@ class VisualizationTestCase(ConradTestCase):
 		self.case.anatomy.label_order = [0, 1, 2]
 
 		cp = CasePlotter(self.case)
+		if cp is None:
+			return
+
 		cp.set_display_groups('together')
 		self.assert_vector_equal(
 				vec(cp.dvh_plot.series_panels.values()), vec([1, 1, 1]) )
@@ -92,6 +108,9 @@ class VisualizationTestCase(ConradTestCase):
 
 	def test_case_plotter_plot(self):
 		cp = CasePlotter(self.case)
+		if cp is None:
+			return
+
 		self.anatomy.calculate_doses(rand(self.beams))
 		cp.plot(self.anatomy.plotting_data)
 		self.assertTrue( isinstance(cp.dvh_plot.fig, Figure) )

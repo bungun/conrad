@@ -162,7 +162,7 @@ class Anatomy(object):
 
 	@property
 	def plotting_data(self):
- 		d = {}
+		d = {}
 		for structure in self:
 			d[structure.label] = structure.plotting_data
 		return d

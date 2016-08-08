@@ -40,7 +40,7 @@ if module_installed('cvxpy'):
 			self.use_slack = use_slack
 			self.use_2pass = use_2pass
 			self.__x = Variable(n_beams)
- 			self.objective = Minimize(0)
+			self.objective = Minimize(0)
 			self.constraints = [self.__x >= 0]
 			self.dvh_vars = {}
 			self.slack_vars = {}
