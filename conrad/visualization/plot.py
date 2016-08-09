@@ -5,6 +5,7 @@ from os import getenv
 
 from conrad.compat import *
 from conrad.defs import module_installed
+from conrad.optimization.history import RunRecord
 from conrad.case import Case
 
 # allow for CONRAD use without plotting by making visualization types
@@ -298,8 +299,8 @@ else:
 					raise TypeError('TODO: explain error')
 
 
-		def plot(self, data, show=False, clear=True, subset=None, plotfile=None,
-			  	 **options):
+		def plot(self, data, second_pass=False, show=False, clear=True,
+				 subset=None, plotfile=None, **options):
 			"""
 			Plots dose data given current state of argument "case".
 
@@ -330,6 +331,11 @@ else:
 					instance.
 			"""
 			plotfile = options.pop('file', None)
+			if isinstance(data, RunRecord):
+				if second_pass and data.plotting_data['exact'] is not None:
+					data = data.plotting_data['exact']
+				else:
+					data = data.plotting_data[0]
 			data_ = data
 
 			# filter data to only plot DVH for structures with requested labels

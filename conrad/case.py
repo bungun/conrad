@@ -177,9 +177,9 @@ class Case(object):
 
 
 		# two pass planning for DVH constraints: OFF by default
-		use_2pass = options.pop('dvh_exact', use_slack)
+		use_2pass = options.pop('dvh_exact', use_2pass)
 		# dose constraint slack: ON by default
-		use_slack = options.pop('dvh_slack', use_2pass)
+		use_slack = options.pop('dvh_slack', use_slack)
 
 		# objective weight for slack minimization
 		gamma = options['gamma'] = options.pop('slack_penalty', None)
@@ -191,18 +191,21 @@ class Case(object):
 				gamma=gamma)
 
 		# solve problem
-		self.problem.solve(self.anatomy.list, run.output, slack=use_slack,
-						   exact_constraints=use_2pass, **options)
+		feas = self.problem.solve(self.anatomy.list, run.output,
+								 slack=use_slack, exact_constraints=use_2pass,
+								 **options)
+
 
 		# update doses
 		if run.feasible:
 			run.plotting_data[0] = self.plotting_data(x=run.x)
 			if use_2pass:
 				run.plotting_data['exact'] = self.plotting_data(x=run.x_exact)
-			return True, run
 		else:
 			warn('Problem infeasible as formulated')
-			return False, run
+
+		status = (feas == int(1 + int(use_2pass)))
+		return status, run
 
 	def plotting_data(self, x=None):
 		""" TODO: docstring """
