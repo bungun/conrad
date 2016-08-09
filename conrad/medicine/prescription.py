@@ -381,21 +381,22 @@ class Prescription(object):
 				rx_dose = None
 				label = item['label']
 				name = item['name']
+				dose = 0 * Gy
 				is_target = bool(item['is_target'])
-				if isinstance(item['dose'], (float, int)):
-					rx_dose = dose = float(item['dose']) * Gy
-				elif item['dose'] is not None:
-					rx_dose = dose = dose_from_string(item['dose'])
-				else:
-					dose = 0 * Gy
+				if is_target:
+					if isinstance(item['dose'], (float, int)):
+						rx_dose = dose = float(item['dose']) * Gy
+					else:
+						rx_dose = dose = dose_from_string(item['dose'])
 
 				s = Structure(label, name, is_target, dose=dose)
 				self.add_structure_to_dictionaries(s)
 
-				if item['constraints'] is not None:
-					for string in item['constraints']:
-						self.constraint_dict[label] += string2constraint(
-								string, rx_dose=rx_dose)
+				if 'constraints' in item:
+					if item['constraints'] is not None:
+						for string in item['constraints']:
+							self.constraint_dict[label] += string2constraint(
+									string, rx_dose=rx_dose)
 			self.rx_list = rx_list
 
 		except:

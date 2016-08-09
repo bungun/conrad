@@ -1,2 +1,0 @@
-class AbstractFrame(object):
-	pass
