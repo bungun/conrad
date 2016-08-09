@@ -2,20 +2,24 @@ from conrad import *
 from numpy.random import rand
 
 case = Case()
+
+# populate case anatomy
 case.anatomy += Structure(0, 'target', True)
 case.anatomy += Structure(1, 'avoid', False)
 
 voxels, beams = 1000, 200
 
-# randomly label voxels as 0 (~20%) or 1 (~80%)
+# randomly label voxels as 0=target (~20%) or 1=avoid (~80%)
 voxel_labels = (rand(voxels) > 0.2).astype(int)
 
-dose_matrix = rand(voxels, beams)
+# random dose matrix with target voxels receiving ~3x radiation of non-target
 FACTOR = 3.
+dose_matrix = rand(voxels, beams)
 for row, label in enumerate(voxel_labels):
 	if label == 0:
 		dose_matrix[row, :] *= FACTOR
 
+# populate case physics
 case.physics.voxel_labels = voxel_labels
 case.physics.dose_matrix = dose_matrix
 
