@@ -32,9 +32,9 @@ class PlanningProblemTestCase(ConradTestCase):
 			self.assertTrue( p.solver_cvxpy is None )
 
 		if module_installed('optkit'):
-			self.assertTrue( p.solver_cvxpy is not None )
+			self.assertTrue( p.solver_optkit is not None )
 		else:
-			self.assertTrue( p.solver_cvxpy is None )
+			self.assertTrue( p.solver_optkit is None )
 
 		self.assertTrue( p._PlanningProblem__solver is None )
 		self.assertTrue( p.solver is not None )

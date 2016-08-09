@@ -562,15 +562,15 @@ class ConstraintListTestCase(ConradTestCase):
 		self.assertTrue( isinstance(cl[cl.last_key], PercentileConstraint) )
 		self.assertFalse( cl.mean_only )
 
+		cl.clear()
+		self.assertTrue( cl.size == 0 )
 		cl += D('min') > 0.1 * Gy
 		cl += D('max') < 1 * Gy
 		cl += D(80) < 1 * Gy
 		self.assertTrue( cl.contains(D('min') > 0.1 * Gy) )
 		self.assertTrue( cl.contains(D('max') < 1 * Gy) )
 		self.assertTrue( cl.contains(D(80) < 1 * Gy) )
-		self.assertTrue( cl.size == 4 )
-		cl.clear()
-		self.assertTrue( cl.size == 0 )
+		self.assertTrue( cl.size == 3 )
 
 	def test_plotting_data(self):
 		""" test ConstraintList object property plotting_data """
