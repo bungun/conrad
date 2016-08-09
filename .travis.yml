@@ -39,6 +39,7 @@ script:
 branches:
   only:
     - baris
+    - master
 notifications:
   email:
     - ungun@stanford.edu
