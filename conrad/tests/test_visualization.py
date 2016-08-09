@@ -95,15 +95,18 @@ try:
 
 			cp.set_display_groups('together')
 			self.assert_vector_equal(
-					vec(cp.dvh_plot.series_panels.values()), vec([1, 1, 1]) )
+					vec(list(cp.dvh_plot.series_panels.values())),
+					vec([1, 1, 1]) )
 
 			cp.set_display_groups('separate')
 			self.assert_vector_equal(
-					vec(cp.dvh_plot.series_panels.values()), vec([1, 2, 3]) )
+					vec(list(cp.dvh_plot.series_panels.values())),
+					vec([1, 2, 3]) )
 
 			cp.set_display_groups('list', [('PTV',), ('OAR1', 'OAR2')])
 			self.assert_vector_equal(
-					vec(cp.dvh_plot.series_panels.values()), vec([1, 2, 2]) )
+					vec(list(cp.dvh_plot.series_panels.values())),
+					vec([1, 2, 2]) )
 
 
 		def test_case_plotter_plot(self):
