@@ -424,9 +424,9 @@ class Structure(object):
 		summary = self.summary()
 		hdr = str(6 * '{!s:^10}|' + '{!s:^10}\n').format(
 						'mean', 'min', 'max', 'D98', 'D75', 'D25', 'D2')
-		vals = str(6 * '{!s:^10}' + '{!s:^10}\n'.format(
+		vals = str(6 * '{!s:^10}|' + '{!s:^10}\n').format(
 				summary['mean'], summary['min'], summary['max'],
-				summary['D98'], summary['D75'], summary['D25'], summary['D2']))
+				summary['D98'], summary['D75'], summary['D25'], summary['D2'])
 		return hdr + vals
 
 	@property
