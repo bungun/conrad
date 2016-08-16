@@ -80,11 +80,11 @@ if module_installed('cvxpy'):
 
 				upper constraint:
 
-					\sum (beta + (Ax - dose + slack)))_+ <= beta * vox_limit
+					\sum (beta + (Ax - dose + slack)))_+ <= beta * voxel_limit
 
 				lower constraint:
 
-					\sum (beta - (Ax - dose - slack)))_+ <= beta * vox_limit
+					\sum (beta - (Ax - dose - slack)))_+ <= beta * voxel_limit
 
 			"""
 			if not isinstance(constr, PercentileConstraint):
