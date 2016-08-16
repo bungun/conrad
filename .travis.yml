@@ -38,8 +38,8 @@ script:
   - nosetests conrad/tests/ --with-cover --cover-package=conrad
 branches:
   only:
-    - baris
     - master
+    - dev
 notifications:
   email:
     - ungun@stanford.edu
