@@ -112,6 +112,14 @@ class RunRecord(object):
 		return self.output.x_exact
 
 	@property
+	def x_pass1(self):
+		return self.x
+
+	@property
+	def x_pass2(self):
+		return self.x_exact
+
+	@property
 	def nonzero_beam_count(self, tol=1e-6):
 		return sum(self.x > tol)
 
