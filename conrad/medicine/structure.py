@@ -382,6 +382,15 @@ class Structure(object):
 		return out
 
 	@property
+	def objective(self):
+		return {
+				'is_target': self.is_target,
+				'dose': self.dose,
+				'weight_under': self.__w_under,
+				'weight_over': self.__w_over
+				}
+
+	@property
 	def __obj_string(self):
 		""" return string of objectives attached to Structure object """
 		out = 'target? {}\n'.format(self.is_target)
