@@ -139,29 +139,12 @@ else:
 		@property
 		def series_panels(self):
 			"""
-			Retrieve series subplot indices.
-
-			Args:
-				None
-
-			Returns:
-				:obj:`dict`: Dictionary of each series' subplot index
-					keyed by series (i.e., structure) labels.
+			Dictionary of series subplot indices keyed by series labels.
 			"""
 			return self.__panels_by_structure
 
 		@series_panels.setter
 		def series_panels(self, panels_by_structure):
-			"""
-			Retrieve series subplot indices.
-
-			Args:
-				panels_by_structure (:obj:`dict`): Dictionary of each
-					series' subplot index keyed by series labels.
-
-			Returns:
-				None
-			"""
 			n_panels = max(panels_by_structure.values())
 
 			# subplot dimensions
@@ -171,60 +154,22 @@ else:
 
 		@property
 		def series_names(self):
-			"""
-			Retrieve series names.
-
-			Args:
-				None
-
-			Returns:
-				:obj:`dict`: Dictionary of series names keyed by series
-				(i.e., structure) labels.
-			"""
+			""" Dictionary of series names keyed by series labels. """
 			return self.__names_by_structure
 
 		@series_names.setter
 		def series_names(self, names_by_structure):
-			"""
-			Set series names to specified values, for display in legend.
-
-			Args:
-				names_by_structure (:obj:`dict`): Dictionary of series
-					names keyed by series (i.e., structure) label.
-
-			Returns:
-				None
-			"""
 			for label, name in enumerate(names_by_structure):
 				self.__names_by_structure[label] = color
 
 		@property
 		def series_colors(self):
-			"""
-			Retrieve series colors.
-
-			Args:
-				None
-
-			Returns:
-				:obj:`dict`: Dictionary of series colors keyed by series
-					(i.e., structure) labels.
-			"""
+			""" Dictionary of series colors keyed by series labels. """
 			return self.__colors_by_structure
 
 		@series_colors.setter
 		def series_colors(self, colors_by_structure):
-			"""
-			Set series colors to specified values.
-
-			Args:
-				colors_by_structure (:obj:`dict`): Dictionary of series
-					color keyed by series (i.e., structure) labels.
-
-			Returns:
-				None
-			"""
-			for label, color in enumerate(colors_by_structure):
+  			for label, color in enumerate(colors_by_structure):
 				self.__colors_by_structure[label] = color
 
 		def autoset_series_colors(self, structure_order_dict=None,

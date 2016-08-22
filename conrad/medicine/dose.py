@@ -93,39 +93,34 @@ class Constraint(object):
 
 	@property
 	def threshold(self):
-		""" Get constraint threshold. """
+		""" Constraint threshold: percentile, min, max or mean. """
 		return self.__threshold
 
 	@threshold.setter
 	def threshold(self, threshold):
-		""" Set constraint threshold: percentile, min, max or mean. """
 		self.__threshold = threshold
 
 	@property
 	def relop(self):
-		""" Get constraint relop. """
-		return self.__relop
-
-	@relop.setter
-	def relop(self, relop):
 		"""
-		Set constraint relop. Strict and non-strict (e.g., '<' and '<=')
-		inequalities are non differentiated, but both syntaxes are
-		allowed for convenience.
+		Constraint relop (i.e., sense of inequality).
 
-		Arguments:
-			`relop` (:obj:str): Specify constraint direction; one of
-				'<', '>', '<=', or '>='.
+		Should be one of '<', '>', '<=', or '>='.
 
-		Returns:
-			None
+		The setter method does not differentiate between strict and
+		non-strict inequalities (e.g., '<' versus '<='), but both
+		syntaxes are allowed for convenience.
 
 		Raises:
 			Value Error: If user tries to build a maximum dose
 				constraint with a lower dose bound or a minimum dose
 				constraint with an upper dose bound, or if `relop` is
-				not one of the expected string values. In summary,
+				not one of the expected string values.
 		"""
+		return self.__relop
+
+	@relop.setter
+	def relop(self, relop):
 		if isinstance(self.__threshold, str):
 			if self.__threshold == 'max' and '>' in relop:
 				raise ValueError('constraint of form Dmax > x Gy not allowed, '
@@ -162,7 +157,19 @@ class Constraint(object):
 
 	@property
 	def dose(self):
-		""" Get dose in absolute terms (i.e., `DeliveredDose` units.) """
+		"""
+		Dose bound for constraint.
+
+		Getter returns dose in absolute terms (i.e., `DeliveredDose`
+		units.)
+
+		Setter accepts dose in absolute or relative terms. That is,
+		dose may be provided provided in units of `Percent` or in units
+		of `DeliveredDose`, such as `conrad.physics.units.Gray`.
+
+		Raises:
+			TypeError: If `dose` not of allowed types.
+		"""
 		if isinstance(self.__dose, Percent):
 			if self.__prescription_dose.value is nan:
 				return self.__prescription_dose
@@ -173,21 +180,6 @@ class Constraint(object):
 
 	@dose.setter
 	def dose(self, dose):
-		"""
-		Set dose in absolute or relative terms.
-
-		Arguments:
-			dose (`DeliveredDose` or `Percent`): Dose threshold for
-				constraint. May be relative (i.e., provided in units of
-				`Percent`) or absolute, (i.e., provided in units of
-				`DeliveredDose`, such as `conrad.physics.units.Gray`).
-
-		Returns:
-			None
-
-		Raises:
-			TypeError: If `dose` not of allowed types.
-		"""
 		if isinstance(dose, (DeliveredDose, Percent)):
 			self.__dose = dose
 		else:
@@ -196,30 +188,23 @@ class Constraint(object):
 
 	@property
 	def rx_dose(self):
-		""" Get prescription dose associated with constraint. """
-		return self.__prescription_dose
-
-	@rx_dose.setter
-	def rx_dose(self, rx_dose):
 		"""
-		Get prescription dose associated with constraint.
+		Prescription dose associated with constraint.
 
 		This property is optional, but required when the property
 		`Constraint.dose` is relative (i.e., of type `Percent`), as it
 		provides the numerical basis on whih to interpret the relative
 		value of `Constraint.dose`.
 
-		Arguments:
-			rx_dose (:class:`DeliveredDose`):
-
-		Returns:
-			None
-
 		Raises:
 			TypeError: If `rx_dose` is not of type `DeliveredDose`, e.g.,
 				 `conrad.physics.units.Gray` or
 				 `conrad.physics.units.centiGray`.
 		"""
+		return self.__prescription_dose
+
+	@rx_dose.setter
+	def rx_dose(self, rx_dose):
 		if isinstance(rx_dose, DeliveredDose):
 			self.__prescription_dose = rx_dose
 		else:
@@ -228,21 +213,13 @@ class Constraint(object):
 
 	@property
 	def active(self):
-		"""
-		Indicator of whether constraint was active in .
-
-		"""
+		""" True if constraint active in most recent plan that used it."""
 		return self.__dual > 0.
 
 	@property
 	def dual_value(self):
-		""" Get value of dual variable associated with constraint. """
-		return self.__dual
-
-	@dual_value.setter
-	def dual_value(self, dual_value):
 		"""
-		Set value of dual variable associated with constraint.
+		Value of dual variable associated with constraint.
 
 		This property is intended to reflect information about the state
 		of the `Constraint` in the context of the most recent run of an
@@ -254,24 +231,17 @@ class Constraint(object):
 		dual variable associated with the dose constraint in some
 		solver's representation of an optimization problem, and the
 		value should be that attained at the conclusion of a solver run.
-
-		Arguments:
-			dual_value: Value of dual variable
-
-		Returns:
-			None
 		"""
+		return self.__dual
+
+	@dual_value.setter
+	def dual_value(self, dual_value):
 		self.__dual = float(dual_value)
 
 	@property
 	def slack(self):
-		""" Get value of slack variable associated with constraint. """
-	    return self.__slack
-
-	@slack.setter
-	def slack(self, slack):
 		"""
-		Set value of slack variable associated with constraint.
+		Value of slack variable associated with constraint.
 
 		This property is intended to reflect information about the state
 		of the `Constraint` in the context of the most recent run of an
@@ -284,16 +254,14 @@ class Constraint(object):
 		solver's representation of an optimization problem, and the
 		value should be that attained at the conclusion of a solver run.
 
-		Arguments:
-			slack (int or float): Nonnegative value of slack variable.
-
-		Retuns:
-			None
-
 		Raises:
 			TypeError: If `slack` is not an int or float.
 			ValueError: If `slack` is negative.
 		"""
+	    return self.__slack
+
+	@slack.setter
+	def slack(self, slack):
 		if isinstance(slack, (int, float)):
 			if slack < 0:
 				raise ValueError('argument "slack" must be nonnegative '
@@ -305,22 +273,18 @@ class Constraint(object):
 
 	@property
 	def dose_achieved(self):
-		""" Get dose +/- slack. """
+		""" Constraint dose +/- slack. """
 		sign = +1 if self.upper else -1
 		return self.dose + sign * self.__slack
 
 	@property
 	def priority(self):
-		""" Get constraint priority. """
-		return self.__priority
-
-	@priority.setter
-	def priority(self, priority):
 		"""
-		Set constraint priority to value in {0, 1, 2, 3}.
+		Constraint priority.
 
-		Constraint priorities are used when incorporating a `Constraint`
-		in an optimization problem.
+		Priority is one of {0, 1, 2, 3}. Constraint priorities are used
+		when incorporating a `Constraint` in an optimization problem
+		with slack allowed.
 
 		Priority 0 indicates that the constraint should be enforced
 		strictly even when the overall problem formulation permits
@@ -334,7 +298,15 @@ class Constraint(object):
 		with a Priority 3 constraint. This mechanism allows users to
 		encourage some constraints to be met more closely than others,
 		even when slack is allowed for all of them.
+
+		Raises:
+			TypeError: If `priority` not an integer.
+			ValueError: If `priority` not in {0, 1, 2, 3}.
 		"""
+		return self.__priority
+
+	@priority.setter
+	def priority(self, priority):
 		if isinstance(priority, (int, float)):
 			self.__priority = max(0, min(3, int(priority)))
 			if priority < 0:
@@ -349,7 +321,7 @@ class Constraint(object):
 
 	@property
 	def symbol(self):
-		""" Get strict inequality version of `Constraint.relop` """
+		""" Strict inequality version of `Constraint.relop`. """
 		return self.__relop.replace('=', '')
 
 	def __lt__(self, other):
@@ -477,24 +449,16 @@ class PercentileConstraint(Constraint):
 
 	@property
 	def percentile(self):
-		""" Get percentile threshold. """
+		"""
+		Percentile threshold in interval (0, 100).
+
+		Raises:
+			TypeError: If `percentile` is not int, float, or `Percent`.
+		"""
 		return self.threshold
 
 	@percentile.setter
 	def percentile(self, percentile):
-		"""
-		Set percentile threshold.
-
-		Arguments:
-			percentile (int, float, or `Percent`): Value in interval
-				(0, 100) to use as threshold for `PercentileConstraint`.
-
-		Returns:
-			None
-
-		Raises:
-			TypeError: If `percentile` is not one of the allowed types.
-		"""
 		if isinstance(percentile, (int, float)):
 			self.threshold = min(100., max(0., float(percentile))) * Percent()
 		elif isinstance(percentile, Percent):
@@ -505,7 +469,7 @@ class PercentileConstraint(Constraint):
 
 	@property
 	def plotting_data(self):
-		""" Get dictionary of `matplotlib`-compatible data. """
+		""" Dictionary of `matplotlib`-compatible data. """
 		return {
 				'type': 'percentile',
 				'percentile' : 2 * [self.percentile.value],
@@ -656,7 +620,7 @@ class MeanConstraint(Constraint):
 
 	@property
 	def plotting_data(self):
-		""" Get dictionary of `matplotlib`-compatible data. """
+		""" Dictionary of `matplotlib`-compatible data. """
 		return {'type': 'mean',
 			'dose' : [self.dose.value, self.dose_achieved.value],
 			'symbol' : self.symbol}
@@ -687,7 +651,7 @@ class MinConstraint(Constraint):
 
 	@property
 	def plotting_data(self):
-		""" Get dictionary of `matplotlib`-compatible data. """
+		""" Dictionary of `matplotlib`-compatible data. """
 		return {'type': 'min',
 			'dose' : [self.dose.value, self.dose_achieved.value],
 			'symbol' : self.symbol}
@@ -718,7 +682,7 @@ class MaxConstraint(Constraint):
 
 	@property
 	def plotting_data(self):
-		""" Get dictionary of `matplotlib`-compatible data. """
+		""" Dictionary of `matplotlib`-compatible data. """
 		return {'type': 'max',
 			'dose' :[self.dose.value, self.dose_achieved.value],
 			'symbol' : self.symbol}
@@ -942,23 +906,23 @@ class ConstraintList(object):
 
 	@property
 	def size(self):
-		""" Get number of constraints in list. """
+		""" Number of constraints in list. """
 		return len(self.items)
 
 	@property
 	def keys(self):
-		""" Get keys of constraints in list. """
+		""" Keys of constraints in list. """
 		return self.items.keys()
 
 	@property
 	def list(self):
-		""" Get constraints in list. """
+		""" `Constraint` objects in list. """
 		return self.items.values()
 
 
 	@property
 	def mean_only(self):
-		""" Return True if list only contains mean constraints. """
+		""" True if list exclusively contains mean constraints. """
 		meantest = lambda c : isinstance(c, MeanConstraint)
 		if self.size == 0:
 			return True
@@ -992,7 +956,9 @@ class ConstraintList(object):
 
 	@property
 	def plotting_data(self):
-		""" Get `matplotlib`-compatible plotting data for all constraints. """
+		"""
+		List of `matplotlib`-compatible plotting data for all constraints.
+		"""
 		return [(key, dc.plotting_data) for key, dc in self.items.items()]
 
 	def __str__(self):
@@ -1066,28 +1032,23 @@ class DVH(object):
 
 	@property
 	def data(self):
-		""" Get non-redundant, sorted dose values from DVH curve. """
+		"""
+		Sorted dose values from DVH curve.
+
+		The data provided to the setter are sorted to form the abscissa
+		values for the DVH curve. If the length of the input exceeds the
+		maximum data series length (as determined when the object was
+		initialized), the input data is sampled.
+
+		Raises:
+			ValueError: If size of input data does not match size of
+			structure associated with `DVH` as specified to object
+			initializer.
+		"""
 	    return self.__doses[1:]
 
 	@data.setter
 	def data(self, y):
-		"""
-		Set dose values for DVH curve.
-
-		The data in `y` are sorted to form the abscissa values for the
-		DVH curve. If the length of `y` (and the number of voxels in the
-		structure associated with this `DVH`) exceeds the maximum data
-		series length (as determined when the object was initialized),
-		the data in `y` is sampled.
-
-		Arguments:
-			y: Vector-like input to populate `DVH` object's buffer of
-				dose values.
-
-		Raises:
-			ValueError: If size of `y` does not match size of structure
-				associated with `DVH` as specified to object constructor.
-		"""
 		if len(y) != self.__dose_buffer.size:
 			raise ValueError('dimension mismatch: length of argument "y" '
 							 'must be {}'.format(self.__dose_buffer.size))
@@ -1209,17 +1170,17 @@ class DVH(object):
 
 	@property
 	def min_dose(self):
-		""" Get smallest dose value in DVH curve. """
+		""" Smallest dose value in DVH curve. """
 		if self.__doses is None: return nan
 		return self.__dose_buffer[0]
 
 	@property
 	def max_dose(self):
-		""" Get largest dose value in DVH curve. """
+		""" Largest dose value in DVH curve. """
 		if self.__doses is None: return nan
 		return self.__dose_buffer[-1]
 
 	@property
 	def plotting_data(self):
-		""" Get dictionary of `matplotlib`-compatible plotting data. """
+		""" Dictionary of `matplotlib`-compatible plotting data. """
 		return {'percentile' : self.__percentiles, 'dose' : self.__doses}
