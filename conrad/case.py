@@ -31,22 +31,27 @@ from conrad.optimization.history import RunRecord, PlanningHistory
 
 class Case(object):
 	"""
-	Description.
+	Top level interface for treatment planning.
 
-	Attributes:
-		physics (`Physics`): Physical information for case, including
-			number of voxels, beams, beam layout, voxel labels and
-			dose influence matrix.
-		anatomy (`Anatomy`): Patient anatomy, comprises planning
-			structures.
-		prescription (`Prescription`): Clinical prescription for case,
-			including prescribed doses for target structures and dose
-			constraints (e.g., RTOG recommendations).
-		problem (`PlanningProblem`): Tool that forms and manages
+	The `Case` object has four major components:
+		- `Case.physics` is an object of type `Physics`, and contains
+			physical information for the case, including the number of
+			voxels, beams, beam layout, voxel labels and dose influence
+			matrix.
+
+		- `Case.anatomy` is an object of type `Antomy`, and manages the
+			structures in the patient anatomy, including optimization
+			objectives and dose constraints applied to each structure.
+
+		- `Case.prescription` specifies a clinical prescription for the
+			case, including prescribed doses for target structures and
+			prescribed dose constraints (e.g., RTOG recommendations).
+
+		- `Case.problem` is a tool that forms and manages the
 			mathematical representation of treatment planning problem
-			specified by case anatomy, physics and prescription;
-			interface to convex solvers that run the treatment plan
-			optimization.
+			specified by case anatomy, physics and prescription; it
+			serves as the interface to convex solvers that run the
+			treatment plan optimization.
 	"""
 	def __init__(self, anatomy=None, physics=None, prescription=None,
 				 suppress_rx_constraints=False):
@@ -63,7 +68,7 @@ class Case(object):
 				initializer.
 			prescription (optional): Must be compatible with
 				`Presription` initializer; i.e., can be `Prescription`
-				object, a suitably formatted :obj:`dict` with
+				object, a suitably formatted :obj:`list` with
 				prescription data, or the path to a valid JSON or YAML
 				file with suitably formatted prescription data.
 			suppress_rx_constraints (bool, optional): Suppress
@@ -86,68 +91,76 @@ class Case(object):
 
 	@property
 	def physics(self):
-		""" Get `Case.physics` """
+		""" Object containing all dose physics information. """
 		return self.__physics
 
 	@physics.setter
 	def physics(self, physics):
-		""" Set `Case.physics` """
 		self.__physics = Physics(physics)
 
 	@property
 	def anatomy(self):
-		""" Get `Case.anatomy` """
+		""" Object containing all planning structures. """
 		return self.__anatomy
 
 	@anatomy.setter
 	def anatomy(self, anatomy):
-		""" Set `Case.anatomy` """
 		self.__anatomy = Anatomy(anatomy)
 
 	@property
 	def prescription(self):
-		""" Get `Case.prescription` """
+		"""
+		Object specifying clinical goals and limits.
+
+		Structure list from prescription used to populate `Case.anatomy`
+		if anatomy is empty when `Case.prescription` setter is invoked.
+		"""
 		return self.__prescription
 
 	@prescription.setter
 	def prescription(self, prescription):
-		""" Set `Case.prescription` """
 		self.__prescription = Prescription(prescription)
 		if self.anatomy.is_empty:
 			self.anatomy.structures = self.prescription.structure_dict
 
 	@property
 	def problem(self):
-		""" Get `Case.problem` """
+		""" Object managing numerical optimization setup and results. """
 		return self.__problem
 
 	@property
 	def structures(self):
-		""" Get dictionary of structures contained in `Case.anatomy`. """
+		""" Dictionary of structures contained in `Case.anatomy`. """
 		return self.anatomy.structures
 
 	@property
 	def A(self):
-		""" Get dose matrix current frame of `Case.physics` """
+		"""
+		Dose matrix from current planning frame of `Case.physics`.
+		"""
 		if self.physics is None:
 			return None
 		return self.physics.dose_matrix
 
 	@property
 	def n_structures(self):
-		""" Get number of structures in `Case.anatomy` """
+		""" Number of structures in `Case.anatomy`. """
 		return self.anatomy.n_structures
 
 	@property
 	def n_voxels(self):
-		""" Get number of voxels in current frame of `Case.physics` """
+		"""
+		Number of voxels in current planning frame of `Case.physics`.
+		"""
 		if self.physics.voxels is nan:
 			return None
 		return self.physics.voxels
 
 	@property
 	def n_beams(self):
-		""" Get number of beams in current frame of `Case.physics` """
+		"""
+		Number of beams in current planning frame of `Case.physics`.
+		"""
 		if self.physics.beams is nan:
 			return None
 		return self.physics.beams
@@ -172,7 +185,7 @@ class Case(object):
 
 	def add_constraint(self, structure_label, constraint):
 		"""
-		Add `constraint` to structure specified by `structure_label`
+		Add `constraint` to structure specified by `structure_label`.
 
 		Arguments:
 			structure_label: Must correspond to label or name of a
@@ -278,16 +291,27 @@ class Case(object):
 
 	def load_physics_to_anatomy(self, overwrite=False):
 		"""
-		Description ...
+		Transfer data from physics to each structure.
+
+		The label associated with each structure in `Case.anatomy` is
+		used to retrieve the dose matrix data and voxel weights from
+		`Case.physics` for the voxels bearing that label.
+
+		The method marks the `Case.physics.dose_matrix` as seen, in
+		order to prevent redundant data transfers.
 
 		Arguments:
-			overwrite(bool, optional):
+			overwrite(bool, optional): If True, dose matrix data from
+				`Case.physics` will overwrite dose matrices assigned to
+				each structure in `Case.anatomy`.
 
 		Returns:
 			None
 
 		Raises:
-			ValueError: If ....
+			ValueError: If `Case.anatomy` has assigned dose matrices,
+				`Case.physics` not marked as having updated dose matrix
+				data, and flag `overwrite` set to False.
 
 		"""
 		if not overwrite:
@@ -309,10 +333,10 @@ class Case(object):
 
 	def calculate_doses(self, x):
 		"""
-		Description
+		Calculate voxel doses for each structure in `Case.anatomy`.
 
 		Arguments:
-			x:
+			x: Vector-like array of beam intensities.
 
 		Returns:
 			None
@@ -322,7 +346,7 @@ class Case(object):
 	@property
 	def plannable(self):
 		"""
-		Description
+		True if case meets minimum requirements for `Case.plan` call.
 
 		Arguments:
 			None
@@ -341,21 +365,30 @@ class Case(object):
 
 	def plan(self, use_slack=True, use_2pass=False, **options):
 		"""
-		Description
+		Invoke numerical solver to optimize plan given state of case.
+
+		At call time, the objectives, dose constraints, dose matrix,
+		and other relevant data associated with each structure in
+		`Case.anatomy` is passed to `Case.problem` to build and solve
+		a convex optimization problem.
 
 		Arguments:
-			use_slack (bool, optional):
-			use_2pass (bool, optional):
-			options: Arbitrary keyword arguments.
+			use_slack (bool, optional): Allow slacks on each dose
+				constraint.
+			use_2pass (bool, optional): Execute two-pass planing method
+				to enforce exact versions, rather than convex
+				restrictions of any percentile-type dose constraints
+				included in the plan.
+			**options: Arbitrary keyword arguments.
 
 		Returns:
 			(bool, `conrad.optimization.history.RunRecord`): Tuple with
-				indicator of solver/planning problem feasibility and a
+				`bool` indicator of planning problem feasibility and a
 				`conrad.optimization.history.RunRecord` object with data
 				from the setup, execution and output of the planning run.
 
 		Raises:
-			ValueError: If ...
+			ValueError: If case not plannable due to missing information.
 		"""
 		if not self.plannable:
 			raise ValueError('case not plannable in current state.\n'
@@ -400,13 +433,20 @@ class Case(object):
 
 	def plotting_data(self, x=None):
 		"""
-		Description.
+		Dictionary of `matplotlib`-compatible plotting data.
+
+		Includes data for dose volume histograms, prescribed doses, and
+		dose volume (percentile) constraints for each structure in
+		`Case.anatomy`.
 
 		Arguments:
-			x (optional):
+			x (optional): Vector of beam intensities from which to
+				calculate structure doses prior to emitting plotting
+				data.
 
 		Returns:
-			None
+			:obj:`dict`: Plotting data for each structure, keyed by
+				structure label.
 		"""
 		if x is not None:
 			self.calculate_doses(x)
