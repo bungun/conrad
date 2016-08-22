@@ -1,4 +1,14 @@
 """
+Define `Structure` object, building block of `conrad.medicine.Anatomy`.
+
+Attributes:
+	W_UNDER_DEFAULT (float): Default objective weight for underdose
+		penalty on target structures.
+	W_OVER_DEFAULT (float): Default objective weight for underdose
+		penalty on non-target structures.
+	W_NONTARG_DEFAULT (float): Default objective weight for overdose
+		penalty on non-target structures.
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -26,18 +36,64 @@ from conrad.physics.units import cm3, Gy, DeliveredDose
 from conrad.medicine.dose import Constraint, MeanConstraint, ConstraintList, \
 								 PercentileConstraint, DVH, RELOPS
 
-"""
-TODO: structure.py docstring
-"""
-
 W_UNDER_DEFAULT = 1.
 W_OVER_DEFAULT = 0.05
 W_NONTARG_DEFAULT = 0.025
 
 class Structure(object):
-	""" TODO: docstring """
+	"""
+	The `Structure` object manages the dose information (including
+	dose influence matrix, dose calculation and dose volume histogram),
+	as well as optimization objective information---including dose
+	constraints---for a set of voxels (volume elements) in the patient
+	volume to be treated as a logically homogeneous unit with respect to
+	the optimization process.
+
+	There are usually three types of structures:
+		- Anatomical structures, such as a kidney or the spinal
+			cord, termed organs-at-risk (OARs),
+		- Clinically delineated structures, such as a tumor or a target
+			volume, and,
+		- Tissues grouped together by virtue of not being explicitly
+			delineated by a clinician, typically lumped together under
+			the catch-all category "body".
+
+	Healthy tissue structures, including OARs and "body", are treated as
+	non-target, are prescribed zero dose, and only subject to an
+	overdose penalty during optimization.
+
+	Target tissue structures are prescribed a non-zero dose, and subject
+	to both an underdose and an overdose penalty.
+
+	Attributes:
+		label: (int or :obj:`str`): Label, applied to each voxel in the
+			structure, usually generated during CT contouring step in
+			the clinical workflow for treatment planning.
+		name (:obj:`str`): Clinical or anatomical name.
+		is_target (bool): True if structure is a target.
+		dvh (:class:`DVH`): Dose volume histogram.
+		constraints (:class:`ConstraintList`): Mutable collection of
+			dose constraints to be applied to structure during
+			optimization.
+
+		 """
 	def __init__(self, label, name, is_target, size=None, **options):
-		""" TODO: docstring """
+		"""
+		Description.
+
+		Arguments:
+			label (int or :obj:`str`): Structure label.
+			name: Name of structure (e.g., "PTV", "body", or
+				"spinal cord").
+			is_target (bool): True if structure is intended to receive
+				a non-zero dose level during treatment.
+			size (int, optional): Number of voxels (volume elements) in
+				structure.
+			**options: Arbitrary keyword arguments.
+
+		Raises:
+			TypeError: If `label` is not an `int` or `str`.
+		"""
 		# basic information
 		if not isinstance(label, (int, str)):
 			raise TypeError('argument "label" must be of type {} or {}'
@@ -73,6 +129,14 @@ class Structure(object):
 
 	@property
 	def plannable(self):
+		"""
+		True if structure's attached data is sufficient for optimization.
+
+		Minimum requirements:
+			- Structure size determined, and
+			- Dose matrix assigned, *or*
+			- Structure collapsable and mean dose matrix assigned.
+		"""
 		size_set = positive_real_valued(self.size)
 		full_mat_usable = sparse_or_dense(self.A_full)
 		if full_mat_usable:
@@ -86,6 +150,12 @@ class Structure(object):
 
 	@property
 	def size(self):
+		"""
+		Structure size (i.e., number of voxels in structure).
+
+		Raises:
+			ValueError: If `size` not an int.
+		"""
 		return self.__size
 
 	@size.setter
@@ -100,15 +170,32 @@ class Structure(object):
 			self.voxel_weights = ones(self.size)
 
 	def reset_matrices(self):
+		""" Reset structure's dose and mean dose matrices to `None` """
 		self.__A_full = None
 		self.__A_mean = None
 
 	@property
 	def collapsable(self):
+		""" True if optimization can be performed with mean dose only. """
 		return self.constraints.mean_only and not self.is_target
 
 	@property
 	def A_full(self):
+		"""
+		Full dose matrix (dimensions = voxels x beams).
+
+		Setter method will perform two additional tasks:
+			- If `Structure.size` is not set, set it based on number of
+				rows in `A_full`.
+			- Trigger `Structure.A_mean` to be calculated from
+				`Structure.A_full`.
+
+		Raises:
+			TypeError: If `A_full` is not a matrix in `ndarray`,
+				`csc_matrix`, or `sparse.csr_matrix` format.
+			ValueError: If `Structure.size` is set, and the number of
+				rows in `A_full` does not match `Structure.size`.
+		"""
 		return self.__A_full
 
 	@A_full.setter
@@ -123,25 +210,46 @@ class Structure(object):
 
 		if self.size is not None:
 			if A_full.shape[0] != self.size:
-				raise ValueError('# rows of "A_full" must correspond to value '
-								 ' of property size ({}) of {} object'.format(
-								 self.size, Structure))
+				raise ValueError('# rows of "A_full" must correspond to '
+								 'value  of property size ({}) of {} '
+								 'object'.format(self.size, Structure))
 		else:
 			self.size = A_full.shape[0]
 
 		self.__A_full = A_full
+
+		# Pass "None" to self.A_mean setter to trigger calculation of
+		# mean dose matrix from full dose matrix.
 		self.A_mean = None
 
 	@property
 	def A_mean(self):
+		"""
+		Mean dose matrix (dimensions = 1 x beams).
+
+		Setter expects a one dimensional `ndarray` representing the
+		mean dose matrix for the structure. If this optional argument
+		is not provided, the method will attempt to calculate the mean
+		dose from `Structure.A_full`.
+
+		Raises:
+			TypeError: If `A_mean` providded and not of type `ndarray`,
+				*or* if mean dose matrix is to be calculated from
+				`Structure.A_full`, but full dose matrix is not a
+				`ndarray`, `csr_matrix` or `csc_matrix`.
+			ValueError: If `A_mean` is not dimensioned as a row or
+				column vector, or number of beams implied by `A_mean`
+				conflicts with number of beams implied by
+				`Structure.A_full`.
+		 """
 		return self.__A_mean
 
 	@A_mean.setter
 	def A_mean(self, A_mean=None):
 		if A_mean is not None:
 			if not isinstance(A_mean, ndarray):
-				raise TypeError('if argument "A_mean" is provided, it must be '
-								'of type {}'.format(ndarray))
+				raise TypeError('if argument "A_mean" is provided, it '
+								'must be of type {}'.format(ndarray))
 			elif not A_mean.size in A_mean.shape:
 				raise ValueError('if argument "A_mean" is provided, it must be'
 								 ' a row or column vector. shape of argument: '
@@ -157,7 +265,7 @@ class Structure(object):
 										 self.__A_full.shape[1]))
 				self.__A_mean = vec(A_mean)
 		elif self.__A_full is not None:
-			if not isinstance(self.A_full, (ndarray, csc_matrix, csr_matrix)):
+			if not sparse_or_dense(self.A_full):
 				raise TypeError('cannot calculate structure.A_mean from'
 								'structure.A_full: A_full must be one of'
 								' ({},{},{})'.format(ndarray, csc_matrix,
@@ -169,10 +277,24 @@ class Structure(object):
 
 	@property
 	def A(self):
+		""" Alias for `Structure.A_full`. """
 		return self.__A_full
 
 	@property
 	def voxel_weights(self):
+		"""
+		Voxel weights, or relative volumes of voxels.
+
+		The voxel weights are the 1 vector if the structure volume is
+		regularly discretized, and some other set of integer values if
+		voxels are clustered.
+
+		Raises:
+			ValueError: If `Structure.voxel_weights` setter called
+				before `Structure.size` is defined, or if length of
+				input does not match `Structure.size`, or if any of the
+				provided weights are negative.
+		"""
 		return self.__voxel_weights
 
 	@voxel_weights.setter
@@ -190,6 +312,29 @@ class Structure(object):
 		self.__voxel_weights = vec(weights)
 
 	def set_constraint(self, constr_id, threshold=None, relop=None, dose=None):
+		"""
+		Modify threshold, relop, and dose of an existing constraint.
+
+		Arguments:
+			constr_id (:obj:`str`): Key to a constraint in
+				`Structure.constraints`.
+			threshold (optional): Percentile threshold to assign if
+				queried constraint is of type `PercentileConstraint`,
+				no-op otherwise. Must be compatible with the setter
+				method for `PercentileConstraint.percentile`.
+			relop (optional): Inequality constraint sense. Must be
+				compatible with the setter method for
+				`Constraint.relop`.
+			dose (optional): Constraint dose. Must be compatible with
+				setter method for `Constraint.dose`.
+
+		Returns:
+			None
+
+		Raises:
+			ValueError: If `constr_id` is not the key to a constraint in
+				the `Constraintlist` located at `Structure.constraints`.
+		"""
 		if constr_id in self.constraints.items:
 			if isinstance(self.constraints[constr_id], PercentileConstraint) \
 					and threshold is not None:
@@ -204,21 +349,32 @@ class Structure(object):
 							 Structure))
 
 	@property
-	def dose_rx(self):
-		return self.__dose
-
-	@property
 	def dose(self):
-		return self.__boost * self.__dose
+		"""
+		Dose level targeted in structure's optimization objective.
 
-	@dose_rx.setter
-	def dose_rx(self, dose):
-		if not self.is_target: return
-		if not isinstance(dose, DeliveredDose):
-			raise TypeError('argument "dose" must be of type {}'
-							''.format(DeliveredDose))
-		self.__dose = dose
-		self.__boost = 1.
+		The dose has two components: the precribed dose,
+		`Structure.dose_rx`, and a multiplicative adjustment factor,
+		`Structure.boost`.
+
+		Once the structure's dose has been initialized, setting
+		`Structure.dose` will change the adjustment factor. This is to
+		distinguish (and allow for differences) between the dose level
+		prescribed to a structure by a clinician and the dose level
+		request to a numerical optimization algorithm that yields a
+		desirable distribution, since the latter may require some
+		offset relative to the former. To change the reference dose
+		level, use the `Structure.dose_rx` setter.
+
+		Setter is no-op for non-target structures, since zero dose is
+		prescribed always.
+
+		Raises:
+			TypeError: If requested dose does not have units of
+				`DeliveredDose`.
+			ValueError: If zero dose is requested to a target structure.
+		"""
+		return self.boost * self.__dose
 
 	@dose.setter
 	def dose(self, dose):
@@ -235,14 +391,46 @@ class Structure(object):
 			self.__boost = dose.to_Gy.value / self.__dose.to_Gy.value
 
 	@property
+	def boost(self):
+		"""
+		Adjustment factor from precription dose to optimization dose.
+		"""
+		return self.__boost
+
+	@property
+	def dose_rx(self):
+		"""
+		Prescribed dose level.
+
+		Setting this field sets `Structure.dose` to the requested value
+		and `Structure.boost` to one.
+		"""
+		return self.__dose
+
+	@dose_rx.setter
+	def dose_rx(self, dose):
+		self.__dose.value = 0
+		self.dose = dose
+
+	@property
 	def dose_unit(self):
+		""" One times the `DeliveredDose` unit of the structure dose. """
 		u = 1 * self.__dose
 		u.value = 1
 		return u
 
 	@property
 	def w_under(self):
-		""" TODO: docstring """
+		"""
+		Underdose weight for structure's optimization objective.
+
+		Getter returns weight normalized by structure size. Setter sets
+		raw weight.
+
+		Raises:
+			TypeError: If `w_under` not `int` or `float`.
+			ValueError: If `w_under` negative.
+		"""
 		if not positive_real_valued(self.size):
 			return nan
 
@@ -250,10 +438,6 @@ class Structure(object):
 		    return self.__w_under / float(self.size)
 		else:
 			return None
-
-	@property
-	def w_under_raw(self):
-	    return self.__w_under
 
 	@w_under.setter
 	def w_under(self, weight):
@@ -269,19 +453,29 @@ class Structure(object):
 			raise TypeError('argument "weight" must be a float >= 0')
 
 	@property
+	def w_under_raw(self):
+		""" Raw underdose weight, not normalized for structure size. """
+		return self.__w_under
+
+	@property
 	def w_over(self):
-		""" TODO: docstring """
+		"""
+		Overdose weight for structure's optimization objective.
+
+		Getter returns weight normalized by structure size. Setter sets
+		raw weight.
+
+		Raises:
+			TypeError: If `w_under` not `int` or `float`.
+			ValueError: If `w_under` negative.
+		"""
 		if not positive_real_valued(self.size):
 			return nan
 
 		if isinstance(self.__w_over, (float, int)):
-		    return self.__w_over / float(self.size)
+			return self.__w_over / float(self.size)
 		else:
 			return None
-
-	@property
-	def w_over_raw(self):
-	    return self.__w_over
 
 	@w_over.setter
 	def w_over(self, weight):
@@ -292,11 +486,25 @@ class Structure(object):
 		else:
 			raise TypeError('argument "weight" must be a float >= 0')
 
+	@property
+	def w_over_raw(self):
+		""" Raw overdose weight, not normalized for structure size. """
+		return self.__w_over
+
 	def calculate_dose(self, beam_intensities):
+		""" Alias for `Structure.calc_y`. """
 		self.calc_y(beam_intensities)
 
 	def calc_y(self, x):
-		""" TODO: docstring """
+		"""
+		Calculate voxel doses as `Structure.y` = `Structure.A` * `x`.
+
+		Arguments:
+			x: Vector-like input of beam intensities.
+
+		Returns:
+			None
+		"""
 
 		# calculate dose from input vector x:
 		# 	y = Ax
@@ -315,29 +523,45 @@ class Structure(object):
 
 	@property
 	def y(self):
-		""" TODO: docstring """
+		""" Vector of structure's voxel doses. """
 		return self.__y
 
 	@property
 	def mean_dose(self):
-		""" TODO: docstring """
+		""" Average dose to structure's voxels. """
 		return self.__y_mean * self.dose_unit
 
 	@property
 	def min_dose(self):
-		""" TODO: docstring """
+		""" Minimum dose to structure's voxels. """
 		if self.dvh is None:
 			return nan * Gy
 		return self.dvh.min_dose * self.dose_unit
 
 	@property
 	def max_dose(self):
-		""" TODO: docstring """
+		""" Maximum dose to structure's voxels. """
 		if self.dvh is None:
 			return nan * Gy
 		return self.dvh.max_dose * self.dose_unit
 
 	def satisfies(self, constraint):
+		"""
+		Test whether structure's voxel doses satisfy `constraint`.
+
+		Arguments:
+			constraint (`Constraint`): Dose constraint to test against
+				structure's voxel doses.
+
+		Returns:
+			bool: True if structure's voxel doses conform to the queried
+				constraint.
+
+		Raises:
+			TypeError: If `constraint` not of type `Constraint`.
+			ValueError: If `Structure.dvh` not initialized or not
+				populated with dose data.
+		"""
 		if self.dvh is None:
 			raise ValueError('structure DVH does not exist, cannot evaluate '
 							 'constraint satisfaction.\n(assign structure '
@@ -378,8 +602,10 @@ class Structure(object):
 
 	@property
 	def plotting_data(self):
-		""" return plotting data from DVH curve and constraints, as well
-	 		as the prescribed dose
+		"""
+		Dictionary of `matplotlib`-compatible plotting data.
+
+		Data includes DVH curve, constraints, and prescribed dose.
 	 	"""
 		return {'curve': self.dvh.plotting_data,
 				'constraints': self.constraints.plotting_data,
@@ -388,9 +614,7 @@ class Structure(object):
 
 	@property
 	def __header_string(self):
-		""" return header string for structure, comprising name and
-			label
-		"""
+		""" Header string, comprising structure name and label. """
 		out = '\nStructure: '
 		if self.name != '':
 			out += '{}'.format(self.name)
@@ -401,6 +625,7 @@ class Structure(object):
 
 	@property
 	def objective(self):
+		""" Dictionary of objective data. """
 		return {
 				'is_target': self.is_target,
 				'dose': self.dose,
@@ -410,7 +635,7 @@ class Structure(object):
 
 	@property
 	def __obj_string(self):
-		""" return string of objectives attached to Structure object """
+		""" String of objective data. """
 		out = 'target? {}\n'.format(self.is_target)
 		out += 'rx dose: {}\n'.format(self.dose)
 		if self.is_target:
@@ -423,7 +648,7 @@ class Structure(object):
 
 	@property
 	def __constr_string(self):
-		""" return string of constraints attached to Structure object """
+		""" String of constraints attached to `Structure`. """
 		out = ''
 		for key in self.constraints.items:
 			out += self.constraints[key].__str__()
@@ -431,9 +656,18 @@ class Structure(object):
 		return out
 
 	def summary(self, percentiles=[2, 25, 75, 98]):
-		""" given list- or array-like argument percentiles, retrieve and
-			return a dictionary of doses at each percentile, as well as
-			the MEAN, MIN and MAX doses
+		"""
+		Dictionary summarizing dose statistics.
+
+		Arguments:
+			percentiles (:obj:`list`, optional): Percentile levels at
+				which to query the structure dose. If not provided, will
+				query doses at default percentile levels of 2%, 25%, 75%
+				and 98%.
+
+		Returns:
+			:obj:`dict`: Dictionary of doses at requested percentiles,
+			plus mean, minimum and maximum voxel doses.
 		"""
 		s = {}
 		s['mean'] = self.mean_dose
@@ -445,8 +679,11 @@ class Structure(object):
 
 	@property
 	def __summary_string(self):
-		""" return string of MEAN, MIN, and MAX doses, as well as doses
-			at several default percentiles: 98%, 75%, 25%, 2%
+		"""
+		String summarizing dose statistics.
+
+		Includes MEAN, MIN, and MAX doses, as well as doses at several
+		default percentiles: 98%, 75%, 25%, 2%
 		"""
 		summary = self.summary()
 		hdr = str(6 * '{!s:^10}|' + '{!s:^10}\n').format(
@@ -458,19 +695,19 @@ class Structure(object):
 
 	@property
 	def objective_string(self):
-		""" print structure header and objectives """
+		""" String of structure header and objectives """
 		return self.__header_string + self.__obj_string
 
 	@property
 	def constraints_string(self):
-		""" prinst structure header and constraints """
+		""" String of structure header and constraints """
 		return self.__header_string + self.__constr_string
 
 	@property
 	def summary_string(self):
-		""" print structure header and dose summary """
+		""" String of structure header and dose summary """
 		return self.__header_string + self.__summary_string
 
 	def __str__(self):
-		""" print structure header, objectives, and constraints """
+		""" String of structure header, objectives, and constraints """
 		return self.__header_string + self.__obj_string + self.__constr_string
