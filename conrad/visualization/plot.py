@@ -253,7 +253,7 @@ else:
 					x-axis label.
 				suppress_ylabel (bool, optional): Suppress drawing of
 					y-axis label.
-				options: Arbitrary keyword arguments, passed to
+				**options: Arbitrary keyword arguments, passed to
 					`matplotlib.Figure.plot`.
 
 			Returns:
@@ -508,7 +508,7 @@ else:
 				plotfile (:obj:`str`, optional): Passed to to the
 					`DVHPlot` object to as a target filepath to save the
 					drawn plot.
-				options: Arbitrary keyword arguments passed through to
+				**options: Arbitrary keyword arguments passed through to
 					`DVHPlot.plot`.
 
 			Returns:
