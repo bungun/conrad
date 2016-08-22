@@ -1,4 +1,13 @@
 """
+Python 2/3 comptability module for CONRAD.
+
+Attributes:
+	xrange: Alias python3 `range` in namespace to match python2 `xrange`.
+	listmap: Wrap python3 `map` to match python2 implementation.
+	listfilter: Wrap python3 `filter` to match python2 implementation.
+	reduce: Import python3 `functools.reduce` into namespace.
+	CONRAD_PY_VERSION: Constant, set to match `sys.version_info.major`.
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
