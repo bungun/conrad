@@ -258,7 +258,7 @@ class Constraint(object):
 			TypeError: If `slack` is not an int or float.
 			ValueError: If `slack` is negative.
 		"""
-	    return self.__slack
+		return self.__slack
 
 	@slack.setter
 	def slack(self, slack):

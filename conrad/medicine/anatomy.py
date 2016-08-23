@@ -1,4 +1,6 @@
 """
+Define `Anatomy` class, container for treatment planning structures.
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -22,7 +24,47 @@ from conrad.compat import *
 from conrad.medicine.structure import Structure
 
 class Anatomy(object):
-	def __init__(self, structures=None, **options):
+	"""
+	Iterable container class for treatment planning `Structure` objects.
+
+	Provides simple syntax via overloaded operators, including addition
+	or removal of structures from anatomy::
+
+		anatomy = Anatomy()
+
+		# target structure with label = 4
+		s1 = Structure(4, 'target', True)
+
+		# non-target structure with label = 12
+		s2 = Structure(12, 'non-target', False)
+
+		# non-target structure with label = 7
+		s3 = Structure(7, 'non-target 2', False)
+
+		anatomy += s1
+		anatomy += s2
+		anatomy += s3
+
+		# remove structure s3 by name
+		anatomy -= 'non-target 2'
+
+		# remove structure s2 by label
+		anatomy -= 12
+
+	and retrieval::
+		# retrieve structure s1 by name
+		anatomy[4]
+		anatomy['target']
+	"""
+	def __init__(self, structures=None):
+		"""
+		Initialize `Anatomy` object, empty by default.
+
+		Arguments:
+			structures (optional): Iterable collection of `Structure`
+				objects to append to `Anatomy`. If `structures` is of
+				type `Anatomy`, initializer acts as a copy constructor.
+		"""
 		self.__structures = {}
 		self.__label_order = None
 
@@ -43,32 +85,18 @@ class Anatomy(object):
 
 	@property
 	def structures(self):
+		"""
+		Dictionary of structures in anatomy, keyed by label.
+
+		Setter method accepts any iterable collection of `Structure`
+		objects.
+
+		Raises:
+			TypeError: If input to setter is not iterable.
+			ValueError: If input to setter contains elements of a type
+				other than `Structure`.
+		"""
 		return self.__structures
-
-	@property
-	def list(self):
-		return list(self.structures.values())
-
-	@property
-	def label_order(self):
-		if self.__label_order is None:
-			return [s.label for s in self]
-		elif len(self.__label_order) != self.n_structures:
-			return [s.label for s in self]
-		else:
-			return self.__label_order
-
-	@label_order.setter
-	def label_order(self, ordered_labels):
-		if len(ordered_labels) != self.n_structures:
-			raise ValueError('provided label ordering has length {}.\n'
-							 'Anatomy contains {} structures'
-							 ''.format(len(ordered_labels), self.n_structures))
-		for label in ordered_labels:
-			if label not in self.labels:
-				raise ValueError('label {} does not exist in this {}'
-								 ''.format(label, Anatomy))
-		self.__label_order = list(ordered_labels)
 
 	@structures.setter
 	def structures(self, structures):
@@ -88,15 +116,52 @@ class Anatomy(object):
 			self += s
 
 	@property
+	def list(self):
+		""" List of structures in anatomy. """
+		return [self[label] for label in self.label_order]
+
+	@property
+	def label_order(self):
+		"""
+		Ranked list of labels of structures in anatomy.
+
+		Raises:
+			ValueError: If input to setter contains labels for
+				structures not contained in anatomy, or if the length
+				of the input list does not match `Anatomy.n_structures`.
+		"""
+		if self.__label_order is None:
+			return [s.label for s in self]
+		elif len(self.__label_order) != self.n_structures:
+			return [s.label for s in self]
+		else:
+			return self.__label_order
+
+	@label_order.setter
+	def label_order(self, ordered_labels):
+		if len(ordered_labels) != self.n_structures:
+			raise ValueError('provided label ordering has length {}.\n'
+							 'Anatomy contains {} structures'
+							 ''.format(len(ordered_labels), self.n_structures))
+		for label in ordered_labels:
+			if label not in self.labels:
+				raise ValueError('label {} does not exist in this {}'
+								 ''.format(label, Anatomy))
+		self.__label_order = list(ordered_labels)
+
+	@property
 	def is_empty(self):
+		""" True if anatomy contains no structures. """
 		return self.n_structures == 0
 
 	@property
 	def n_structures(self):
+		""" Number of structures in anatomy. """
 		return len(self.structures)
 
 	@property
 	def size(self):
+		""" Total number of voxels in all structures in anatomy. """
 		if self.is_empty:
 			return 0
 		elif any([s.size is None for s in self]):
@@ -106,28 +171,64 @@ class Anatomy(object):
 
 	@property
 	def labels(self):
+		""" List of labels of structures in anatomy. """
 	    return self.structures.keys()
 
 	@property
 	def plannable(self):
+		"""
+		True if all structures plannable and at least one is a target.
+		"""
 		if self.is_empty:
 			return False
 
 		# at least one target
 		status = any([structure.is_target for structure in self])
-		# at least one target
+
+		# every structure plannable, i.e. has dose matrix and other
+		# required data
 		status &= all([structure.plannable for structure in self])
 		return status
 
 	def clear_constraints(self):
+		"""
+		Clear all constraints from all structures in anatomy.
+
+		Arguments:
+			None
+
+		Returns:
+			None
+		"""
 		for s in self:
 			s.constraints.clear()
 
 	def calculate_doses(self, beam_intensities):
+		"""
+		Calculate voxel doses to each structure in anatomy.
+
+		Arguments:
+			beam_intensities: Beam intensities to provide to each
+				structure's `Structure.calculate_dose` method.
+
+		Returns:
+			None
+		"""
 		for s in self:
 			s.calculate_dose(beam_intensities)
 
 	def dose_summary_data(self, percentiles = [2, 98]):
+		"""
+		Collimate dose summaries from each structure in anatomy.
+
+		Arguments:
+			percentiles (:obj:`list`): List of percentiles to include
+				in dose summary queries.
+
+		Returns:
+			:obj:`dict`: Dictionary of dose summaries obtained by
+				calling `Structure.summary` for each structure.
+		"""
 		d = {}
 		for s in self:
 			d[s.label] = s.summary(percentiles=percentiles)
@@ -135,21 +236,52 @@ class Anatomy(object):
 
 	@property
 	def dose_summary_string(self):
+		"""
+		Collimate dose summary strings from each structure in anatomy.
+
+		Arguments:
+			None
+
+		Returns:
+			:obj:`dict`: Dictionary of dose summaries obtained by
+				calling `Structure.summary_string` for each structure.
+		"""
 		out = ''
 		for s in self.structures.values():
 			out += s.summary_string
 		return out
 
 	def __iadd__(self, other):
+		"""
+		Overload operator +=.
+
+		Append structure(s) in argument to anatomy.
+
+		Arguments:
+			other: Singleton or iterable collection of `Structure`
+				objects.
+
+		Returns:
+		 	`Anatomy`: Updated anatomy.
+		"""
 		if isinstance(other, Structure):
 			self.__structures[other.label] = other
-		elif isinstance(other, dict):
-			for key, item in other.items:
-				self.__structures[key] += item
+		else:
+			for key, item in enumerate(other):
+				self += item
 
 		return self
 
 	def __isub__(self, other):
+		"""
+		Overload operator -=.
+
+		Arguments:
+			other: Name or label of structure to remove from anatomy.
+
+		Returns:
+			`Anatomy`: Downdated anatomy.
+		"""
 		key = other
 		for s in self:
 			if s.name == other:
@@ -165,6 +297,7 @@ class Anatomy(object):
 		return self
 
 	def __str__(self):
+		""" Collimate strings for each `Structure` in anatomy. """
 		ret_string = str(
 				'\n{} with {} structures:\n'.format(
 						Anatomy, self.n_structures))
@@ -174,6 +307,9 @@ class Anatomy(object):
 
 	@property
 	def plotting_data(self):
+		"""
+		Dictionary of `matplotlib`-compatible plotting data for all structures.
+		"""
 		d = {}
 		for structure in self:
 			d[structure.label] = structure.plotting_data

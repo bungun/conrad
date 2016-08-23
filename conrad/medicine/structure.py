@@ -1,5 +1,5 @@
 """
-Define `Structure` object, building block of `conrad.medicine.Anatomy`.
+Define `Structure` class, building block of `conrad.medicine.Anatomy`.
 
 Attributes:
 	W_UNDER_DEFAULT (float): Default objective weight for underdose

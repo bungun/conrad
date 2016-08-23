@@ -1,4 +1,48 @@
 """
+Define `Prescription` class and methods for parsing prescription data
+from python objects as well as JSON- or YAML-formatted files.
+
+Parsing methods expect the following formats.
+
+YAML::
+
+	- name : PTV
+	  label : 1
+	  is_target: Yes
+	  dose : 35.
+	  constraints:
+	  - "D90 >= 32.3Gy"
+	  - "D1 <= 1.1rx"
+
+	- name : OAR1
+	  label : 2
+	  is_target: No
+	  dose :
+	  constraints:
+	  - "D95 <= 20Gy"
+	  - "V30 Gy <= 20%"
+
+Python :obj:`list` of :obj:`dict` (JSON approximately the same)::
+
+	[{
+		'name' : 'PTV',
+		'label' : 1,
+		'is_target' : True,
+		'dose' : 35.,
+		'constraints' : ['D1 <= 1.1rx', 'D90 >= 32.3Gy']
+	}, {
+ 		'name' : 'OAR1',
+	  	'label' : 2,
+	  	'is_target' : False,
+	  	'dose' : None,
+	  	'constraints' : ['D95 <= 20Gy']
+	}]
+
+JSON verus Python syntax differences:
+	- double quote instead of single
+	- true/false instead of True/False
+	- null instead of None
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -27,140 +71,92 @@ from conrad.medicine.structure import Structure
 from conrad.medicine.anatomy import Anatomy
 from conrad.medicine.dose import D, ConstraintList
 
-"""
-TODO: prescription.py docstring
-
-Parsing methods expect following format:
-
-YAML:
-=====
-
-- name : PTV
-  label : 1
-  is_target: Yes
-  dose : 35.
-  constraints:
-  - "D90 >= 32.3Gy"
-  - "D1 <= 1.1rx"
-
-- name : OAR1
-  label : 2
-  is_target: No
-  dose :
-  constraints:
-  - "D95 <= 20Gy"
-  - "V30 Gy <= 20%"
-
-
-
-Python list of dictionaries (JSON approximately same)
-=====================================================
-
-	[{
-		'name' : 'PTV',
-		'label' : 1,
-		'is_target' : True,
-		'dose' : 35.,
-		'constraints' : ['D1 <= 1.1rx', 'D90 >= 32.3Gy']
-	},
-
-	{
- 		'name' : 'OAR1',
-	  	'label' : 2,
-	  	'is_target' : False,
-	  	'dose' : None,
-	  	'constraints' : ['D95 <= 20Gy']
-	}]
-
-
-( JSON differences:
-	- double quote instead of single
-	- true/false instead of True/False
-	- null instead of None )
-"""
-
 def v_strip(input_string):
+	"""
+	Strip 'v', 'V' and 'to' from input string.
+
+	Preprocessing step for handling of string constraints of type
+	"V20 Gy < 30 %" or "20 Gy to < 30%".
+	"""
 	return input_string.replace('to', '').replace('V', '').replace('v', '')
 
 def d_strip(input_string):
+	"""
+	Strip 'd', and 'D' from input string.
+
+	Preprocessing step for handling of string constraints of type
+	"D70 < 20 Gy".
+	"""
 	return input_string.replace('D', '').replace('d', '')
 
 def string2constraint(string_constraint, rx_dose=None):
-	""" convert input string to standard form dose constraint:
+	"""
+	Parse input string to form a new :class:`Constraint` instance.
 
-		D{p} <= {d} Gy (dose @ pth percentile <= d Gy)
+	This method handles the following input cases.
 
-	or
+	Absolute dose constraints:
+		- "min > x Gy"
+			variants: "Min", "min"
+			meaning: minimum dose greater than x Gy
 
-		D{p} >= {d} Gy (dose @ pth percentile >= d Gy)
+		- "mean < x Gy"
+		- "mean > x Gy"
+			variants: "Mean, mean"
+			meaning: mean dose less than (more than) than x Gy
 
+		- "max < x Gy"
+			variants: "Max", "max"
+			meaning: maximum dose less than x Gy
 
-	input cases:
+		- "D__ < x Gy"
+		- "D__ > x Gy"
+			variants: "D__%", "d__%", "D__", "d__"
+			meaning: dose to __ percent of volume less than (greater
+				than) x Gy
 
-	absolute dose constraints
-	-------------------------
+		- "V__ Gy < p %"
+		- "V__ Gy > p %"
+			variants: "V__", "v__", "__ Gy to", "__ to"
+			meaning: no more than (at least) __ Gy to p percent of
+				volume.
 
-	- "min > x Gy"
+	Relative dose constraints:
+		- "V__ %rx < p %"
+		- "V__ %rx > p %"
+			variants: "V__%", "v__%", "V__", "v__"
+			meaning: volume receiving __ percent of rx dose less than
+				(greater than) p percent of structure volume
 
-		variants: "Min", "min"
-		meaning: minimum dose greater than x Gy
+		 - "D__ < {frac} rx"
+		 - "D__ > {frac} rx"
+			variants: "D__%", "d__%", "D__", "d__"
+			meaning: dose to __ percent of volume less than (greater
+				than) frac * rx
 
+	Absolute volume constraints:
+		- "V_ Gy > x cm3"
+		- "V_ Gy < x cm3"
+		- "V_ rx > x cm3"
+		- "V_ rx < x cm3"
+			variants: "cc" vs. "cm3" vs. "cm^3"; "V__ _" vs. "v___ _"
+			error: convert to relative volume terms
 
-	- "mean < x Gy"
-	- "mean > x Gy"
+	Arguments:
+		string_constraint (:obj:`str`): Parsable string representation
+			of dose constraint.
+		rx_dose (:class:`DeliveredDose`, optional): Prescribed dose
+			level to associate with dose constraint, required for
+			relative dose constraints.
 
-		variants: "Mean, mean"
-		meaning: mean dose less than (more than) than x Gy
+	Returns:
+		:class:`Constraint`: Dose constraint specified by input.
 
-
-	- "max < x Gy"
-
-		variants: "Max", "max"
-		meaning: maximum dose less than x Gy
-
-
-	- "D__ < x Gy"
-	- "D__ > x Gy"
-
-		variants: "D__%", "d__%", "D__", "d__"
-		meaning: dose to __ percent of volume less than (greater than) x Gy
-
-
-	- "V__ Gy < p %"
-	- "V__ Gy > p %"
-
-		variants: "V__", "v__", "__ Gy to", "__ to"
-		meaning: no more than (at least) __ Gy to p percent of volume
-
-	relative dose constraints
-	-------------------------
-
-	- "V__ %rx < p %"
-	- "V__ %rx > p %"
-
-		variants: "V__%", "v__%", "V__", "v__"
-		meaning: volume receiving __ percent of rx dose less than
-			(greater than) p percent of structure volume
-
-
-	 - "D__ < {frac} rx"
-	 - "D__ > {frac} rx"
-
-		variants: "D__%", "d__%", "D__", "d__"
-		meaning: dose to __ percent of volume less than (greater than)
-			frac * rx
-
-
-	absolute volume constraints:
-	----------------------------
-	- "V_ Gy > x cm3"
-	- "V_ Gy < x cm3"
-	- "V_ rx > x cm3"
-	- "V_ rx < x cm3"
-
-		variants: "cc" vs. "cm3" vs. "cm^3"; "V__ _" vs. "v___ _"
-		error: convert to relative volume terms
-
+	Raises:
+		TypeError: If `rx_dose` not of type :class:`DeliveredDose`.
+		ValueError: If input string specifies an absolute volume
+			constraint, or if input is not well-formed (e.g., a dose
+			qunatity appears on LHS and RHS of inequality).
 	"""
 	string_constraint = str(string_constraint)
 
@@ -340,10 +336,27 @@ def string2constraint(string_constraint, rx_dose=None):
 		raise
 
 class Prescription(object):
-	""" TODO: docstring """
+	"""
+	Class for specifying structures with dose targets and constraints.
+
+	Attributes:
+		constraint_dict (:obj:`dict`): Dictionary of `ConstraintList`
+			objects, keyed by structure labels.
+		structure_dict (:obj:`dict`): Diciontionary of `Structure`
+			objects, keyed by strictire labels.
+		rx_list (:obj:`list`): List of dictionaries representation of
+			prescription.
+	"""
 
 	def __init__(self, prescription_data=None):
-		""" TODO: docstring """
+		"""
+		Intialize empty or populated `Prescription` instance.
+
+		Arguments:
+			prescription_data (optional): Data to parse as prescription.
+				If input is of type `Prescription`, intializer acts as a
+				copy constructor.
+		"""
 		self.constraint_dict = {}
 		self.structure_dict = {}
 		self.rx_list = []
@@ -355,6 +368,21 @@ class Prescription(object):
 			self.digest(prescription_data)
 
 	def add_structure_to_dictionaries(self, structure):
+		"""
+		Add a new structure to internal representation of prescription.
+
+		Arguments:
+			structure (`Structure`): Structure added to
+				`Prescription.structure_dict`. An corresponding, empty
+				constraint list is added to
+				`Prescription.constraint_dict`.
+
+		Returns:
+			None
+
+		Raises:
+			TypeError: If `structure` not of type `Structure`.
+		"""
 		if not isinstance(structure, Structure):
 			raise TypeError('argumet "Structure" must be of type {}'
 							''.format(Structure))
@@ -362,8 +390,35 @@ class Prescription(object):
 		self.constraint_dict[structure.label] = ConstraintList()
 
 	def digest(self, prescription_data):
-		""" TODO: docstring """
+		"""
+		Populate `Prescription` object's structures and dose constraints.
 
+		Specifically, for each entry in `prescription_data`, construct
+		a `Structure` object to capture structure data (e.g., name,
+		label), as well as a corresponding but separate `ConstraintList`
+		object to capture any dose constraints specified for the
+		structure.
+
+		Add each such structure to `Prescription.structure_dict`, and
+		each such constraint list to `Prescription.constraint_dict`.
+		Build or copy as list of dictionaries representation of the
+		prescription data, assign to `Prescription.rx_list`.
+
+		Arguments:
+			prescription_data: Input to be parsed for structure and dose
+				constraint data. Accepted formats include :obj:`str`
+				specifying a valid path to a suitably-formatted JSON or
+				YAML file, or a suitably-formatted :obj:`list` of
+				:obj:`dict` objects.
+
+		Returns:
+			None
+
+		Raises:
+			TypeError: If input not of type :obj:`list` or a :obj:`str`
+				specfying a valid path to file that can be loaded with
+				the `json.load` or `yaml.safe_load` methods.
+		"""
 		err = None
 		data_valid = False
 		rx_list = []
@@ -424,28 +479,46 @@ class Prescription(object):
 
 	@property
 	def list(self):
-		""" TODO: docstring """
+		""" List of structures in prescription """
 		return self.rx_list
 
 	@property
 	def dict(self):
-		""" TODO: docstring """
-		rx_dict = {}
-		for structure in self.rx_list:
-			rx_dict[structure.label] = structure
-		return self.rx_dict
+		""" Dictionary of structures in prescription, by label. """
+		return {structure.label: structure for structure in self.rx_list}
 
 	@property
 	def constraints_by_label(self):
-		""" TODO: docstring """
+		"""
+		Dictionary of constraints in prescription, by structure label.
+		"""
 		return self.constraint_dict
 
 	def __str__(self):
-		""" TODO: docstring """
+		"""
+		String of structures in prescription with attached constraints.
+		"""
 		return str(self.rx_list)
 
 	def report(self, anatomy):
-		"""TODO: docstring"""
+		"""
+		Reports whether `anatomy` fulfills all prescribed constraints.
+
+		Arguments:
+			anatomy (`Antomy`): Container of structures to compare
+				against prescribed constraints.
+
+		Returns:
+			:obj:`dict`: Dictionary keyed by structure label, with data
+				on each dose constraint associated with that structure
+				in this `Prescription` instance. Reported data includes
+				the constraint, whether it was satisfied, and the actual
+				dose achieved at the percentile/threshold specified by
+				the constraint.
+
+		Raises:
+			TypeError: If `anatomy` not of type `Anatomy`.
+		"""
 		if not isinstance(anatomy, Anatomy):
 			raise TypeError('argument "anatomy" must be of type{}'.format(
 							Anatomy))
@@ -462,6 +535,17 @@ class Prescription(object):
 		return report
 
 	def report_string(self, anatomy):
+		"""
+		Reports whether `anatomy` fulfills all prescribed constraints.
+
+		Arguments:
+			anatomy (`Antomy`): Container of structures to compare
+				against prescribed constraints.
+
+		Returns:
+			:obj:`str`: Stringified version of output from
+				`Presription.report`.
+		"""
 		report = self.report(anatomy)
 		out = ''
 		for label, replist in report.items():
