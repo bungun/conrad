@@ -1,4 +1,8 @@
 """
+Define `VoxelGrid` object to describe dose grids used in dose
+calculations, or other regular voxel grids used in treatment planning,
+such as CT/MRI/PET scan data sets.
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -22,7 +26,22 @@ from conrad.compat import *
 from conrad.physics.grid import Grid3D
 
 class VoxelGrid(Grid3D):
+	""" Specialize `Grid3D` to (regular) voxel grids. """
+
 	def __init__(self, x_voxels=None, y_voxels=None, z_voxels=None, grid=None):
+		"""
+		Initialize `VoxelGrid` as `Grid3D` instance.
+
+		Arguments:
+			x_voxels (int, optional): Number of voxels in grid's
+				x-dimension.
+			y_voxels (int, optional): Number of voxels in grid's
+				y-dimension.
+			z_voxels (int, optional): Number of voxels in grid's
+				z-dimension.
+			grid (`Grid3D`, optional): Pre-existing three-dimensional
+				grid from which to initialize grid shape.
+		"""
 		if isinstance(grid, Grid3D):
 			Grid3D.__init__(self, *grid.shape)
 		else:
@@ -30,6 +49,7 @@ class VoxelGrid(Grid3D):
 
 	@property
 	def voxels(self):
+		""" Number of voxels in grid. """
 		if self.x_voxels and self.y_voxels and self.z_voxels:
 			return self.x_voxels * self.y_voxels * self.z_voxels
 		else:
@@ -37,6 +57,7 @@ class VoxelGrid(Grid3D):
 
 	@property
 	def total_volume(self):
+		""" Total volume of grid; undefine if unit volume unknown. """
 		if self.unit_volume.value is nan:
 			return nan * self.unit_volume
 		else:
@@ -44,12 +65,15 @@ class VoxelGrid(Grid3D):
 
 	@property
 	def x_voxels(self):
+		""" Width of grid's x-dimension, in voxels. """
 		return self._AbstractGrid__x
 
 	@property
 	def y_voxels(self):
+		""" Width of grid's y-dimension, in voxels. """
 		return self._AbstractGrid__y
 
 	@property
 	def z_voxels(self):
+		""" Width of grid's z-dimension, in voxels. """
 		return self._AbstractGrid__z

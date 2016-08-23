@@ -1,4 +1,11 @@
 """
+Export frequently used units and classes to `conrad.physics` namespace.
+
+Attributes:
+	cm3: Volume units object of type `conrad.physics.units.CM3`.
+	Gy: Dose units of type `conrad.physics.units.Gray`.
+	percent: Percent units object.
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
