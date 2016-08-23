@@ -400,8 +400,9 @@ class Physics(object):
 		Initialize `Physics`.
 
 		Arguments:
-			voxels (int, optional): Number of voxels in initial
-				`Physics.frame`.
+			voxels (int or :class:`Physics`, optional): Number of voxels
+				in initial `Physics.frame`. If argument is of type
+				`Physics`, initializer acts as a copy constructor.
 			beams (int or :class:`BeamSet`, optional): Number of beams
 				or `BeamSet` object describing beam configuration in
 				initial `Physics.frame`.

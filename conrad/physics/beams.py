@@ -29,7 +29,7 @@ from conrad.compat import *
 from conrad.physics.grid import Grid2D, Grid3D
 
 class BeamTypes(object):
-	""" Description. """
+	""" Enumeration of beam types used in external beam therapy. """
 	ELECTRON = 'electron'
 	PARTICLE = 'particle'
 	PHOTON = 'photon'
@@ -37,7 +37,15 @@ class BeamTypes(object):
 	__types = (ELECTRON, PARTICLE, PHOTON, PROTON)
 
 	def validate(self, beamtype):
-		""" Description. """
+		"""
+		Test whether argument is an enumerate beam type.
+
+		Arguments:
+			beamtype (:obj:`str`): Value to be tested.
+
+		Returns:
+			bool: True if input matches an enumerated beam type.
+		"""
 		return beamtype in self.__types
 
 BEAM_TYPES = BeamTypes()
