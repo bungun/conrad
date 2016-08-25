@@ -189,7 +189,7 @@ else:
 
 		@series_colors.setter
 		def series_colors(self, colors_by_structure):
-  			for label in colors_by_structure:
+			for label in colors_by_structure:
 				self.__colors_by_structure[label] = colors_by_structure[label]
 
 		def autoset_series_colors(self, structure_order_dict=None,

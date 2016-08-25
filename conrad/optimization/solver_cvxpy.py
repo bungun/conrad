@@ -153,7 +153,7 @@ if module_installed('cvxpy'):
 			self.problem = Problem(Minimize(0), [self.__x >= 0])
 			self.dvh_vars = {}
 			self.slack_vars = {}
- 			self.constraint_dual_vars = {}
+			self.constraint_dual_vars = {}
 
 		@staticmethod
 		def __percentile_constraint_restricted(A, x, constr, beta, slack=None):
