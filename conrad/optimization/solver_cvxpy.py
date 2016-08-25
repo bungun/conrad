@@ -1,4 +1,19 @@
 """
+Define solver using the CVXPY module, if available.
+
+For infromation on CVXPY, see:
+http://www.cvxpy.org/en/latest/
+
+If `conrad.defs.module_installed` routine does not find the module
+`cvxpy`, the variable `SolverCVXPY` is still defined in the module
+namespace as a lambda returning None with the same method signature as
+the initializer for :class:`SolverOptkit`. If `optkit` is found, the
+class is defined normally.
+
+Attributes:
+	SOLVER_DEFAULT (:obj:`str`): Default solver, set to "SCS" if module
+		`scs` is installed, otherwise set to "ECOS".
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -35,13 +50,45 @@ if module_installed('cvxpy'):
 		SOLVER_DEFAULT = ECOS
 
 	class SolverCVXPY(Solver):
-		""" TODO: docstring """
+		"""
+		Interface between CONRAD and OPTKIT's POGS implementation.
+
+		`SolverOptkit` interprets CONRAD treatment planning problems
+		(based on structures with attached objectives, dose constraints,
+		and dose matrices) to build equivalent convex optimization
+		problems using POGS' syntax.
+
+		The class provides an interface to modify, run, and retrieve
+		solutions from optimization problems that can be executed on
+		a CPU or GPU.
+
+		`SolverOptkit` does not (currently) support planning problems
+		with dose constraints.
+
+		Attributes:
+			problem (`cvxpy.Minimize`): CVXPY representation of
+				optimization problem.
+			constraint_dual_vars (:obj:`dict`): Dictionary, keyed by
+				constraint ID, of dual variables associated with each
+				dose constraint in the CVXPY problem representation.
+				The dual variables' values are stored here after each
+				optimization run for access by clients of the
+				`SolverCVXPY` object.
+		"""
 
 		def __init__(self, n_beams=None, **options):
-			""" TODO: docstring """
+			"""
+			Initialize empty `SolverCVXPY` as a `Solver` instance.
+
+			If number of beams provided, initialize the problem's CVXPY
+			representation.
+
+			Arguments:
+				n_beams (int, optional): Number of beams in plan.
+				**options: Arbitrary keyword arguments, passed to
+					`SolverCVXPY.init_problem`.
+			"""
 			Solver.__init__(self)
-			self.objective = None
-			self.constraints = None
 			self.problem = None
 			self.__x = Variable(0)
 			self.__constraint_indices = {}
@@ -51,59 +98,88 @@ if module_installed('cvxpy'):
 			if isinstance(n_beams, int):
 				self.init_problem(n_beams, **options)
 
-		# methods:
 		def init_problem(self, n_beams, use_slack=True, use_2pass=False,
 						 **options):
-			""" TODO: docstring """
+			"""
+			Initialize CVXPY variables and problem components.
+
+			Create a `cvxpy.Variable` of length-`n_beams` to represent
+			the beam intensities. Invoke `SolverCVXPY.clear` to build
+			minimal problem.
+
+			Arguments:
+				n_beams (int): Number of candidate beams in plan.
+				use_slack (bool, optional): If True, next invocation of
+					`SolverCVXPY.build` will build dose constraints
+					with slack variables.
+				use_2pass (bool, optional): If True, next invocation of
+					`SolverCVXPY.build` will build percentile-type
+					dose constraints as exact constraints instead of
+					convex restrictions thereof, assuming other
+					requirements are met.
+				**options: Arbitrary keyword arguments.
+
+			Returns:
+				None
+			"""
+			self.__x = Variable(n_beams)
+			self.clear()
+
 			self.use_slack = use_slack
 			self.use_2pass = use_2pass
-			self.__x = Variable(n_beams)
-			self.objective = Minimize(0)
-			self.constraints = [self.__x >= 0]
-			self.dvh_vars = {}
-			self.slack_vars = {}
-			self.problem = Problem(self.objective, self.constraints)
 			self.gamma = options.pop('gamma', GAMMA_DEFAULT)
 
 		@property
 		def n_beams(self):
+			""" Number of candidate beams in treatment plan. """
 			return self.__x.size[0]
 
 		def clear(self):
-			""" TODO: docstring """
-			self.constraints = [self.__x >= 0]
-			self.objective = Minimize(0)
-			self.problem = Problem(self.objective, self.constraints)
+			"""
+			Reset CVXPY problem to minimal representation.
 
-		def build(self, structures, exact=False):
-			self.clear()
-			if isinstance(structures, Anatomy):
-				structures = structures.list
+			The minmal representation consists of:
+				- An empty objective (Minimize 0),
+				- A nonnegativity constraint on the vector of beam
+					intensities (x >= 0).
 
-			A, dose, weight_abs, weight_lin = \
-					self._Solver__gather_matrix_and_coefficients(structures)
-
-			self.problem.objective = Minimize(
-					weight_abs.T * abs(A * self.__x - dose) +
-					weight_lin.T * (A * self.__x - dose))
-
-			for s in structures:
-				self.__add_constraints(s, exact=exact)
-
-			return self._Solver__construction_report(structures)
+			Reset dictionaries of:
+				- Slack variables (all dose constraints),
+				- Dual variables (all dose constraints), and
+				- Slope variables for convex restrictions (percentile
+					dose constraints).
+			"""
+			self.problem = Problem(Minimize(0), [self.__x >= 0])
+			self.dvh_vars = {}
+			self.slack_vars = {}
+ 			self.constraint_dual_vars = {}
 
 		@staticmethod
 		def __percentile_constraint_restricted(A, x, constr, beta, slack=None):
-			""" Form the upper (or lower) DVH constraint:
+			"""
+			Form convex restriction to DVH constraint.
 
-				upper constraint:
+			Upper constraint::
 
-					\sum (beta + (Ax - dose + slack)))_+ <= beta * voxel_limit
+				# \sum (beta + (Ax - dose + slack)))_+ <= beta * voxel_limit
 
-				lower constraint:
+			Lower constraint::
 
-					\sum (beta - (Ax - dose - slack)))_+ <= beta * voxel_limit
+				# \sum (beta - (Ax - dose - slack)))_+ <= beta * voxel_limit
 
+			Arguments:
+				A: Structure-specifc dose matrix to use in constraint.
+				x (`cvxpy.Variable`): Beam intensity variable.
+				constr (`PercentileConstraint`): Dose constraint.
+				slack (bool, optional): If True, include slack variable
+					in constraint formulation.
+
+			Returns:
+				`cvxpy.Constraint`: CVXPY representation of convex
+					restriction to dose constraint.
+
+			Raises:
+				TypeError: If `constr` not of type `PercentileConstraint`.
 			"""
 			if not isinstance(constr, PercentileConstraint):
 				raise TypeError('parameter constr must be of type {}'
@@ -121,8 +197,26 @@ if module_installed('cvxpy'):
 
 		@staticmethod
 		def __percentile_constraint_exact(A, x, y, constr, had_slack=False):
-			""" TODO: docstring """
-			if not isinstance(constr, Constraint):
+			"""
+			Form exact version of DVH constraint.
+
+			Arguments:
+				A: Structure-specifc dose matrix to use in constraint.
+				x (`cvxpy.Variable`): Beam intensity variable.
+				y: Vector of doses, feasible with respect to constraint
+					`constr`.
+				constr (`PercentileConstraint`): Dose constraint.
+				slack (bool, optional): If True, include slack variable
+					in constraint formulation.
+
+			Returns:
+				`cvxpy.Constraint`: CVXPY representation of exact dose
+					constraint.
+
+			Raises:
+				TypeError: If `constr` not of type `PercentileConstraint`.
+			"""
+			if not isinstance(constr, PercentileConstraint):
 				raise TypeError('parameter constr must be of type {}. '
 								'Provided: {}'
 								''.format(Constraint, type(constr)))
@@ -134,7 +228,42 @@ if module_installed('cvxpy'):
 			return sign * (A_exact * x - dose.value) <= 0
 
 		def __add_constraints(self, structure, exact=False):
-			""" TODO: docstring """
+			"""
+			Add constraints from `structure` to problem.
+
+			Constraints built with slack variables if
+			`SolverCVXPY.use_slack` is True at call time. When slacks
+			are used, each slack variable is registered in the
+			dictionary `SolverCVXPY.slack_vars` under the corresponding
+			constraint's ID as a key for later retrieval of optimal
+			values. A nonnegativity constraint on each slack variable is
+			added to `SolverCVXPY.problem.constraints`.
+
+			When `structure` includes percentile-type dose constraints,
+			and a convex restriction (hinge loss approximation) is used,
+			the reciprocal of the slope of the hinge loss is a variable;
+			each slope variable is registered in the dictionary
+			`SolverCVXPY.dvh_vars` under the corresponding constraint's
+			ID as a key for later retrival of optimal values. A
+			nonnegativity constraint on each slope variable is added to
+			`SolverCVXPY.problem.constraints`.
+
+			Arguments:
+				structure (`conrad.medicine.Structure`): Structure from
+					which to read dose matrix and dose constraints.
+				exact (bool, optional): If True *and*
+					`SolverCVXPY.use_2pass` is True *and* `structure`
+					has a calculated dose vector, treat percentile-type
+					dose constraints as exact constraints. Otherwise,
+					use convex restrictions.
+
+			Returns:
+				None
+
+			Raises:
+				ValueError: If `exact` True, but other conditions for
+					building exact constraints not met.
+			"""
 			# extract dvh constraint from structure,
 			# make slack variable (if self.use_slack), add
 			# slack to self.objective and slack >= 0 to constraints
@@ -206,6 +335,18 @@ if module_installed('cvxpy'):
 				self.__constraint_indices[cid] = len(self.problem.constraints) - 1
 
 		def get_slack_value(self, constr_id):
+			"""
+			Retrieve slack variable for queried constraint.
+
+			Arguments:
+				constr_id (:obj:`str`): ID of queried constraint.
+
+			Returns:
+				None if `constr_id` does not correspond to a registered
+					slack variable. Zero if corresponding constraint
+					built without slack. Value of slack variable if
+					constraint build with slack.
+			"""
 			if constr_id in self.slack_vars:
 				if self.slack_vars[constr_id] is None:
 					return 0.
@@ -215,6 +356,16 @@ if module_installed('cvxpy'):
 				return None
 
 		def get_dual_value(self, constr_id):
+			"""
+			Retrieve dual variable for queried constraint.
+
+			Arguments:
+				constr_id (:obj:`str`): ID of queried constraint.
+
+			Returns:
+				None if `constr_id` does not correspond to a registered
+					dual variable. Value of dual variable otherwise.
+			"""
 			if constr_id in self.__constraint_indices:
 				dual_var = self.problem.constraints[
 						self.__constraint_indices[constr_id]].dual_value
@@ -227,6 +378,18 @@ if module_installed('cvxpy'):
 				return None
 
 		def get_dvh_slope(self, constr_id):
+			"""
+			Retrieve slope variable for queried constraint.
+
+			Arguments:
+				constr_id (:obj:`str`): ID of queried constraint.
+
+			Returns:
+				None if `constr_id` does not correspond to a registered
+					slope variable. NaN (as `numpy.nan`) if constraint
+					built as exact. Reciprocal of slope variable
+					otherwise.
+			"""
 			if constr_id in self.dvh_vars:
 				beta =  self.dvh_vars[constr_id].value
 				if beta is None:
@@ -237,10 +400,12 @@ if module_installed('cvxpy'):
 
 		@property
 		def x(self):
+			""" Vector variable of beam intensities, x. """
 			return conrad_vec(self.__x.value)
 
 		@property
 		def x_dual(self):
+			""" Dual variable corresponding to constraint x >= 0. """
 			try:
 				return conrad_vec(self.problem.constraints[0].dual_value)
 			except:
@@ -248,27 +413,79 @@ if module_installed('cvxpy'):
 
 		@property
 		def solvetime(self):
+			""" Solver run time. """
 			return self.__solvetime
 
 		@property
 		def status(self):
+			""" Solver status. """
 			return self.problem.status
 
 		@property
 		def objective_value(self):
+			""" Objective value at end of solve. """
 			return self.problem.value
 
 		@property
 		def solveiters(self):
-			# TODO: get solver iters
+			""" Number of solver iterations performed. """
 			return 'n/a'
 
+		def build(self, structures, exact=False):
+			"""
+			Update CVXPY optimization based on structure data.
+
+			Extract dose matrix, target doses, and objective weights
+			from structures.
+
+			Use doses and weights to add minimization terms to
+			`SolverCVXPY.problem.objective`. Use dose constraints to
+			add constraints to `SolverCVXPY.problem.constraints`.
+			(When constraint include slack variables, a penalty on each
+			slack variable is added to the objective).
+
+			Arguments:
+				structures: Iterable collection of `Structure` objects.
+
+			Returns:
+				:obj:`str`: String documenting how data in `structures`
+					were parsed to form an optimization problem.
+			"""
+			self.clear()
+			if isinstance(structures, Anatomy):
+				structures = structures.list
+
+			A, dose, weight_abs, weight_lin = \
+					self._Solver__gather_matrix_and_coefficients(structures)
+
+			self.problem.objective = Minimize(
+					weight_abs.T * abs(A * self.__x - dose) +
+					weight_lin.T * (A * self.__x - dose))
+
+			for s in structures:
+				self.__add_constraints(s, exact=exact)
+
+			return self._Solver__construction_report(structures)
+
 		def solve(self, **options):
-			""" TODO: docstring """
+			"""
+			Execute optimization of a previously built planning problem.
+
+			Arguments:
+				**options: Keyword arguments specifying solver options,
+					passed to `cvxpy.Problem.solve`.
+
+			Returns:
+				bool: True if POGS solver converged.
+
+			Raises:
+				ValueeError: If specified solver is neither SCS nor
+					ECOS.
+			"""
 
 			# set verbosity level
 			VERBOSE = bool(options.pop('verbose', VERBOSE_DEFAULT))
-			PRINT = println if VERBOSE else lambda msg : None
+			PRINT = print if VERBOSE else lambda msg : None
 
 			# solver options
 			solver = options.pop('solver', SOLVER_DEFAULT)
@@ -316,4 +533,5 @@ if module_installed('cvxpy'):
 			return ret != inf and not isinstance(ret, str)
 
 else:
+	SOLVER_DEFAULT = 'CVXPY_UNAVAILABLE'
 	SolverCVXPY = lambda: None

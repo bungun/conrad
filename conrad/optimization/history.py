@@ -1,4 +1,7 @@
 """
+Define classes used to record solver inputs/outputs and maintain a
+treatment planning history.
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -20,15 +23,44 @@ from numpy import nan
 
 from conrad.compat import *
 
-# TODO: unit test
-"""
-TODO: run_data.py docstring
-"""
 class RunProfile(object):
-	""" TODO: docstring """
+	"""
+	Record of solver input associated with a treatment planning run.
+
+	Attributes:
+		use_slack (bool): True if solver allowed to construct convex
+			problem with slack variables for each dose constraint.
+		use_2pass (bool): True if solver requested to construct and
+			solve two problems, one incorporating convex restrictions
+			of all percentile-type dose constraints, and a second
+			problem formulating exact constraints based on the feasible
+			output of the first solver run.
+		objectives (:obj:`dict`): Dictionary of objective data
+			associated with each structure in plan, keyed by structure
+			labels.
+		constraints (:obj:`dict`): Dictionary of constraint data
+			for each dose constraint on each structure in plan, keyed
+			by constraint ID.
+		gamma: Master scaling applied to slack penalty term in objective
+			when dose constraint slacks allowed.
+	"""
+
 	def __init__(self, structures=None, use_slack=True, use_2pass=False,
 				 gamma='default'):
-		""" TODO: docstring """
+		"""
+		Initialize and populate a `RunProfile`.
+
+		Arguments:
+			structures (:obj:`list` of `Structure`, optional): List of
+				structures (with attached dose constraints) supplied to
+				solver.
+			use_slack (bool, optional): True if request to solver
+				allowed slacks on dose constraints.
+			use_2pass (bool, optional): True if two-pass planning with
+				exact dose constraints requested of solver.
+			gamma (optional): Slack penalty scaling supplied to solver.
+		"""
+
 		self.use_slack = use_slack
 		self.use_2pass = use_2pass
 
@@ -46,7 +78,16 @@ class RunProfile(object):
 			self.pull_constraints(structures)
 
 	def pull_objectives(self, structures):
-		""" TODO: docstring """
+		"""
+		Extract and store dictionaries of objective data from `structures`.
+
+		Arguments:
+			structures: Iterable collection of
+				`conrad.medicine.Structure` objects.
+
+		Returns:
+			None
+		"""
 		if isinstance(structures, dict):
 			structures = structures.values()
 		for s in structures:
@@ -59,7 +100,16 @@ class RunProfile(object):
 			}
 
 	def pull_constraints(self, structures):
-		""" TODO: docstring """
+		"""
+		Extract and store dictionaries of constraint data from `structures`.
+
+		Arguments:
+			structures: Iterable collection of
+				`conrad.medicine.Structure` objects.
+
+		Returns:
+			None
+		"""
 		if isinstance(structures, dict):
 			structures = structures.values()
 		for s in structures:
@@ -71,12 +121,29 @@ class RunProfile(object):
 				}
 
 class RunOutput(object):
-	""" TODO: docstring """
+	"""
+	Record of solver outputs associated with a treatment planning run.
 
+	Attributes:
+		optimal_variables (:obj:`dict`): Dictionary of optimal variables
+			returned by solver. At a minimum, has entries for the beam
+			intensity vectors for the first-pass and second-pass solver
+			runs. May include entries for:
+				- x (beam intensities),
+				- y (voxel doses),
+				- mu (dual variable for constraint x>= 0), and
+				- nu (dual variable for constraint Ax == y).
+		optimal_dvh_slopes (:obj:`dict`): Dictionary of optimal slopes
+			associated with the convex restriction of each
+			percentile-type dose constraint. Keyed by constraint ID.
+		solver_info (:obj:`dict`): Dictionary of solver information. At
+			a minimum, has entries solver
+			run time (first pass/restricted constraints, and second
+			pass/exact constraints).
+		"""
 	def __init__(self):
-		""" TODO: docstring """
-		# x (beams), y (dose)
-		# mu (dual variable for x>= 0), nu (dual variable for Ax == y)
+		""" Intialize empty `RunOutput`. """
+
 		self.optimal_variables = {'x': None, 'x_exact': None}
 		self.optimal_dvh_slopes = {}
 		self.solver_info = {'time': nan, 'time_exact': nan}
@@ -84,27 +151,59 @@ class RunOutput(object):
 
 	@property
 	def x(self):
+		""" Optimal beam intensities from first-pass solve. """
 		return self.optimal_variables['x']
 
 	@property
 	def x_exact(self):
+		""" Optimal beam intensities from second-pass solve. """
 		return self.optimal_variables['x_exact']
 
 	@property
 	def solvetime(self):
+		""" Run time for first-pass solve (restricted dose constraints). """
 		return self.solver_info['time']
 
 	@property
 	def solvetime_exact(self):
+		""" Run time for second-pass solve (exact dose constraints). """
 		return self.solver_info['time_exact']
 
 
 class RunRecord(object):
-	""" TODO: docstring """
+	"""
+	Attributes:
+		profile (`RunProfile`): Record of the objective weights,
+			dose constraints, and relevant solver options passed to the
+			convex solver prior to planning.
+		output (`RunOutput`): Output from the solver, including optimal
+			beam intensities, i.e., the treatment plan.
+		plotting_data (:obj:`dict`): Dictionary of plotting data from
+			case, with entries corresponding to the first (and
+			potentially only) plan formed by the solver, as well as
+			the exact-constraint version of the same plan, if the
+			two-pass planning method was invoked.
+	"""
+
 	def __init__(self, structures=None, use_slack=True, use_2pass=False,
 				 gamma='default'):
+		"""
+		Initialize `RunRecord`.
 
-		""" TODO: docstring """
+		Pass optional arguments to build `RunRecord.profile`. Initialize
+		(but do not populate) the `RunRecord.output` and
+		`RunRecord.plotting_data` fields.
+
+		Arguments:
+			structures (:obj:`list` of `Structure`, optional): List of
+				structures (with attached dose constraints) supplied to
+				solver.
+			use_slack (bool, optional): True if request to solver
+				allowed slacks on dose constraints.
+			use_2pass (bool, optional): True if two-pass planning with
+				exact dose constraints requested of solver.
+			gamma (optional): Slack penalty scaling supplied to solver.
+		"""
 		self.profile = RunProfile(
 				structures=structures,
 				use_slack=use_slack,
@@ -115,65 +214,123 @@ class RunRecord(object):
 
 	@property
 	def feasible(self):
+		""" Solver feasibility flag from solver output. """
 		return self.output.feasible
 
 	@property
 	def info(self):
+		""" Solver information from solver output. """
 		return self.output.solver_info
 
 	@property
 	def x(self):
+		""" Optimal beam intensitites from first-pass solution. """
 		return self.output.x
 
 	@property
 	def x_exact(self):
+		""" Optimal beam intensitites from second-pass solution. """
 		return self.output.x_exact
 
 	@property
 	def x_pass1(self):
+		""" Alias for `RunRecord.x`. """
 		return self.x
 
 	@property
 	def x_pass2(self):
+		""" Alias for `RunRecord.x_exact`. """
 		return self.x_exact
 
 	@property
 	def nonzero_beam_count(self, tol=1e-6):
+		""" Number of active beams in first-pass solution. """
 		return sum(self.x > tol)
 
 	@property
 	def nonzero_beam_count_exact(self, tol=1e-6):
+		""" Number of active beams in second-pass solution. """
 		return sum(self.x_exact > tol)
 
 	@property
 	def solvetime(self):
+		"""
+		Run time for first-pass solve (restricted dose constraints).
+		"""
 		return self.output.solvetime
 
 	@property
 	def solvetime_exact(self):
+		""" Run time for second-pass solve (exact dose constraints). """
 		return self.output.solvetime
 
 class PlanningHistory(object):
+	"""
+	Class for tracking treatment plans generated by a `conrad.Case`.
+
+	Attributes:
+		runs (:obj:`list` of `RunRecord`): List of treatment plans in
+			history, in chronological order.
+		run_tags (:obj:`dict`): Dictionary mapping tags of named plans
+			to their respective indices in `PlanningHistory.runs`
+	"""
+
 	def __init__(self):
+		""" Initialize bare history with no treatment plans. """
 		self.runs = []
 		self.run_tags = {}
 
 	def __getitem__(self, key):
-		if isinstance(key, int):
+		"""
+		Overload operator [].
+
+		Allow slicing syntax for plan retrieval.
+
+		Arguments:
+			key: Key corresponding to a tagged treatment plan, or index
+				of a plan in the history's list of plans.
+
+		Returns:
+			`RunRecord`: Record of solver inputs and outputs from
+				requested treatment planning run.
+
+		Raises:
+			ValueError: If `key` is neither the key to a tagged run nor
+				a positive integer than or equal to the number of plans
+				in the history.
+
+		"""
+		if key in self.run_tags:
+				return self.runs[self.run_tags[key]]
+		elif isinstance(key, int):
 			if key >= len(self.runs):
 				raise ValueError('cannot retrieve (base-0) enumerated '
 								 'run "{}" since only {} runs have '
 								 'been performed'.format(key, len(self.runs)))
 			else:
 				return self.runs[key]
-		elif key in self.run_tags:
-				return self.runs[self.run_tags[key]]
 		else:
 			raise ValueError('key "{}" does not correspond to a tagged '
 							 'or enumerated run in this {}'
 							 ''.format(key, PlanningHistory))
 
 	def __iadd__(self, other):
+		"""
+		Overload operator +=.
+
+		Extend case history by appending `other` to
+		`PlanningHistory.runs`.
+
+		Arguments:
+			other (`RunRecord`): Treatment plan to append to history.
+
+		Returns:
+			Updated `PlanningHistory` object.
+
+		Raises:
+			TypeError: If `other` not of type `RunRecord`.
+
+		"""
 		if isinstance(other, RunRecord):
 			self.runs.append(other)
 			return self
@@ -182,44 +339,82 @@ class PlanningHistory(object):
 				'rvalues of type conrad.RunRecord')
 
 	def no_run_check(self, property_name):
+		"""
+		Test whether history includes any treatment plans.
+
+		Helper method for property getter methods.
+
+		Arguments:
+			property_name (:obj:`str`): Name to use in error message if
+				exception raised.
+
+		Returns:
+			None
+
+		Raises:
+			AttributeError: If no treatment plans exist in history,
+				i.e., `PlanningHistory.runs` has length zero.
+		"""
 		if len(self.runs) == 0:
-			raise Exception('no optimization runs performed, cannot '
-							'retrieve {} for most recent run'
-							''.format(property_name))
+			raise AttributeError('no optimization runs performed, '
+								 'cannot retrieve {} for most recent '
+								 'plan'.format(property_name))
 
 	@property
 	def last_feasible(self):
+		""" Solver feasibility flag from most recent treatment plan. """
 		self.no_run_check('solver feasibility')
 		return self.runs[-1].feasible
 
 	@property
 	def last_info(self):
+		""" Solver info from most recent treatment plan. """
 		self.no_run_check('solver info')
 		return self.runs[-1].info
 
 	@property
 	def last_x(self):
+		""" Vector of beam intensities from most recent treatment plan. """
 		self.no_run_check('beam intensitites')
 		return self.runs[-1].x
 
 	@property
 	def last_x_exact(self):
+		""" Second-pass beam intensities from most recent treatment plan. """
 		self.no_run_check('beam intensities')
 		return self.runs[-1].x_exact
 
 	@property
 	def last_solvetime(self):
+		""" Solver runtime from most recent treatment plan. """
 		self.no_run_check('solve time')
 		return self.runs[-1].solvetime
 
 	@property
 	def last_solvetime_exact(self):
+		""" Second-pass solver runtime from most recent treatment plan. """
 		self.no_run_check('solve time')
 		return self.runs[-1].solvetime_exact
 
-
 	def tag_last(self, tag):
+		"""
+		Tag most recent treatment plan in history.
+
+		Arguments:
+			tag: Name to apply to most recently added treatment plan.
+				Plan can then be retrieved with slicing syntax::
+
+					# (history is a PlanningHistory object)
+					history[tag]
+
+		Returns:
+			None
+
+		Raises:
+			AttributeError: If no treatment plans exist in history.
+		"""
 		if len(self.runs) == 0:
-			raise Exception('no optimization runs performed, cannot '
-							'apply tag "{}" to most recent run'.format(tag))
+			raise AttributeError(
+					'no optimization runs performed, cannot apply tag '
+					'"{}" to most recent plan'.format(tag))
 		self.run_tags[tag] = len(self.runs) - 1

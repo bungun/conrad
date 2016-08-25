@@ -1,4 +1,18 @@
 """
+Define POGS-based solver using the OPTKIT module, if available.
+
+For information on POGS, see:
+https://foges.github.io/pogs/
+
+For infromation on OPTKIT, see:
+https://github.com/bungun/optkit
+
+If `conrad.defs.module_installed` routine does not find the module
+`optkit`, the variable `SolverOptkit` is still defined in the module
+namespace as a lambda returning None with the same method signature as
+the initializer for :class:`SolverOptkit`. If `optkit` is found, the
+class is defined normally.
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -26,10 +40,42 @@ if module_installed('optkit'):
 	import optkit as ok
 
 	class SolverOptkit(Solver):
-		""" TODO: docstring """
+		"""
+		Interface between CONRAD and OPTKIT's POGS implementation.
+
+		`SolverOptkit` interprets CONRAD treatment planning problems
+		(based on structures with attached objectives, dose constraints,
+		and dose matrices) to build equivalent convex optimization
+		problems using POGS' syntax.
+
+		The class provides an interface to modify, run, and retrieve
+		solutions from optimization problems that can be executed on
+		a CPU or GPU.
+
+		`SolverOptkit` does not (currently) support planning problems
+		with dose constraints.
+
+		Attributes:
+			objective_voxels (`optkit.PogsObjective`): POGS description
+				of the fully-separable objective function f to apply to
+				the vector of voxel doses, i.e., f: R^{voxels} -> R. Can
+				be modified between solver runs at little cost.
+			objective_beams (`optkit.PogsObjective`): POGS description
+				of the fully-separable objective function g to apply to
+				the vector of beam intensities, i.e., g: R^{beams} -> R.
+				Can be modified between solver runs at little cost.
+			pogs_solver (`optkit.PogsSolver`): POGS solver with fixed
+				representation of the problem matrix. Must be rebuilt
+				each time the dose matrix is changed.
+		"""
 
 		def __init__(self):
-			""" TODO: docstring """
+			"""
+			Initialize empty `SolverOpkit` as a `Solver` instance.
+
+			Arguments:
+				None
+			"""
 			Solver.__init__(self)
 			self.objective_voxels = None
 			self.objective_beams = None
@@ -37,27 +83,247 @@ if module_installed('optkit'):
 			self.__A_current = None
 			self.__n_beams = None
 
-		# methods:
-		def init_problem(self, n_beams, **options):
-			""" TODO: docstring """
-			self.__n_beams = int(n_beams)
+		def init_problem(self, n_beams=None, **options):
+			"""
+			Initialize problem---no-op for `SolverOptkit`.
+
+			Method defined to match public methods of
+			`optkit.optimization.solver_cvxpy.SolverCVXPY`.
+
+			Arguments:
+				n_beams (int, optional): Number of beams in plan.
+				**options: Arbitrary keyword arguments.
+			"""
+			if n_beams is not None:
+				self.__n_beams = int(n_beams)
 
 		@property
 		def n_beams(self):
+			""" Number of candidate beams in solver's problem. """
 			return self.__n_beams
 
 		@staticmethod
 		def can_solve(structures):
+			"""
+			Test if `Structure` objects compatible with solver.
+
+			Arguments:
+				structures: An iterable collection of `Structure`
+					objects.
+
+			Returns:
+				bool: True if none of the structures have dose
+					constraints.
+			"""
 			return all([s.constraints.size == 0 for s in structures])
 
 		def clear(self):
-			""" TODO: docstring """
+			"""
+			Destroy backend representation of solver.
+
+			Sets `SolverOptkit.pogs_solver` to `None`. Invoke `optkit`
+			call to reset GPU (freeing memory allocated to solver), if
+			applicable.
+
+			Arguments:
+				None
+
+			Returns:
+				None
+			"""
 			if self.pogs_solver:
 				del self.pogs_solver
 				ok.backend.reset_device()
 				self.pogs_solver = None
 
+		@staticmethod
+		def __percentile_constraint_restricted(A, constr, slack=False):
+			"""
+			Form convex restriction to DVH constraint. Not implemented.
+
+			Arguments:
+				A: Structure-specifc dose matrix to use in constraint.
+				constr: Percentile-type dose constraint.
+				slack (bool, optional): Flag to allow slack variable in
+					 constraint formulation.
+
+			Returns:
+				None
+
+			Raises:
+				ValueError: Always.
+			"""
+			raise ValueError('dose constraints not supported for SolverOptkit')
+
+		@staticmethod
+		def __percentile_constraint_exact(A, y, constr, had_slack=False):
+			"""
+			Form exact version of DVH constraint. Not implemented.
+
+			Arguments:
+				A: Structure-specifc dose matrix to use in constraint.
+				y: Vector of doses, feasible with respect to constraint
+					`constr`.
+				constr: Percentile-type dose constraint.
+				slack (bool, optional): Flag to allow slack variable in
+					 constraint formulation.
+
+			Returns:
+				None
+
+			Raises:
+				ValueError: Always.
+			"""
+			raise ValueError('dose constraints not supported for SolverOptkit')
+
+
+		def __add_constraints(self, structure, exact=False):
+			"""
+			Add constraints from `structure` to problem. Not implemented.
+
+			Arguments:
+				structure (`conrad.medicine.Structure`): Structure from
+					which to read dose matrix and dose constraints.
+				exact (bool, optional): If True, treat percentile-type
+					dose constraints as exact constraints. Otherwise,
+					use convex restrictions.
+
+			Returns:
+				None
+
+			Raises:
+				ValueError: Always.
+			"""
+			raise ValueError('dose constraints not supported for SolverOptkit')
+
+
+		def get_slack_value(self, constr_id):
+			"""
+			Get slack variable for queried constraint. Not implemented.
+
+			Arguments:
+				constr_id (:obj:`str`): ID tag for queried constraint.
+
+			Returns:
+				float: NaN, as `numpy.nan`.
+			"""
+			return nan
+
+		def get_dual_value(self, constr_id):
+			"""
+			Get dual variable for queried constraint. Not implemented.
+
+			Arguments:
+				constr_id (:obj:`str`): ID tag for queried constraint.
+
+			Returns:
+				float: NaN, as `numpy.nan`.
+			"""
+			return nan
+
+		def get_dvh_slope(self, constr_id):
+			"""
+			Get slope for queried constraint. Not implemented.
+
+			Arguments:
+				constr_id (:obj:`str`): ID tag for queried constraint.
+
+			Returns:
+				float: NaN, as `numpy.nan`.
+			"""
+			return nan
+
+		def __assert_solver_exists(self, property_name):
+			"""
+			Assert `SolverPogs.pogs_solver` is not None.
+
+			Helper method for getters of various properties that are
+			retrievable only when a POGS solver is built.
+
+			Arguments:
+				property_name (:obj:`str`): Name of property to
+					retrieve, display in exception message if raised.
+
+			Returns:
+				None
+
+			Raises:
+				AttributeError: If `SolverOptkit.pogs_solver` is `None`.
+			"""
+			if self.pogs_solver is None:
+				raise AttributeError('no POGS solver built; cannot '
+									 'retrieve property SolverOptkit.{}'
+									 '.\n Call SolverOptkit.build() at '
+									 'least once to build a solver in '
+									 'the backend'.format(property_name))
+
+		@property
+		def x(self):
+			""" Vector variable of beam intensities, x. """
+			if self.pogs_solver is None:
+				raise ValueError()
+			self.__assert_solver_exists('x')
+			return self.pogs_solver.output.x
+
+		@property
+		def x_dual(self):
+			""" Dual variable corresponding to constraint x >= 0. """
+			self.__assert_solver_exists('x_dual')
+			return self.pogs_solver.output.mu
+
+		@property
+		def y_dual(self):
+			""" Dual variable corresponding to constraint Ax == y. """
+			self.__assert_solver_exists('y_dual')
+			return self.pogs_solver.output.nu
+
+		@property
+		def solvetime(self):
+			""" Solver run time. """
+			self.__assert_solver_exists('solvetime')
+			return self.pogs_solver.info.c.solve_time
+
+		@property
+		def status(self):
+			self.__assert_solver_exists('status')
+			return self.pogs_solver.info.err
+
+		@property
+		def objective_value(self):
+			""" Objective value at end of solve. """
+			self.__assert_solver_exists('objective_value')
+			return self.pogs_solver.info.objval
+
+		@property
+		def solveiters(self):
+			""" Number of solver iterations performed. """
+			self.__assert_solver_exists('solveiters')
+			return int(self.pogs_solver.info.iters)
+
 		def build(self, structures, **options):
+			"""
+			Build POGS optimization problem from structure data.
+
+			Extract dose matrix, target doses, and objective weights
+			from structures.
+
+			Use doses and weights to update POGS objectives
+			(`SolverOptkit.objective_voxels` and
+			`SolverOptkit.objective_beams`). POGS solver's dose matrix
+			only updated if matrix gathered from structures is has
+			changed.
+
+			Arguments:
+				structures: Iterable collection of `Structure` objects.
+
+			Returns:
+				:obj:`str`: String documenting how data in `structures`
+					were parsed to form an optimization problem.
+
+			Raises:
+				ValueError: If `SolverOptkit.can_solve` returns False
+					for structures in argument `structures`.
+			"""
 			if not self.can_solve:
 				raise ValueError(
 						'SolverOptkit does not support dose constraints')
@@ -91,90 +357,39 @@ if module_installed('optkit'):
 				self.objective_beams = ok.PogsObjective(n_beams, h='IndGe0')
 
 			if self.pogs_solver is None or matrix_updated:
+				self.clear()
 				self.pogs_solver = ok.PogsSolver(A)
 
 			return self._Solver__construction_report(structures)
 
-		@staticmethod
-		def __percentile_constraint_restricted(A, constr, slack=False):
-			""" Form the upper (or lower) DVH constraint:
-
-				upper constraint:
-
-					\sum (beta + (Ax - (b + slack)))_+ <= beta * vox_limit
-
-				lower constraint:
-
-					\sum (beta - (Ax - (b - slack)))_+ <= beta * vox_limit
-
-			"""
-			raise ValueError('dose constraints not supported for SolverOptkit')
-
-		@staticmethod
-		def __percentile_constraint_exact(A, y, constr, had_slack=False):
-			# """ TODO: docstring """
-			raise ValueError('dose constraints not supported for SolverOptkit')
-
-
-		def __add_constraints(self, structure, exact=False):
-			# """ TODO: docstring """
-			raise ValueError('dose constraints not supported for SolverOptkit')
-
-
-		def get_slack_value(self, constr_id):
-			return nan
-
-		def get_dual_value(self, constr_id):
-			return nan
-
-		def get_dvh_slope(self, constr_id):
-			return nan
-
-		def __assert_solver_exists(self, property_name):
-			if self.pogs_solver is None:
-				raise ValueError('no POGS solver built; cannot retrieve '
-								 'property {}.\noCall {}.build() at least '
-								 'once to build a solver in the backend'
-								 ''.format(property_name, SolverOptkit))
-
-		@property
-		def x(self):
-			if self.pogs_solver is None:
-				raise ValueError()
-			self.__assert_solver_exists('x')
-			return self.pogs_solver.output.x
-
-		@property
-		def x_dual(self):
-			self.__assert_solver_exists('x_dual')
-			return self.pogs_solver.output.mu
-
-		@property
-		def y_dual(self):
-			self.__assert_solver_exists('y_dual')
-			return self.pogs_solver.output.nu
-
-		@property
-		def solvetime(self):
-			self.__assert_solver_exists('solvetime')
-			return self.pogs_solver.info.c.solve_time
-
-		@property
-		def status(self):
-			self.__assert_solver_exists('status')
-			return self.pogs_solver.info.err
-
-		@property
-		def objective_value(self):
-			self.__assert_solver_exists('objective_value')
-			return self.pogs_solver.info.objval
-
-		@property
-		def solveiters(self):
-			self.__assert_solver_exists('solveiters')
-			return int(self.pogs_solver.info.iters)
-
 		def solve(self, **options):
+			"""
+			Execute optimization of a previously built planning problem.
+
+			`SolverOptkit.build` must be called after initialization
+			(after any invocation of `SolverOptkit.clear`) for there to
+			be a POGS solver instance to perform the requested
+			optimization.
+
+			Arguments:
+				**options: Keyword arguments specifying solver options,
+					passed to `optkit.PogsSolver.solve`.
+
+			Returns:
+				bool: True if POGS solver converged.
+
+			Raises:
+				AttributeError: If `SolverOptkit.pogs_solver` has not
+					been built.
+			"""
+			if self.pogs_solver is None:
+				raise AttributeError('no POGS solver built; cannot '
+									 'perform treatment plan '
+									 'optimization.\n Call '
+									 'SolverOptkit.build() at least '
+									 'once to build a solver in the '
+									 'backend')
+
 			self.pogs_solver.solve(self.objective_voxels, self.objective_beams,
 								   **options)
 			return self.pogs_solver.info.converged

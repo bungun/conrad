@@ -1,4 +1,6 @@
 """
+Define `PlanningProblem` class, interface between case and solvers.
+
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -24,21 +26,36 @@ from conrad.medicine.dose import PercentileConstraint
 from conrad.optimization.solver_cvxpy import SolverCVXPY
 from conrad.optimization.solver_optkit import SolverOptkit
 
-"""
-TODO: problem.py docstring
-"""
-
 class PlanningProblem(object):
-	""" TODO: docstring """
+	"""
+	Interface between `conrad.Case` and convex solvers.
+
+	Builds and solves specified treatment planning problem using fastest
+	available solver, then extracts solution data and solver metadata
+	(e.g., timing results) for use by clients of the `PlanningProblem`
+	object (e.g., a `conrad.Case` object).
+
+	Attributes:
+		solver_cvxpy (`SolverCVXPY` or `NoneType`): CVXPY solver, if
+			available.
+		solver_pogs (`SolverOptkit` or `NoneType`): POGS solver, if
+			available.
+	"""
 
 	def __init__(self):
-		""" TODO: docstring """
+		"""
+		Initialize a bare `PlanningProblem` with all available solvers.
+
+		Arguments:
+			None
+		"""
 		self.solver_cvxpy = SolverCVXPY()
 		self.solver_pogs = SolverOptkit()
 		self.__solver = None
 
 	@property
 	def solver(self):
+		""" Get active solver (CVXPY or OPTKIT/POGS). """
 		if self.__solver is None:
 			if self.solver_cvxpy is not None:
 				return self.solver_cvxpy
@@ -50,7 +67,21 @@ class PlanningProblem(object):
 			return self.__solver
 
 	def __update_constraints(self, structure, slack_tol=1e-3):
-		""" TODO: docstring """
+		"""
+		Pull solver results pertaining to constraint slacks.
+
+		Arguments:
+			structure (`conrad.medicine.Structure`): Structure for which
+				to retrieve constraint data.
+			slack_tol (float, optional): Numerical tolerance; if the
+				magnitude of the slack variable's value is smaller than
+				this tolerance, it is treated as zero.
+
+		Returns:
+			None
+
+		TODO: retrieve dual variable values.
+		"""
 		for cid in structure.constraints:
 			slack = self.solver.get_slack_value(cid)
 			if slack is not None:
@@ -61,12 +92,36 @@ class PlanningProblem(object):
 					structure.constraints[cid].slack = slack
 
 	def __update_structure(self, structure, exact=False):
-		""" TODO: docstring """
+		"""
+		Calculate structure dose from solver's optimal beam intensities.
+
+		Arguments:
+			structure (`conrad.medicine.Structure`): Structure for which
+				to calculate dose.
+			exact (bool, optional): If False (i.e., first-pass results),
+				trigger call to update constraints as well.
+
+		Returns:
+			None
+		"""
 		structure.calc_y(self.solver.x)
 		if not exact:
 			self.__update_constraints(structure)
 
 	def __gather_solver_info(self, run_output, exact=False):
+		"""
+		Transfer solver metadata to a `RunOutput` object.
+
+		Arguments:
+			run_output (`conrad.optimization.history.RunOutput`): Container
+				for solver data. Data stored as dictionary entries in
+				`run_output.solver_info`.
+			exact (bool, optional): If True, append `_exact` to keys
+				of dictionary entries.
+
+		Returns:
+			None
+		"""
 		keymod = '_exact' if exact else ''
 		run_output.solver_info['status' + keymod] = self.solver.status
 		run_output.solver_info['time' + keymod] = self.solver.solvetime
@@ -74,6 +129,19 @@ class PlanningProblem(object):
 		run_output.solver_info['iters' + keymod] = self.solver.solveiters
 
 	def __gather_solver_vars(self, run_output, exact=False):
+		"""
+		Transfer solver variables to a `RunOutput` object.
+
+		Arguments:
+			run_output (`conrad.optimization.history.RunOutput`): Container
+				for solver data. Data stored as dictionary entries in
+				`run_output.optimal_variables`.
+			exact (bool, optional): If True, append `_exact` to keys
+				of dictionary entries.
+
+		Returns:
+			None
+		"""
 		keymod = '_exact' if exact else ''
 		run_output.optimal_variables['x' + keymod] = self.solver.x
 		run_output.optimal_variables['mu' + keymod] = self.solver.x_dual
@@ -84,6 +152,23 @@ class PlanningProblem(object):
 
 
 	def __gather_dvh_slopes(self, run_output, structures):
+		"""
+		Transfer optimal DVH constraint slopes to a `RunOutput` object.
+
+		For each percentile-type dose constraint in each `Structure` in
+		`structures`, retrieve the optimal value of the slope variable
+		used in the convex restriction to the constraint.
+
+		Arguments:
+			run_output (`conrad.optimization.history.RunOutput`): Container
+				for solver data. Data stored as dictionary entries in
+				`run_output.optimal_dvh_slopes`.
+			structures: Iterable collection of
+				`conrad.medicine.Structure` objects.
+
+		Returns:
+			None
+		"""
 		# recover dvh constraint slope variables
 		for s in structures:
 			for cid in s.constraints:
@@ -91,6 +176,26 @@ class PlanningProblem(object):
 						self.solver.get_dvh_slope(cid)
 
 	def __set_solver_fastest_available(self, structures):
+		"""
+		Set active solver to fastest solver than can handle problem.
+
+		If `structures` includes any dose constraints, only CVXPY-based
+		solvers can be used. If no dose constraints are present,
+		and the module `optkit` is installed, the POGS solver is the
+		fastest option.
+
+		Arguments:
+			structures: Iterable collection of
+				`conrad.medicine.Structure` objects, passed to the
+				`SolverOptkit.can_solve` method.
+
+		Returns:
+			None
+
+		Raises:
+			AttributeError: If neither a CVXPY solver nor an OPTKIT/POGS
+				solver is available.
+		"""
 		if self.solver_pogs is not None:
 			if self.solver_pogs.can_solve(structures):
 				self.__solver = self.solver_pogs
@@ -99,9 +204,21 @@ class PlanningProblem(object):
 			self.__solver = self.solver_cvxpy
 			return
 
-		raise Exception('no solvers available')
+		raise AttributeError('no solvers available')
 
 	def __verify_2pass_applicable(self, structures):
+		"""
+		Two-pass algorithm only needed if percentile constraints present.
+
+		Arguments:
+			structures: Iterable collection of
+				`conrad.medicine.Structure` objects to be check for
+				percentile constraints.
+
+		Returns:
+			bool: True if any structure in `structures` has a percentile
+				dose constraint.
+		"""
 		percentile_constraints_included = False
 		for s in structures:
 			for key in s.constraints:
@@ -111,11 +228,39 @@ class PlanningProblem(object):
 
 	def solve(self, structures, run_output, slack=True,
 			  exact_constraints=False, **options):
-		""" TODO: docstring """
+		"""
+		Run treatment plan optimization.
+
+		Arguments:
+			structures: Iterable collection of
+				`conrad.medicine.Structure` objects with attached
+				objective, constraint, and dose matrix information.
+				Build convex model of treatment planning problem using
+				these data.
+			run_output (`conrad.optimization.history.RunOutput`): Object
+				for saving solver results.
+			slack (bool, optional): If True, build dose constraints
+				with slack.
+			exact_constraints (bool, optional): If True *and* at least
+				one structure has a percentile-type dose constraint,
+				execute the two-pass planning algorithm, using convex
+				restrictions of the percentile constraints on the first
+				pass, and exact versions of the constraints on the
+				second pass.
+			**options: Abitrary keyword arguments.
+
+		Returns:
+			int: Number of feasible solver runs performed: 0 if first
+				pass infeasible, 1 if first pass feasible, 2 if two-pass
+				method requested and both passes feasible.
+
+		Raises:
+			AttributeError: If no solvers avaialable.
+		"""
 		if self.solver_cvxpy is None and self.solver_pogs is None:
-			raise Exception('at least one of packages\n-cvxpy\n'
-							'-optkit\nmust be installed to perform '
-							'optimization')
+			raise AttributeError('at least one of packages\n-cvxpy\n'
+								 '-optkit\nmust be installed to perform'
+								 ' optimization')
 		if 'print_construction' in options:
 			PRINT_PROBLEM_CONSTRUCTION = bool(options['print_construction'])
 		else:
