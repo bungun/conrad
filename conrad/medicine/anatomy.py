@@ -172,7 +172,7 @@ class Anatomy(object):
 	@property
 	def labels(self):
 		""" List of labels of structures in anatomy. """
-	    return self.structures.keys()
+		return self.structures.keys()
 
 	@property
 	def plannable(self):

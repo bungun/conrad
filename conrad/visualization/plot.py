@@ -129,7 +129,7 @@ else:
 			self.__cols = 1
 			self.__rows = 1
 
-			self.__n_structures = len(panels_by_structure)
+			self.n_structures = len(panels_by_structure)
 			self.series_names = names_by_structure
 			self.series_panels = panels_by_structure
 
@@ -143,14 +143,33 @@ else:
 			"""
 			return self.__panels_by_structure
 
+		@property
+		def rows(self):
+			""" Number of subplot rows. """
+			return self.__rows
+
+		@property
+		def cols(self):
+			""" Number of subplot columns. """
+			return self.__cols
+
+		@property
+		def n_panels(self):
+			""" Total number of suplots. """
+			return self.cols * self.rows
+
 		@series_panels.setter
 		def series_panels(self, panels_by_structure):
-			n_panels = max(panels_by_structure.values())
+			self.__panels_by_structure = {}
+			n_panels = 1
+			for label in panels_by_structure:
+				panel = panels_by_structure[label]
+				self.__panels_by_structure[label] = panel
+				n_panels = max(n_panels, panel)
 
 			# subplot dimensions
 			self.__cols = panels_to_cols(n_panels)
 			self.__rows = int(ceil(float(n_panels) / self.__cols))
-
 
 		@property
 		def series_names(self):
@@ -159,8 +178,9 @@ else:
 
 		@series_names.setter
 		def series_names(self, names_by_structure):
-			for label, name in enumerate(names_by_structure):
-				self.__names_by_structure[label] = color
+			self.__names_by_structure = {}
+			for label in names_by_structure:
+				self.__names_by_structure[label] = names_by_structure[label]
 
 		@property
 		def series_colors(self):
@@ -169,8 +189,8 @@ else:
 
 		@series_colors.setter
 		def series_colors(self, colors_by_structure):
-  			for label, color in enumerate(colors_by_structure):
-				self.__colors_by_structure[label] = color
+  			for label in colors_by_structure:
+				self.__colors_by_structure[label] = colors_by_structure[label]
 
 		def autoset_series_colors(self, structure_order_dict=None,
 								  colormap=None):
@@ -191,11 +211,11 @@ else:
 			"""
 			if isinstance(colormap, LinearSegmentedColormap):
 				colors = listmap(colormap, linspace(
-						0.1, 0.9, self.__n_structures))
+						0.1, 0.9, self.n_structures))
 			else:
 				cmap = get_cmap('rainbow')
 				colors = listmap(cmap, linspace(
-						0.9, 0.1, self.__n_structures))
+						0.9, 0.1, self.n_structures))
 
 			for idx, label in enumerate(self.series_panels.keys()):
 				if structure_order_dict is not None:
@@ -267,11 +287,12 @@ else:
 					data in plot_data.values()])
 			marker_size = 16 if large_markers else 12
 
-			for label, data in enumerate(plot_data.items):
+			for label, data in plot_data.items():
 				plt.subplot(self.__rows, self.__cols, self.series_panels[label])
 
 				color = self.series_colors[label]
 				name = self.series_names[label] if legend else '_nolegend_'
+
 				plt.plot(data['curve']['dose'], data['curve']['percentile'],
 					color=color, label=name, **options)
 				if self_title:

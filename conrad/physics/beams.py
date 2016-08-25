@@ -96,7 +96,7 @@ class AbstractBeam(object):
 	@property
 	def limit(self):
 		""" Maximum intensity assignable to beam. """
-	    return self.__limit
+		return self.__limit
 
 	@limit.setter
 	def limit(self, limit):
@@ -231,7 +231,7 @@ class BixelGrid(Grid2D):
 	@property
 	def y_bixels(self):
 		""" Width of grid's y-dimesion, in bixels. """
-			return self._AbstractGrid__y
+		return self._AbstractGrid__y
 
 class FluenceMap(AbstractBeam):
 	"""

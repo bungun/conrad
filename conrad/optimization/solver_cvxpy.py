@@ -31,11 +31,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
 from time import clock
 from numpy import copy as np_copy, inf, nan
 
 from conrad.compat import *
-from conrad.defs import vec as conrad_vec, module_installed, println
+from conrad.defs import vec as conrad_vec, module_installed
 from conrad.medicine.dose import Constraint, MeanConstraint, MinConstraint, \
 								 MaxConstraint, PercentileConstraint
 from conrad.medicine.anatomy import Anatomy

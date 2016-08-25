@@ -33,8 +33,6 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		if s is None:
 			return
 
-		self.assertTrue( s.objective is None )
-		self.assertTrue( s.constraints is None )
 		self.assertTrue( s.problem is None )
 		self.assertTrue( isinstance(s._SolverCVXPY__x, Variable) )
 		self.assertTrue( isinstance(s._SolverCVXPY__constraint_indices, dict) )
@@ -53,9 +51,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		self.assertTrue( s.use_slack )
 		self.assertFalse( s.use_2pass )
 		self.assertTrue( s.n_beams == n_beams )
-		self.assertTrue( s.objective is not None )
-		self.assertTrue( len(s.constraints) == 1 )
 		self.assertTrue( s.problem is not None )
+		self.assertTrue( s.problem.objective is not None )
+		self.assertTrue( len(s.problem.constraints) == 1 )
 
 		for slack_flag in (True, False):
 			for two_pass_flag in (True, False):

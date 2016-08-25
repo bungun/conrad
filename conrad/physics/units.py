@@ -467,8 +467,7 @@ class CM2(Area):
 			TypeError: if `other` is not of type `Length`.
 		"""
 		if isinstance(other, Length):
-			if isinstance(other, CM):
-				return CM3(self.value * other.to_cm.value)
+			return CM3(self.value * other.to_cm.value)
 		else:
 			raise TypeError('Type {} only supports left multiplication '
 							'of type {}'.format(Area, Length))
@@ -528,7 +527,7 @@ class CM2(Area):
 		return MM2(self.value * 1e2)
 
 
-class Volume(object):
+class Volume(AbstractNonnegativeUnit):
 	""" Extend abstract unit to form base class of `Volume` units. """
 
 	def __init__(self, value=nan):
@@ -774,7 +773,7 @@ class Gray(DeliveredDose):
 	@property
 	def to_Gy(self):
 		""" Convert to dose units of Gray (no-op). """
-	    return self
+		return self
 
 	@property
 	def to_cGy(self):
@@ -877,7 +876,7 @@ class centiGray(DeliveredDose):
 	@property
 	def to_Gy(self):
 		""" Convert to dose units of Gray. """
-	    return Gray(0.01 * self.value)
+		return Gray(0.01 * self.value)
 
 	@property
 	def to_cGy(self):

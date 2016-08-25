@@ -442,7 +442,7 @@ class Physics(object):
 		f = DoseFrame(voxels, beams, dose_matrix, voxel_labels=voxel_labels,
 					  **options)
 
-		if self.beams is None and isinstance(f.beams, int):
+		if self.__beams is None and isinstance(f.beams, int):
 			self.__beams = BeamSet(f.beams)
 		elif isinstance(beams, BeamSet):
 			self.__beams = beams

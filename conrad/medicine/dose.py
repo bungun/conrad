@@ -1045,7 +1045,7 @@ class DVH(object):
 			structure associated with `DVH` as specified to object
 			initializer.
 		"""
-	    return self.__doses[1:]
+		return self.__doses[1:]
 
 	@data.setter
 	def data(self, y):
