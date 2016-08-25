@@ -28,7 +28,6 @@ from conrad.medicine import Anatomy, Prescription
 from conrad.optimization.problem import PlanningProblem
 from conrad.optimization.history import RunRecord, PlanningHistory
 
-
 class Case(object):
 	"""
 	Top level interface for treatment planning.
