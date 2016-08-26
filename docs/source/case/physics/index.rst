@@ -1,7 +1,7 @@
-.. _physics:
+.. _physics-index:
 
 Physics
 =======
 
-.. automodule:: conrad.physics.physics
+.. automodule:: physics
    :members:

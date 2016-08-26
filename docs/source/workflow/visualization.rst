@@ -3,5 +3,5 @@
 Visualization
 =============
 
-.. automodule:: conrad.visualization.plot
+.. automodule:: plot
    :members:

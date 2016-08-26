@@ -1,9 +1,11 @@
-.. _medicine:
+.. _medicine-index:
 
 Medicine
 ========
 
-.. automodule:: conrad.medicine.anatomy
-   :members:
-.. automodule:: conrad.medicine.structure
-   :members:
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   
+   anatomy
+   prescription

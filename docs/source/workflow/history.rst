@@ -3,5 +3,5 @@
 Planning History
 ================
 
-.. automodule:: conrad.optimization.history
+.. automodule:: history
    :members:

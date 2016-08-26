@@ -1,8 +1,12 @@
-.. _optimization:
+.. _optimization-index:
 
 Optimization
 ============
 
-.. automodule:: conrad.optimization.problem
-   :members:
-.. automodule:: conrad.optimization.solver_cvxpy
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   problem
+   solvers
+
