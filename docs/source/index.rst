@@ -1,17 +1,26 @@
-ConRad: convex optimization in radiation therapy
-================================================
+conrad
+======
+convex optimization in radiation therapy
 
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :hidden:
 
-    README
-    LICENSE
+   tutorial/index
 
+.. toctree::
+   :maxdepth: 3
+   :hidden:
 
-Indices and tables
-==================
+   case/index
+
+.. toctree::
+   :maxdepth: 3
+   :hidden:
+
+   workfloat/index
 
 * :ref:`genindex`
 * :ref:`modindex`
