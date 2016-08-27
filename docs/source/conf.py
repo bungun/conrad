@@ -16,6 +16,7 @@ import sys
 import os
 import sphinx_rtd_theme
 from recommonmark.parser import CommonMarkParser
+from unittest.mock import MagicMock
 
 
 # to import conrad:
@@ -30,6 +31,16 @@ sys.path.insert(0, os.path.abspath('../../conrad/medicine'))
 sys.path.insert(0, os.path.abspath('../../conrad/physics'))
 sys.path.insert(0, os.path.abspath('../../conrad/optimization'))
 sys.path.insert(0, os.path.abspath('../../conrad/visualization'))
+
+# -- Module installation bypass -------------------------------------------
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return Mock()
+
+MOCK_MODULES = ['numpy', 'scipy', 'optkit']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
 
