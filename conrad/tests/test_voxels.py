@@ -37,7 +37,7 @@ class VoxelsTestCase(ConradTestCase):
 
 		g = VoxelGrid(mx, my, mz)
 		self.assertEqual(g.voxels, m)
-		self.assertTrue(g.total_volume.value is nan)
+		self.assert_nan(g.total_volume.value)
 
 		g.set_scale(dx, dy, dz)
 		self.assertTrue(g.total_volume.value is not nan)

@@ -45,7 +45,7 @@ from numpy import nan
 class AbstractNonnegativeUnit(object):
 	""" Base class for physical units """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.0):
 		"""
 		Initializer for unit object.
 
@@ -81,7 +81,7 @@ class AbstractNonnegativeUnit(object):
 class Percent(AbstractNonnegativeUnit):
 	""" Specialize :obj:`AbstractNonnegativeUnit` to percent units. """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=100):
 		""" Initialize :obj:`Percent` as :obj:`AbstractNonnegativeUnit`. """
 		AbstractNonnegativeUnit.__init__(self, value=value)
 
@@ -98,9 +98,7 @@ class Percent(AbstractNonnegativeUnit):
 		"""
 		Overload right multiplication.
 
-		Multiplies :attr:`Percent.value` by ``other``. If
-		:attr:`Percent.value` is ``nan`` (i.e., unintialized) at call
-		time, the returned :class:`Percent` has value set to `other`.
+		Multiplies :attr:`Percent.value` by ``other``.
 
 		Arguments:
 			other: Nonnegative scalar to right multiply by
@@ -110,7 +108,13 @@ class Percent(AbstractNonnegativeUnit):
 			:class:`Percent`: Product of multiplication.
 		"""
 		ret = Percent(self.value)
-		ret.value = other if ret.value is nan else ret.value * other
+		if isinstance(other, Percent):
+			if ret.value is nan:
+				other = other.value
+			else:
+				other = other.fraction
+
+		ret.value = other if ret.value is nan else ret.fraction * other
 		return ret
 
 	def __add__(self, other):
@@ -169,7 +173,7 @@ class Percent(AbstractNonnegativeUnit):
 
 class Length(AbstractNonnegativeUnit):
 	""" Specialize :class:`AbstractNonnegativeUnit` to lengths. """
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		"""
 		Initialize :class:`Length` as :class:`AbstractNonnegativeUnit`.
 		"""
@@ -186,7 +190,7 @@ class Length(AbstractNonnegativeUnit):
 class MM(Length):
 	""" Specialize :class:`Length` to millimeters. """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		""" Initialize :class:`MM` as :class:`Length`. """
 		Length.__init__(self, value)
 
@@ -226,9 +230,11 @@ class MM(Length):
 
 		Returns:
 			:class:`MM`: Millimeter object with value set to original
-			value times ``other``. If original value is ``nan`` (i.e.,
-			uninitialized), value of returned object set to ``other``.
+			value times ``other``.
 		"""
+		if isinstance(other, Percent):
+			other = other.fraction
+
 		ret = MM(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
@@ -274,7 +280,7 @@ class MM(Length):
 class CM(Length):
 	""" Specialize :class:`Length` to centimeters. """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		""" Initialize :class:`CM` object as :class:`Length`. """
 		Length.__init__(self, value)
 
@@ -313,9 +319,11 @@ class CM(Length):
 
 		Returns:
 			:class:`CM`: Centimeter object with value set to original
-			value times ``other``. If original value is ``nan`` (i.e.,
-			uninitialized), value of returned object set to ``other``.
+			value times ``other``.
 		"""
+		if isinstance(other, Percent):
+			other = other.fraction
+
 		ret = CM(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
@@ -362,7 +370,7 @@ class CM(Length):
 class Area(AbstractNonnegativeUnit):
 	""" Extend abstract unit to form base class of :class:`Area` units. """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		""" Initialize :class:`Area` object. """
 		AbstractNonnegativeUnit.__init__(self, value=value)
 
@@ -377,7 +385,7 @@ class Area(AbstractNonnegativeUnit):
 class MM2(Area):
 	""" Specialize :class:`Area` to millimeters squared. """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		""" Initialize :class:`MM2` object as :class:`Area`. """
 		Area.__init__(self, value)
 
@@ -411,9 +419,11 @@ class MM2(Area):
 
 		Returns:
 			:class:`MM2`: Millimeter^2 object with value set to original
-			value times ``other``. If original value is ``nan`` (i.e.,
-			uninitialized), value of returned object set to ``other``.
+			value times ``other``.
 		"""
+		if isinstance(other, Percent):
+			other = other.fraction
+
 		ret = MM2(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
@@ -458,7 +468,7 @@ class MM2(Area):
 
 class CM2(Area):
 	""" Specialize :class:`Area` to centimeters squared. """
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		""" Initialize :class:`CM2` object as :class:`Area`. """
 		Area.__init__(self, value)
 
@@ -492,9 +502,11 @@ class CM2(Area):
 
 		Returns:
 			`CM2`: Centimeter^2 object with value set to original value
-			times `other`. If original value is `nan` (i.e.,
-			uninitialized), value of returned object set to `other`.
+			times `other`.
 		"""
+		if isinstance(other, Percent):
+			other = other.fraction
+
 		ret = CM2(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
@@ -541,7 +553,7 @@ class CM2(Area):
 class Volume(AbstractNonnegativeUnit):
 	""" Extend abstract unit to form base class of :class:`Volume` units. """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		""" Initialize :class:`Volume` object. """
 		AbstractNonnegativeUnit.__init__(self, value=value)
 
@@ -556,7 +568,7 @@ class Volume(AbstractNonnegativeUnit):
 
 class MM3(Volume):
 	""" Specialize :class:`Volume` to millimeters cubed. """
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		""" Initialize :class:`MM3` as :class:`Volume`. """
 		Volume.__init__(self, value)
 
@@ -569,9 +581,11 @@ class MM3(Volume):
 
 		Returns:
 			:class:`MM3`: Millimeter^3 object with value set to original
-			value times ``other``. If original value is ``nan`` (i.e.,
-			uninitialized), value of returned object set to ``other``.
+			value times ``other``.
 		"""
+		if isinstance(other, Percent):
+			other = other.fraction
+
 		ret = MM3(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
@@ -617,7 +631,7 @@ class MM3(Volume):
 class CM3(Volume):
 	""" Specialize :class:`Area` to centimeters cubed. """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		""" Initialize :class:`CM3` as :class:`Volume`. """
 		Volume.__init__(self, value)
 
@@ -630,9 +644,11 @@ class CM3(Volume):
 
 		Returns:
 			:class:`CM3`: Centimeter^3 object with value set to original
-			value times ``other``. If original value is ``nan`` (i.e.,
-			uninitialized), value of returned object set to ``other``.
+			value times ``other``.
 		"""
+		if isinstance(other, Percent):
+			other = other.fraction
+
 		ret = CM3(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
 		return ret
@@ -680,7 +696,7 @@ class DeliveredDose(AbstractNonnegativeUnit):
 	Extend :obj:`AbstractNonnegativeUnit` to form base class of dose units.
 	"""
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		"""
 		Initialize :class:`DeliveredDose` as :class:`AbstractNonnegativeUnit`
 		"""
@@ -697,7 +713,7 @@ class DeliveredDose(AbstractNonnegativeUnit):
 class Gray(DeliveredDose):
 	""" Specialize :class:`DeliveredDose` to radiological units of Gray. """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		""" Initialize `Gray` object as type `DeliveredDose`. """
 		DeliveredDose.__init__(self, value=value)
 
@@ -710,8 +726,7 @@ class Gray(DeliveredDose):
 
 		Returns:
 			:class:`Gray`: Gray object with value set to original value
-			times ``other``. If original value is ``nan`` (i.e.,
-			uninitialized), value of returned object set to ``other``.
+			times ``other``.
 
 		Raises:
 			TypeError: If ``other`` is not of type :obj:`int`,
@@ -722,7 +737,8 @@ class Gray(DeliveredDose):
 							'when left operand is of type {}, {} or {}'.format(
 							int, float, Percent))
 
-		other = other.fraction if isinstance(other, Percent) else other
+		if isinstance(other, Percent):
+			other = other.fraction
 
 		ret = Gray(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
@@ -799,7 +815,7 @@ class Gray(DeliveredDose):
 class centiGray(DeliveredDose):
 	""" Specialize :class:`DeliveredDose` class to centiGrays. """
 
-	def __init__(self, value=nan):
+	def __init__(self, value=1.):
 		"""
 		Initialize :class:`centiGray` object as type :class:`DeliveredDose`.
 		"""
@@ -815,9 +831,7 @@ class centiGray(DeliveredDose):
 
 		Returns:
 			:class:`centiGray`: centiGray object with value set to
-			original value times ``other``. If original value is ``nan``
-			(i.e., uninitialized), value of returned object set to
-			``other``.
+			original value times ``other``.
 
 		Raises:
 			TypeError: If ``other`` is not of type :obj:`int`,
@@ -828,7 +842,8 @@ class centiGray(DeliveredDose):
 							'when left operand is of type {}, {} or {}'.format(
 							centiGray, int, float, Percent))
 
-		other = other.fraction if isinstance(other, Percent) else other
+		if isinstance(other, Percent):
+			other = other.fraction
 
 		ret = centiGray(self.value)
 		ret.value = other if ret.value is nan else ret.value * other

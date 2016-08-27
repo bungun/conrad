@@ -25,6 +25,8 @@ from conrad.tests.base import *
 
 class TestUnits(ConradTestCase):
 	def test_percent(self):
+		p = Percent()
+		print(p.value)
 		p = 10 * Percent()
 		self.assertTrue( isinstance(p, Percent) )
 		self.assertTrue( p.value == 10 )
