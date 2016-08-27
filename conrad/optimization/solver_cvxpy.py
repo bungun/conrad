@@ -44,12 +44,12 @@ from conrad.medicine.anatomy import Anatomy
 from conrad.optimization.solver_base import *
 
 if module_installed('cvxpy'):
-	from cvxpy import *
+	import cvxpy
 
 	if module_installed('scs'):
-		SOLVER_DEFAULT = SCS
+		SOLVER_DEFAULT = cvxpy.SCS
 	else:
-		SOLVER_DEFAULT = ECOS
+		SOLVER_DEFAULT = cvxpy.ECOS
 
 	class SolverCVXPY(Solver):
 		"""
@@ -90,7 +90,7 @@ if module_installed('cvxpy'):
 			"""
 			Solver.__init__(self)
 			self.problem = None
-			self.__x = Variable(0)
+			self.__x = cvxpy.Variable(0)
 			self.__constraint_indices = {}
 			self.constraint_dual_vars = {}
 			self.__solvetime = nan
@@ -122,7 +122,7 @@ if module_installed('cvxpy'):
 			Returns:
 				None
 			"""
-			self.__x = Variable(n_beams)
+			self.__x = cvxpy.Variable(n_beams)
 			self.clear()
 
 			self.use_slack = use_slack
@@ -147,7 +147,7 @@ if module_installed('cvxpy'):
 				- Dual variables (all dose constraints), and
 				- Slope variables for convex restrictions (percentile dose constraints).
 			"""
-			self.problem = Problem(Minimize(0), [self.__x >= 0])
+			self.problem = cvxpy.Problem(cvxpy.Minimize(0), [self.__x >= 0])
 			self.dvh_vars = {}
 			self.slack_vars = {}
 			self.constraint_dual_vars = {}
@@ -198,7 +198,7 @@ if module_installed('cvxpy'):
 			dose = constr.dose.value
 			if slack is None:
 				slack = 0.
-			return sum_entries(pos(
+			return cvxpy.sum_entries(cvxpy.pos(
 					beta + sign * (A*x - (dose + sign * slack)) )) <= beta * p
 
 		@staticmethod
@@ -293,9 +293,9 @@ if module_installed('cvxpy'):
 				cslack = not exact and self.use_slack and c.priority > 0
 				if cslack:
 					gamma = self.gamma_prioritized(c.priority)
-					slack = Variable(1)
+					slack = cvxpy.Variable(1)
 					self.slack_vars[cid] = slack
-					self.problem.objective += Minimize(gamma * slack)
+					self.problem.objective += cvxpy.Minimize(gamma * slack)
 					self.problem.constraints += [slack >= 0]
 				else:
 					slack = 0.
@@ -331,7 +331,7 @@ if module_installed('cvxpy'):
 
 					else:
 						# beta = 1 / slope for DVH constraint approximation
-						beta = Variable(1)
+						beta = cvxpy.Variable(1)
 						self.dvh_vars[cid] = beta
 						self.problem.constraints += [ beta >= 0 ]
 
@@ -473,8 +473,8 @@ if module_installed('cvxpy'):
 			A, dose, weight_abs, weight_lin = \
 					self._Solver__gather_matrix_and_coefficients(structures)
 
-			self.problem.objective = Minimize(
-					weight_abs.T * abs(A * self.__x - dose) +
+			self.problem.objective = cvxpy.Minimize(
+					weight_abs.T * cvxpy.abs(A * self.__x - dose) +
 					weight_lin.T * (A * self.__x - dose))
 
 			for s in structures:
@@ -512,26 +512,26 @@ if module_installed('cvxpy'):
 			# solve
 			PRINT('running solver...')
 			start = clock()
-			if solver == ECOS:
+			if solver == cvxpy.ECOS:
 				ret = self.problem.solve(
-						solver=ECOS,
+						solver=cvxpy.ECOS,
 						verbose=VERBOSE,
 						max_iters=maxiter,
 						reltol=reltol,
 						reltol_inacc=reltol,
 						feastol=reltol,
 						feastol_inacc=reltol)
-			elif solver == SCS:
+			elif solver == cvxpy.SCS:
 				if use_gpu:
 					ret = self.problem.solve(
-							solver=SCS,
+							solver=cvxpy.SCS,
 							verbose=VERBOSE,
 							max_iters=maxiter,
 							eps=reltol,
 							gpu=use_gpu)
 				else:
 					ret = self.problem.solve(
-							solver=SCS,
+							solver=cvxpy.SCS,
 							verbose=VERBOSE,
 							max_iters=maxiter,
 							eps=reltol,

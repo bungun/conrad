@@ -38,7 +38,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 			return
 
 		self.assertTrue( s.problem is None )
-		self.assertTrue( isinstance(s._SolverCVXPY__x, Variable) )
+		self.assertTrue( isinstance(s._SolverCVXPY__x, cvxpy.Variable) )
 		self.assertTrue( isinstance(s._SolverCVXPY__constraint_indices, dict) )
 		self.assertTrue( len(s._SolverCVXPY__constraint_indices) == 0 )
 		self.assertTrue( isinstance(s.constraint_dual_vars, dict) )
@@ -84,8 +84,8 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		if s is None:
 			return
 
-		beta = Variable(1)
-		x = Variable(n_beams)
+		beta = cvxpy.Variable(1)
+		x = cvxpy.Variable(n_beams)
 		A = self.A_targ
 
 		# lower dose limit:
@@ -110,15 +110,17 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		constr = D(80) >= 10 * Gy
 		dose = constr.dose.value
 
-		objective = Minimize(0)
+		objective = cvxpy.Minimize(0)
 
 		theta = (1 - constr.percentile.fraction) * self.m_target
 		c = s._SolverCVXPY__percentile_constraint_restricted(
 				A, x, constr, beta)
-		c_direct = sum_entries(pos(beta + (-1) * (A*x - dose))) <= beta * theta
+		c_direct = cvxpy.sum_entries(
+				cvxpy.pos(beta + (-1) * (A*x - dose))) <= beta * theta
 
 		obj_shape, mat_shape = self.assert_problems_equivalent(
-				Problem(Minimize(0), [c]), Problem(Minimize(0), [c_direct]) )
+				cvxpy.Problem(cvxpy.Minimize(0), [c]),
+				cvxpy.Problem(cvxpy.Minimize(0), [c_direct]) )
 
 		# m voxels, n beams, 1 slope variable (beta), 0 slack variables
 		var_count = self.m_target + self.n + 1
@@ -150,15 +152,17 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		constr = D(80) <= 10 * Gy
 		dose = constr.dose.value
 
-		objective = Minimize(0)
+		objective = cvxpy.Minimize(0)
 
 		theta = constr.percentile.fraction * self.m_target
 		c = s._SolverCVXPY__percentile_constraint_restricted(
 				A, x, constr, beta)
-		c_direct = sum_entries(pos(beta + (A*x - dose))) <= beta * theta
+		c_direct = cvxpy.sum_entries(
+				cvxpy.pos(beta + (A*x - dose))) <= beta * theta
 
 		obj_shape, mat_shape = self.assert_problems_equivalent(
-				Problem(Minimize(0), [c]), Problem(Minimize(0), [c_direct]) )
+				cvxpy.Problem(cvxpy.Minimize(0), [c]),
+				cvxpy.Problem(cvxpy.Minimize(0), [c_direct]) )
 
 		# m voxels, n beams, 1 slope variable (beta), 0 slack variables
 		var_count = self.m_target + self.n + 1
@@ -172,21 +176,22 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		#
 		#	\sum {beta - y + (dose - slack)}_+ <= beta * (1 - fraction) * size
 		#
-		slack = Variable(1)
+		slack = cvxpy.Variable(1)
 
 		constr = D(80) >= 10 * Gy
 		dose = constr.dose.value
 
-		objective = Minimize(0)
+		objective = cvxpy.Minimize(0)
 
 		theta = (1 - constr.percentile.fraction) * self.m_target
 		c = s._SolverCVXPY__percentile_constraint_restricted(
 				A, x, constr, beta, slack=slack)
-		c_direct = sum_entries(pos(
+		c_direct = cvxpy.sum_entries(cvxpy.pos(
 				beta + (-1) * (A * x - (dose - slack)))) <= beta * theta
 
 		obj_shape, mat_shape = self.assert_problems_equivalent(
-				Problem(Minimize(0), [c]), Problem(Minimize(0), [c_direct]) )
+				cvxpy.Problem(cvxpy.Minimize(0), [c]),
+				cvxpy.Problem(cvxpy.Minimize(0), [c_direct]) )
 
 		# m voxels, n beams, 1 slope variable (beta), 1 slack variable
 		var_count = self.m_target + self.n + 2
@@ -203,16 +208,17 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		constr = D(80) <= 10 * Gy
 		dose = constr.dose.value
 
-		objective = Minimize(0)
+		objective = cvxpy.Minimize(0)
 
 		theta = constr.percentile.fraction * self.m_target
 		c = s._SolverCVXPY__percentile_constraint_restricted(
 				A, x, constr, beta, slack=slack)
-		c_direct = sum_entries(
-				pos(beta + (A * x - (dose + slack)))) <= beta * theta
+		c_direct = cvxpy.sum_entries(
+				cvxpy.pos(beta + (A * x - (dose + slack)))) <= beta * theta
 
 		obj_shape, mat_shape = self.assert_problems_equivalent(
-				Problem(Minimize(0), [c]), Problem(Minimize(0), [c_direct]) )
+				cvxpy.Problem(cvxpy.Minimize(0), [c]),
+				cvxpy.Problem(cvxpy.Minimize(0), [c_direct]) )
 
 		# m voxels, n beams, 1 slope variable (beta), 1 slack variable
 		var_count = self.m_target + self.n + 2
@@ -228,8 +234,8 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		if s is None:
 			return
 
-		beta = Variable(1)
-		x = Variable(n_beams)
+		beta = cvxpy.Variable(1)
+		x = cvxpy.Variable(n_beams)
 		A = self.A_targ
 		constr_size = (self.m_target, 1)
 
@@ -250,7 +256,8 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 														had_slack=False)
 		c_direct = A_exact * x >= dose
 		obj_shape, mat_shape = self.assert_problems_equivalent(
-				Problem(Minimize(0), [c]), Problem(Minimize(0), [c_direct]) )
+				cvxpy.Problem(cvxpy.Minimize(0), [c]),
+				cvxpy.Problem(cvxpy.Minimize(0), [c_direct]) )
 		self.assertTrue( obj_shape[0] == mat_shape[1] )
 		self.assertTrue( obj_shape[0] == self.n )
 		self.assertTrue( mat_shape[0] == m_exact )
@@ -272,7 +279,8 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 														had_slack=False)
 		c_direct = A_exact * x <= dose
 		obj_shape, mat_shape = self.assert_problems_equivalent(
-				Problem(Minimize(0), [c]), Problem(Minimize(0), [c_direct]) )
+				cvxpy.Problem(cvxpy.Minimize(0), [c]),
+				cvxpy.Problem(cvxpy.Minimize(0), [c_direct]) )
 		self.assertTrue( obj_shape[0] == mat_shape[1] )
 		self.assertTrue( obj_shape[0] == self.n )
 		self.assertTrue( mat_shape[0] == m_exact )
@@ -282,8 +290,8 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		if s is None:
 			return
 
-		x = Variable(self.n)
-		p = Problem(Minimize(0), [x >= 0])
+		x = cvxpy.Variable(self.n)
+		p = cvxpy.Problem(cvxpy.Minimize(0), [x >= 0])
 
 		s.init_problem(self.n, use_slack=False, use_2pass=False)
 		self.assert_problems_equivalent( p, s.problem )
@@ -304,7 +312,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 
 		# add mean constraint with slack (upper)
 		for priority in xrange(1, 4):
-			slack = Variable(1)
+			slack = cvxpy.Variable(1)
 			s.use_slack = True
 			constr = D('mean') <= 10 * Gy
 			constr.priority = priority
@@ -312,17 +320,18 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 			constr_cvxpy = self.anatomy['tumor'].A_mean * x - slack <= dose
 			self.anatomy['tumor'].constraints.clear()
 			self.anatomy['tumor'].constraints += constr
-			p.objective += Minimize(s.gamma_prioritized(constr.priority) * slack)
+			p.objective += cvxpy.Minimize(
+					s.gamma_prioritized(constr.priority) * slack)
 			p.constraints = [x>=0, slack >= 0, constr_cvxpy]
 			s._SolverCVXPY__add_constraints(self.anatomy['tumor'])
 			self.assert_problems_equivalent( p, s.problem )
 
-			p.objective = Minimize(0)
+			p.objective = cvxpy.Minimize(0)
 			s.clear()
 			s.use_slack = False
 
 			# add mean constraint with slack (lower)
-			slack = Variable(1)
+			slack = cvxpy.Variable(1)
 			s.use_slack = True
 			constr = D('mean') >= 10 * Gy
 			constr.priority = priority
@@ -330,12 +339,13 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 			constr_cvxpy = self.anatomy['tumor'].A_mean * x + slack >= dose
 			self.anatomy['tumor'].constraints.clear()
 			self.anatomy['tumor'].constraints += constr
-			p.objective += Minimize(s.gamma_prioritized(constr.priority) * slack)
+			p.objective += cvxpy.Minimize(
+					s.gamma_prioritized(constr.priority) * slack)
 			p.constraints = [x>=0, slack >= 0, constr_cvxpy]
 			s._SolverCVXPY__add_constraints(self.anatomy['tumor'])
 			self.assert_problems_equivalent( p, s.problem )
 
-			p.objective = Minimize(0)
+			p.objective = cvxpy.Minimize(0)
 			s.clear()
 			s.use_slack = False
 
@@ -368,7 +378,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		s._SolverCVXPY__add_constraints(self.anatomy['tumor'], exact=True)
 
 		# no slack problem
-		p.objective = Minimize(0)
+		p.objective = cvxpy.Minimize(0)
 		p.constraints = [x>=0, constr_cvxpy]
 
 		self.assert_problems_equivalent( p, s.problem )
@@ -385,14 +395,15 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		constr_cvxpy = self.anatomy['tumor'].A_mean * x <= constr.dose.value
 
 		constr2 = D('mean') <= 8 * Gy
-		slack = Variable(1)
+		slack = cvxpy.Variable(1)
 		self.anatomy['tumor'].constraints += constr2
 		# (yes slack)
 		constr_cvxpy2 = self.anatomy['tumor'].A_mean * x - slack <= constr2.dose.value
 
 		s.use_slack = True
 		s._SolverCVXPY__add_constraints(self.anatomy['tumor'])
-		p.objective += Minimize(s.gamma_prioritized(constr2.priority) * slack)
+		p.objective += cvxpy.Minimize(
+				s.gamma_prioritized(constr2.priority) * slack)
 
 		# try permuting constraints if problem equivalence fails
 		try:
@@ -410,7 +421,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		constr = D('max') <= 30 * Gy
 		self.anatomy['tumor'].constraints += constr
 		constr_cvxpy = self.anatomy['tumor'].A * x  <= constr.dose.value
-		p.objective = Minimize(0)
+		p.objective = cvxpy.Minimize(0)
 		p.constraints = [x>=0, constr_cvxpy]
 		s._SolverCVXPY__add_constraints(self.anatomy['tumor'])
 		self.assert_problems_equivalent( p, s.problem )
@@ -421,7 +432,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		constr = D('min') >= 25 * Gy
 		self.anatomy['tumor'].constraints += constr
 		constr_cvxpy = self.anatomy['tumor'].A * x  >= constr.dose.value
-		p.objective = Minimize(0)
+		p.objective = cvxpy.Minimize(0)
 		p.constraints = [x>=0, constr_cvxpy]
 		s._SolverCVXPY__add_constraints(self.anatomy['tumor'])
 		self.assert_problems_equivalent( p, s.problem )
@@ -444,11 +455,11 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		A, dose, weight_abs, weight_lin = s._Solver__gather_matrix_and_coefficients(
 				structure_list)
 
-		x = Variable(self.n)
-		p = Problem(Minimize(0), [])
+		x = cvxpy.Variable(self.n)
+		p = cvxpy.Problem(cvxpy.Minimize(0), [])
 		p.constraints += [ x >= 0 ]
-		p.objective += Minimize(
-				weight_abs.T * abs(A * x) +
+		p.objective += cvxpy.Minimize(
+				weight_abs.T * cvxpy.abs(A * x) +
 				weight_lin.T * (A * x) )
 
 		s.use_slack = False
@@ -667,10 +678,11 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 			for INDIRECT in [True, False]:
 				for GPU in [True, False]:
 					solver_status = s.solve(
-							solver=SCS, verbose=0, use_indirect=INDIRECT,
-							use_gpu=GPU)
+							solver=cvxpy.SCS, verbose=0,
+							use_indirect=INDIRECT, use_gpu=GPU)
 					self.assertTrue( solver_status )
 
 		if module_installed('ecos'):
-			solver_status = s.solve(solver=ECOS, verbose=0, use_indirect=INDIRECT)
+			solver_status = s.solve(
+					solver=cvxpy.ECOS, verbose=0, use_indirect=INDIRECT)
 			self.assertTrue( solver_status )

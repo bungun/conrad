@@ -32,7 +32,10 @@ sys.path.insert(0, os.path.abspath('../../conrad/optimization'))
 sys.path.insert(0, os.path.abspath('../../conrad/visualization'))
 
 # -- Module installation bypass -------------------------------------------
-MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'matplotlib.pyplot']
+MOCK_MODULES = [
+  'numpy', 'numpy.linalg', 'numpy.random', 'scipy', 'scipy.sparse',
+  'cvxpy', 'matplotlib', 'matplotlib.pyplot', 'matplotlib.colors',
+  'optkit']
 for mod_name in MOCK_MODULES:
   sys.modules[mod_name] = mock.Mock()
 
