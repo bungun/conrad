@@ -1,24 +1,25 @@
 """
-Define `Constraint` base class, along with specializations
-`MaxConstraint`, `MinConstraint`, `MeanConstraint` and
-`PercentileConstranint`, as well as `ConstraintList` container and
-method `D` for instantiating constraints with a syntax used by
-clinicians, e.g.:
+Define :class:`Constraint` base class, along with specializations
+:class:`MaxConstraint`, :class:`MinConstraint`, :class:`MeanConstraint`
+and :class:`PercentileConstranint`. Also define :class:`ConstraintList`
+container and function :func:`D` for instantiating constraints with a
+syntax used by clinicians, e.g.::
 
-	D('max') < 30 Gy
-	D('min') > 20 Gy
-	D('mean') > 25 Gy
-	D(90) > 22 Gy
-	D(5) < 29 Gy.
+	D('max') < 30 * Gy
+	D('min') > 20 * Gy
+	D('mean') > 25 * Gy
+	D(90) > 22 * Gy
+	D(5) < 29 * Gy
 
-Also define the `DVH` (dose volume histogram) object for converting
-structure dose vectors to plottable DVH data sets.
+Also define the :class:`DVH` (dose volume histogram) object for
+converting structure dose vectors to plottable DVH data sets.
 
 Atrributes:
-	RELOPS (:class:`__ConstraintRelops`): Defines constants RELOPS.GEQ,
-		RELOPS.LEQ, and RELOPS.INDEFINITE for categorizing inequality
-		constraint directions.
-
+	RELOPS (:class:`__ConstraintRelops`): Defines constants
+		``RELOPS.GEQ``, ``RELOPS.LEQ``, and ``RELOPS.INDEFINITE`` for
+		categorizing inequality constraint directions.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -36,11 +37,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from time import clock
 from hashlib import sha1
 from numpy import zeros, linspace, nan, ceil
 
-from conrad.compat import *
 from conrad.defs import vec
 from conrad.physics.units import DeliveredDose, cGy, Gy, Percent, Volume, cm3
 
@@ -56,13 +58,14 @@ class Constraint(object):
 	"""
 	Base class for dose constraints.
 
-	The `MinConstraint`, `MaxConstraint`, `MeanConstraint` and
-	`PercentileConstraint` types all inherit from this class. This class
-	defines all the basic getters and setters for constraint properties
-	such as the type of threshold, constraint direction (relop) and dose
-	bound, as well as other shared properties such as slack and dual
-	values relevant to the `Constraint` objects' role in treatment
-	planning optimization problems.
+	The :class:`MinConstraint`, :class:`MaxConstraint`,
+	:class:`MeanConstraint` and :class:`PercentileConstraint` types all
+	inherit from :class:`Constraint`. This class defines all the basic
+	getters and setters for constraint properties such as the type of
+	threshold, constraint direction (relop) and dose bound, as well as
+	other shared properties such as slack and dual values relevant to
+	the :class:`Constraint` object's role in treatment plan optimization
+	problems.
 
 	"""
 	def __init__(self):
@@ -93,7 +96,7 @@ class Constraint(object):
 
 	@property
 	def threshold(self):
-		""" Constraint threshold: percentile, min, max or mean. """
+		""" Constraint threshold---percentile, min, max or mean. """
 		return self.__threshold
 
 	@threshold.setter
@@ -105,16 +108,16 @@ class Constraint(object):
 		"""
 		Constraint relop (i.e., sense of inequality).
 
-		Should be one of '<', '>', '<=', or '>='.
+		Should be one of ``<``, ``>``, ``<=``, or ``>=``.
 
 		The setter method does not differentiate between strict and
-		non-strict inequalities (e.g., '<' versus '<='), but both
+		non-strict inequalities (i.e., ``<`` versus ``<=``), but both
 		syntaxes are allowed for convenience.
 
 		Raises:
 			Value Error: If user tries to build a maximum dose
 				constraint with a lower dose bound or a minimum dose
-				constraint with an upper dose bound, or if `relop` is
+				constraint with an upper dose bound, or if ``relop`` is
 				not one of the expected string values.
 		"""
 		return self.__relop
@@ -139,15 +142,17 @@ class Constraint(object):
 	@property
 	def upper(self):
 		"""
-		Indicator of upper dose constraint (or, "less than" inequality).
+		Indicator of upper dose constraint (or, 'less than' inequality).
+
 		Arguments:
 			None
 
 		Returns:
-			bool: True if constraint of type D(threshold) <  dose.
+			:obj:`bool`: ``True`` if constraint of type "D(threshold) <
+			dose".
 
 		Raises:
-			ValueError: If `Constraint.relop` is not set.
+			ValueError: If :attr:`Constraint.relop` is not set.
 		"""
 		if self.__relop == RELOPS.INDEFINITE:
 			raise ValueError('{} object field "relop" not initialized, '
@@ -160,15 +165,16 @@ class Constraint(object):
 		"""
 		Dose bound for constraint.
 
-		Getter returns dose in absolute terms (i.e., `DeliveredDose`
-		units.)
+		Getter returns dose in absolute terms (i.e.,
+		:class:`DeliveredDose` units.)
 
 		Setter accepts dose in absolute or relative terms. That is,
-		dose may be provided provided in units of `Percent` or in units
-		of `DeliveredDose`, such as `conrad.physics.units.Gray`.
+		dose may be provided provided in units of :class:`Percent` or in
+		units of :class:`DeliveredDose`, such as
+		:class:`~conrad.physics.units.Gray`.
 
 		Raises:
-			TypeError: If `dose` not of allowed types.
+			TypeError: If ``dose`` not of allowed types.
 		"""
 		if isinstance(self.__dose, Percent):
 			if self.__prescription_dose.value is nan:
@@ -191,15 +197,16 @@ class Constraint(object):
 		"""
 		Prescription dose associated with constraint.
 
-		This property is optional, but required when the property
-		`Constraint.dose` is relative (i.e., of type `Percent`), as it
-		provides the numerical basis on whih to interpret the relative
-		value of `Constraint.dose`.
+		This property is optional, but required when the
+		:attr:`Constraint.dose` is phrased in relative terms (i.e., of
+		type :class:`Percent`). It provides the numerical basis on which
+		to interpret the relative value of :attr:`Constraint.dose`.
 
 		Raises:
-			TypeError: If `rx_dose` is not of type `DeliveredDose`, e.g.,
-				 `conrad.physics.units.Gray` or
-				 `conrad.physics.units.centiGray`.
+			TypeError: If ``rx_dose`` is not of type
+				:class:`DeliveredDose`, e.g.,
+				:class:`~conrad.physics.units.Gray` or
+				:class:`~conrad.physics.units.centiGray`.
 		"""
 		return self.__prescription_dose
 
@@ -222,10 +229,10 @@ class Constraint(object):
 		Value of dual variable associated with constraint.
 
 		This property is intended to reflect information about the state
-		of the `Constraint` in the context of the most recent run of an
-		optimization problem that it was used in. Accordingly, it is to
-		be managed by some client(s) of the `Constraint` and not the
-		object itself.
+		of the :class:`Constraint` in the context of the most recent run
+		of an optimization problem that it was used in. Accordingly, it
+		is to be managed by some client(s) of the :class:`Constraint`
+		and not the object itself.
 
 		In particular, this property is meant to hold the value of the
 		dual variable associated with the dose constraint in some
@@ -244,10 +251,10 @@ class Constraint(object):
 		Value of slack variable associated with constraint.
 
 		This property is intended to reflect information about the state
-		of the `Constraint` in the context of the most recent run of an
-		optimization problem that it was used in. Accordingly, it is to
-		be managed by some client(s) of the `Constraint` and not the
-		object itself.
+		of the :class:`Constraint` in the context of the most recent run
+		of an optimization problem that it was used in. Accordingly, it
+		is to be managed by some client(s) of the :class:`Constraint`
+		and not the object itself.
 
 		In particular, this property is meant to hold the value of the
 		slack variable associated with the dose constraint in some
@@ -255,8 +262,8 @@ class Constraint(object):
 		value should be that attained at the conclusion of a solver run.
 
 		Raises:
-			TypeError: If `slack` is not an int or float.
-			ValueError: If `slack` is negative.
+			TypeError: If ``slack`` is not an :obj:`int` or :obj:`float`.
+			ValueError: If ``slack`` is negative.
 		"""
 		return self.__slack
 
@@ -282,26 +289,28 @@ class Constraint(object):
 		"""
 		Constraint priority.
 
-		Priority is one of {0, 1, 2, 3}. Constraint priorities are used
-		when incorporating a `Constraint` in an optimization problem
-		with slack allowed.
+		Priority is one of {``0``, ``1``, ``2``, ``3``}. Constraint
+		priorities are used when incorporating a :class:`Constraint` in
+		an optimization problem with slack allowed.
 
-		Priority 0 indicates that the constraint should be enforced
+		Priority ``0`` indicates that the constraint should be enforced
 		strictly even when the overall problem formulation permits
 		dose constraint slacks.
 
-		The remaining values (1, 2, and 3) represent ranked tiers;
-		slacks are permitted and penalized according to the priority:
-		the slack variable for a Priority 1 constraint is penalizeed
-		more heavily than that of a Priority 2 constraint, which is in
-		turn penalized more heavily than the slack variable associated
-		with a Priority 3 constraint. This mechanism allows users to
-		encourage some constraints to be met more closely than others,
-		even when slack is allowed for all of them.
+		The remaining values (``1``, ``2``, and ``3``) represent ranked
+		tiers; slacks are permitted and penalized according to the
+		priority: the slack variable for a ``Priority 1`` constraint is
+		penalizeed more heavily than that of a ``Priority 2``
+		constraint, which is in turn penalized more heavily than the
+		slack variable associated with a ``Priority 3`` constraint. This
+		mechanism allows users to encourage some constraints to be met
+		more closely than others, even when slack is allowed for all of
+		them.
 
 		Raises:
-			TypeError: If `priority` not an integer.
-			ValueError: If `priority` not in {0, 1, 2, 3}.
+			TypeError: If ``priority`` not an :obj:`int`:.
+			ValueError: If ``priority`` not in {``0``, ``1``, ``2``,
+				``3``}.
 		"""
 		return self.__priority
 
@@ -321,21 +330,21 @@ class Constraint(object):
 
 	@property
 	def symbol(self):
-		""" Strict inequality version of `Constraint.relop`. """
+		""" Strict inequality :obj:`str` of :attr:`Constraint.relop`. """
 		return self.__relop.replace('=', '')
 
 	def __lt__(self, other):
 		"""
 		Overload operator <.
 
-		Enable `Constraint.dose` and `Constraint.relop` to be set via
-		syntax "constraint < dose".
+		Enable :attr:`Constraint.dose` and :attr:`Constraint.relop` to
+		be set via syntax 'constraint < dose'.
 
 		Arguments:
-			other: Value that `Constraint.dose` will be set to.
+			other: Value that :attr:`Constraint.dose` will be set to.
 
 		Returns:
-			`Constraint`: Updated version of this object.
+			:class:`Constraint`: Updated version of this object.
 		"""
 		self.relop = RELOPS.LEQ
 		self.dose = other
@@ -349,14 +358,14 @@ class Constraint(object):
 		"""
 		Overload operator >.
 
-		Enable `Constraint.dose` and `Constraint.relop` to be set via
-		syntax "constraint > dose".
+		Enable :attr:`Constraint.dose` and :attr:`Constraint.relop` to
+		be set via syntax 'constraint > dose'.
 
 		Arguments:
-			other: Value that `Constraint.dose` will be set to.
+			other: Value that :attr:`Constraint.dose` will be set to.
 
 		Returns:
-			`Constraint`: Updated version of this object.
+			:class:`Constraint`: Updated version of this object.
 		"""
 		self.relop = RELOPS.GEQ
 		self.dose = other
@@ -374,13 +383,13 @@ class Constraint(object):
 		doses and thresholds.
 
 		Arguments:
-			other ('Constraint'): Value to be compared.
+			other (:class:'Constraint'): Value to be compared.
 
 		Returns:
-			bool: True if compared constraints are equivalent.
+			:obj:bool: ``True`` if compared constraints are equivalent.
 
 		Raises:
-			TypeError: If `other` is not a `Constraint`.
+			TypeError: If ``other`` is not a :class:`Constraint`.
 		"""
 		if not isinstance(other, Constraint):
 			raise TypeError('equality comparison for {} object only '
@@ -399,7 +408,9 @@ class Constraint(object):
 		return equal
 
 	def __str__(self):
-		""" Stringify `Constraint` as 'D{threshold} {<= or >=} {dose}' """
+		"""
+		Stringify :class:`Constraint` as 'D{threshold} {<= or >=} {dose}'
+		"""
 		thresh = self.__threshold
 		thresh = str(thresh.value) if isinstance(thresh, Percent) else thresh
 		return str('D{} {} {}'.format(thresh, self.__relop, self.__dose))
@@ -409,21 +420,22 @@ class PercentileConstraint(Constraint):
 	Percentile, i.e. dose-volume, or partial dose constraint.
 
 	Allow for dose bounds to be applied to a certain fraction of a
-	structure involved in treatment planning. For instance, an lower
+	structure involved in treatment planning. For instance, a lower
 	constraint,
 
-		D80 > 60 Gy,
+	>>>	# D80 > 60 Gy,
 
 	requires at least 80% of the voxels in a structure must receive 60
 	Grays or greater, and an upper constraint,
 
-		D25 < 5 Gy,
+	>>>	# D25 < 5 Gy,
 
 	requires no more than 25% of the voxels in a structure to receive
 	25 Grays or greater.
 
-	Extend base class `Constraint`, recast property
-	`Constraint.threshold` as `PercentileConstraint.percentile`.
+	Extend base class :class:`Constraint`, recast
+	:attr:`Constraint.threshold` as
+	:attr:`PercentileConstraint.percentile`.
 
 	"""
 	def __init__(self, percentile=None, relop=None, dose=None):
@@ -432,12 +444,12 @@ class PercentileConstraint(Constraint):
 
 		Arguments:
 			percentile (optional): Percentile threshold. Expected to be
-				compatible with `PercentileConstraint.percentile`
+				compatible with :attr:`PercentileConstraint.percentile`
 				setter.
 			relop (optional): Sense of inequality. Expected to be
-				compatible with `Constraint.relop` setter.
+				compatible with :attr:`Constraint.relop` setter.
 			dose (optional): Dose bound. Expected to be compatible with
-				`Constraint.dose` setter.
+				:attr:`Constraint.dose` setter.
 		"""
 		Constraint.__init__(self)
 		if relop is not None:
@@ -450,10 +462,11 @@ class PercentileConstraint(Constraint):
 	@property
 	def percentile(self):
 		"""
-		Percentile threshold in interval (0, 100).
+		Percentile threshold in interval (``0``, ``100``).
 
 		Raises:
-			TypeError: If `percentile` is not int, float, or `Percent`.
+			TypeError: If ``percentile`` is not :obj:`int`,
+				:obj:`float`, or :class:`Percent`.
 		"""
 		return self.threshold
 
@@ -469,7 +482,7 @@ class PercentileConstraint(Constraint):
 
 	@property
 	def plotting_data(self):
-		""" Dictionary of `matplotlib`-compatible data. """
+		""" Dictionary of :mod:`matplotlib`-compatible data. """
 		return {
 				'type': 'percentile',
 				'percentile' : 2 * [self.percentile.value],
@@ -478,38 +491,43 @@ class PercentileConstraint(Constraint):
 				}
 
 	def get_maxmargin_fulfillers(self, y, had_slack=False):
-		"""
-		Get indices to values of `y` deepest in feasible set.
+		r"""
+		Get indices to values of ``y`` deepest in feasible set.
 
-		In particular, given len(`y`), if m voxels are required to
-		respect this `PercentileConstraint` exactly, `y` is assumed to
-		contain at least m entries that respect the constraint (for
-		instance, `y` is generated by a convex program that includes a
-		convex restriction of the dose constraint).
+		In particular, given ``len(y)``, if ``m`` voxels are
+		required to respect this :class:`PercentileConstraint` exactly,
+		``y`` is assumed to contain at least ``m`` entries that respect
+		the constraint (for instance, ``y`` is generated by a convex
+		program that includes a convex restriction of the dose
+		constraint).
 
 		Procedure.
-			0. Define
-				  p	= percent non-violating * structure size
-					= percent non-violating * len(`y`)
-			1. Get margins: (`y` - `self.dose`).
-			2. Sort margin indices by margin values.
-			3. If upper constraint, return indices of p most negative
-				entries (first p of sorted indices; `numpy.sort `sorts
-				small to large).
-			4. If lower constraint, return indices of p most positive
-				entries (last p of sorted indices; `numpy.sort` sorts
-				small to large).
+
+		.. math::
+		   :nowrap:
+
+		   \begin{array}{rl}
+		   \mathbf{0.} & \mbox{Define} \\
+		   	& p = \mbox{% non-violating} \cdot \mbox{structure size}
+			    = \mbox{% non-violating} \cdot \mathbf{len}(y) \\
+		   \mathbf{1.} & \mbox{Get margins: } y - \mbox{dose bound}. \\
+		   \mathbf{2.} & \mbox{Sort margin indices by margin values.} \\
+		   \mathbf{3.} & \mbox{If upper constraint, return indices of
+		   $p$ most negative entries}. \\
+		   \mathbf{4.} & \mbox{If lower constraint, return indices of
+		   $p$ most positive entries}. \\
+		   \end{array}
 
 		Arguments:
-			y: Vector-like input data of length m.
-			had_slack (bool, optional): Define margin relative to
+			y: Vector-like input data of length ``m``.
+			had_slack (:obj:`bool`, optional): Define margin relative to
 				slack-modulated dose value instead of the base dose
-				value of this `PercentileConstraint`.
+				value of this :class:`PercentileConstraint`.
 
 		Returns:
-			`numpy.ndarray`: Vector of indices that yield the p entries
-				of `y` that fulfill this `PercentileConstraint` with the
-				greatest margin.
+			:class:`numpy.ndarray`: Vector of indices that yield the
+			``p`` entries of ``y`` that fulfill this
+			:class:`PercentileConstraint` with the greatest margin.
 		"""
 		fraction = self.percentile.fraction
 		non_viol = (1 - fraction) if self.upper else fraction
@@ -598,8 +616,8 @@ class MeanConstraint(Constraint):
 	"""
 	Mean dose constraint.
 
-	Extend base class `Constraint`. Express an upper or lower bound on
-	the mean dose to a structure.
+	Extend base class :class:`Constraint`. Express an upper or lower
+	bound on the mean dose to a structure.
 	"""
 	def __init__(self, relop=None, dose=None):
 		"""
@@ -607,9 +625,9 @@ class MeanConstraint(Constraint):
 
 		Arguments:
 			relop (optional): Sense of inequality. Expected to be
-				compatible with `Constraint.relop` setter.
+				compatible with :attr:`Constraint.relop` setter.
 			dose (optional): Dose bound. Expected to be compatible with
-				`Constraint.dose` setter.
+				:attr:`Constraint.dose` setter.
 		"""
 		Constraint.__init__(self)
 		if relop is not None:
@@ -620,7 +638,7 @@ class MeanConstraint(Constraint):
 
 	@property
 	def plotting_data(self):
-		""" Dictionary of `matplotlib`-compatible data. """
+		""" Dictionary of :mod:`matplotlib`-compatible data. """
 		return {'type': 'mean',
 			'dose' : [self.dose.value, self.dose_achieved.value],
 			'symbol' : self.symbol}
@@ -629,8 +647,8 @@ class MinConstraint(Constraint):
 	"""
 	Minimum dose constraint.
 
-	Extend base class `Constraint`. Express a lower bound on the minimum
-	dose to a structure.
+	Extend base class :class:`Constraint`. Express a lower bound on the
+	minimum dose to a structure.
 	"""
 	def __init__(self, relop=None, dose=None):
 		"""
@@ -638,9 +656,9 @@ class MinConstraint(Constraint):
 
 		Arguments:
 			relop (optional): Sense of inequality. Expected to be
-				compatible with `Constraint.relop` setter.
+				compatible with :attr:`Constraint.relop` setter.
 			dose (optional): Dose bound. Expected to be compatible with
-				`Constraint.dose` setter.
+				:attr:`Constraint.dose` setter.
 		"""
 		Constraint.__init__(self)
 		if relop is not None:
@@ -651,7 +669,7 @@ class MinConstraint(Constraint):
 
 	@property
 	def plotting_data(self):
-		""" Dictionary of `matplotlib`-compatible data. """
+		""" Dictionary of :mod:`matplotlib`-compatible data. """
 		return {'type': 'min',
 			'dose' : [self.dose.value, self.dose_achieved.value],
 			'symbol' : self.symbol}
@@ -660,7 +678,7 @@ class MaxConstraint(Constraint):
 	"""
 	Maximum dose constraint.
 
-	Extend base class `Constraint`. Express an upper bound on the
+	Extend base class :class:`Constraint`. Express an upper bound on the
 	maximum dose to a structure.
 	"""
 	def __init__(self, relop=None, dose=None):
@@ -669,9 +687,9 @@ class MaxConstraint(Constraint):
 
 		Arguments:
 			relop (optional): Sense of inequality. Expected to be
-				compatible with `Constraint.relop` setter.
+				compatible with :attr:`Constraint.relop` setter.
 			dose (optional): Dose bound. Expected to be compatible with
-				`Constraint.dose` setter.
+				:attr:`Constraint.dose` setter.
 		"""
 		Constraint.__init__(self)
 		if relop is not None:
@@ -682,7 +700,7 @@ class MaxConstraint(Constraint):
 
 	@property
 	def plotting_data(self):
-		""" Dictionary of `matplotlib`-compatible data. """
+		""" Dictionary of :mod:`matplotlib`-compatible data. """
 		return {'type': 'max',
 			'dose' :[self.dose.value, self.dose_achieved.value],
 			'symbol' : self.symbol}
@@ -693,20 +711,21 @@ def D(threshold, relop=None, dose=None):
 
 	Arguments:
 		threshold: Specify type of dose constraint; if real-valued or
-			of type `Percent`, parsed as a percentile constraint. If
-			string-valued, tentatively interpreted as a mean, minimum,
-			or maximum type dose constraint.
-		relop (optional): Sense of inequality. Expected to be
-			compatible with `Constraint.relop` setter.
+			of type :class:`Percent`, parsed as a percentile constraint.
+			If string-valued, tentatively interpreted as a mean,
+			minimum, or maximum type dose constraint.
+		relop (optional): Sense of inequality. Expected to be compatible
+			with :attr:`Constraint.relop` setter.
 		dose (optional): Dose bound. Expected to be compatible with
-			`Constraint.dose` setter.
+			:attr:`Constraint.dose` setter.
 
 	Returns:
-		`Constraint`: Return type depends on argument `threshold`.
+		:class:`Constraint`: Return type depends on argument
+		``threshold``.
 
 	Raises:
-		ValueError: If `threshold` does not conform to expected types or
-			formats.
+		ValueError: If ``threshold`` does not conform to expected types
+			or formats.
 
 	Examples:
 		>>> D('mean') > 30 * Gy
@@ -770,7 +789,7 @@ def D(threshold, relop=None, dose=None):
 
 class ConstraintList(object):
 	"""
-	Container for `Constraint` objects.
+	Container for :class:`Constraint` objects.
 
 	Attributes:
 		items (:obj:`dict`): Dictionary of constraints in container,
@@ -781,7 +800,7 @@ class ConstraintList(object):
 	"""
 	def __init__(self):
 		"""
-		Initialize bare `ConstraintList` container.
+		Initialize bare :class:`ConstraintList` container.
 
 		Arguments:
 			None
@@ -792,15 +811,15 @@ class ConstraintList(object):
 	@staticmethod
 	def __keygen(constraint):
 		"""
-		Build unique identifier for `constraint`.
+		Build unique identifier for ``constraint``.
 
 		Hash current time and constraint properties (dose, relop,
 		threshold) to generate unique identifier, take first seven
 		characters as a key with low probability of collision.
 
 		Arguments:
-			constraint (`Constraint`): Dose constraint to be assigned a
-				key.
+			constraint (:class:`Constraint`): Dose constraint to be
+				assigned a key.
 
 		Returns:
 			:obj:`str`: Seven character key.
@@ -840,20 +859,19 @@ class ConstraintList(object):
 		"""
 		Overload operator +=.
 
-		Enable syntax `ConstraintList` += `Constraint`.
+		Enable syntax :class:`ConstraintList` += :class:`Constraint`.
 
 		Arguments:
-			other: One or more `Constraint` objects to append to this
-				`ConstraintList`. May be an individual `Constraint`,
-				another `ConstraintList`, or a :obj:`list`, :obj:`dict`,
-				or :obj:`tuple` of `Constraint` objects.
+			other: Singleton, or iterable collection of
+				:class:`Constraint` objects to append to this
+				:class:`ConstraintList`.
 
 		Returns:
-			`ConstraintList`: Updated version of this object.
+			:class:`ConstraintList`: Updated version of this object.
 
 		Raises:
-			TypeError: If `other` is not a `Constraint` or iterable
-				collection of constraints.
+			TypeError: If ``other`` is not a :class:`Constraint` or
+				iterable collection of constraints.
 		"""
 		if isinstance(other, Constraint):
 			key = self.__keygen(other)
@@ -880,19 +898,20 @@ class ConstraintList(object):
 		Overload operator -=.
 
 		Enables syntaxes
-			`ConstraintList` -= `Constraint`, and
-			`ConstraintList` -= key.
+			:class:`ConstraintList` -= :class:`Constraint`, and
+			:class:`ConstraintList` -= ``key``.
 
-		Remove `other` from this `ConstraintList` if it is a key with
-		a corresponding `Constraint`, *or* if it is a `Constraint` for
-		which an exactly equivalent `Constraint` is found in the list.
+		Remove ``other`` from this :class:`ConstraintList` if it is a
+		key with a corresponding :class:`Constraint`, *or* if it is a
+		:class:`Constraint` for which an exactly equivalent
+		:class:`Constraint` is found in the list.
 
 		Arguments:
-			other: `Constraint` or key to a `Constraint` to be removed
-				from this `ConstraintList`.
+			other: :class:`Constraint` or key to a :class:`Constraint`
+				to be removed from this :class:`ConstraintList`.
 
 		Returns:
-			`ConstraintList`: Updated version of this object.
+			:class:`ConstraintList`: Updated version of this object.
 		"""
 		if isinstance(other, Constraint):
 			for key, constr in self.items.items():
@@ -916,13 +935,15 @@ class ConstraintList(object):
 
 	@property
 	def list(self):
-		""" `Constraint` objects in list. """
+		"""
+		:obj:`list` of :class:`Constraint` objects in :class:`ConstraintList`.
+		"""
 		return self.items.values()
 
 
 	@property
 	def mean_only(self):
-		""" True if list exclusively contains mean constraints. """
+		""" ``True`` if list exclusively contains mean constraints. """
 		meantest = lambda c : isinstance(c, MeanConstraint)
 		if self.size == 0:
 			return True
@@ -931,20 +952,20 @@ class ConstraintList(object):
 
 	def contains(self, constr):
 		"""
-		Test whether search constraint exists in this `ConstraintList`.
+		Test whether search :class:`Constraint` exists in this :class:`ConstraintList`.
 
 		Arguments:
-			constr (`Constraint`): Search term.
+			constr (:class:`Constraint`): Search term.
 
 		Returns:
-			bool: True if a `Constraint` equivalent to `constr` found in
-				this `ConstraintList`.
+			:obj:`bool`: ``True`` if a :class:`Constraint` equivalent to
+			``constr`` found in this :class:`ConstraintList`.
 		"""
 		return constr in self.items.values()
 
 	def clear(self):
 		"""
-		Clear constraints from `ConstraintList`.
+		Clear constraints from :class:`ConstraintList`.
 
 		Arguments:
 			None
@@ -957,7 +978,7 @@ class ConstraintList(object):
 	@property
 	def plotting_data(self):
 		"""
-		List of `matplotlib`-compatible plotting data for all constraints.
+		List of :mod:`matplotlib`-compatible data for all constraints.
 		"""
 		return [(key, dc.plotting_data) for key, dc in self.items.items()]
 
@@ -972,49 +993,50 @@ class DVH(object):
 	"""
 	Representation of a dose volume histogram.
 
-	Given a vector of doses, the `DVH` object generates the
+	Given a vector of doses, the :class:`DVH` object generates the
 	corresponding dose volume histogram (DVH).
 
 	A DVH is associated with a planning structure, which will have a
 	finite volume or number of voxels. A DVH curve (or graph) is a set
-	of points (d, p), with p in the interval [0, 100], where for each
-	dose level d, the value p gives the percent of voxels in the
-	associated structure receiving a radiation dose >= d.
+	of points :math:`(d, p)`---with :math:`p` in the interval
+	:math:`[0, 100]`--where for each dose level :math:`d`, the value
+	:math:`p` gives the percent of voxels in the associated structure
+	receiving a radiation dose :math:`\ge d`.
 
 	Sampling is performed if necessary to keep data series length short
 	enough to be conveniently transmitted (e.g., as part of an
-	interactive user interface) and plotted (e.g., with `matplotlib`
-	utilities) with low latency.
+	interactive user interface) and plotted (e.g., with
+	:mod:`matplotlib` utilities) with low latency.
 
 	Note that the set of (dose, percentile) pairs are maintained as
 	two sorted, length-matched, vectors of dose and percentile values,
 	respectively.
 
 	Attributes:
-		MAX_LENGTH (int): Default maximum length constant to use when
-			constructing and possibly sampling DVH cures.
+		MAX_LENGTH (:obj:`int`): Default maximum length constant to use
+			when constructing and possibly sampling DVH cures.
 	"""
 	MAX_LENGTH = 1000
 
 	def __init__(self, n_voxels, maxlength=MAX_LENGTH):
 		"""
-		Initialize a `DVH` object. Set sizes of full dose data for
-		associated structure, as well as a practical, maximum size to
-		sample down to if necessary.
+		Initialize :class:`DVH`.
+
+		Set sizes of full dose data for associated structure, as well as
+		a practical, maximum size to sample down to if necessary.
 
 		Arguments:
-			n_voxels (int): Number of voxels in the structure associated
-				with this `DVH`.
-			maxlength (int, optional): Maximum series length, above
-				which data will be sampled to maintain a suitably short
-				representation of the DVH.
+			n_voxels (:obj:`int`): Number of voxels in the structure
+				associated with this :class:`DVH`.
+			maxlength (:obj:`int`, optional): Maximum series length,
+				above which data will be sampled to maintain a suitably
+				short representation of the DVH.
 
 		Raises:
-			ValueError: If `n_voxels` is not and integer valued 1 or
-				greater.
+			ValueError: If ``n_voxels`` is not an :obj:`int` >= `1`.
 		"""
 		if n_voxels is None or n_voxels is nan or n_voxels < 1:
-			raise ValueError('argument "n_voxels" must be an integer > 1')
+			raise ValueError('argument "n_voxels" must be an integer > 0')
 
 		self.__dose_buffer = zeros(int(n_voxels))
 		self.__stride = 1 * (n_voxels < maxlength) + int(n_voxels / maxlength)
@@ -1042,8 +1064,8 @@ class DVH(object):
 
 		Raises:
 			ValueError: If size of input data does not match size of
-			structure associated with `DVH` as specified to object
-			initializer.
+			structure associated with :class:`DVH` as specified to
+			object initializer.
 		"""
 		return self.__doses[1:]
 
@@ -1067,23 +1089,28 @@ class DVH(object):
 
 	@staticmethod
 	def __interpolate_percentile(p1, p2, p_des):
-		"""
-		Get alpha such that: alpha * `p1` + (1-alpha) * `p2` == `p_des`.
+		r"""
+		Get ``alpha`` such that:
+
+		:math: alpha * `p1` + (1-alpha) * `p2` = `p_des`.
 
 		Arguments:
-			p1 (float): First endpoint of interval (`p1`, `p2`).
-			p2 (float): Second endpoint of interval (`p1`, `p2`).
-			p_des (float): Desired percentile. Should be contained in
-				interval (`p1`, `p2`) for this method to be a linear
-				interpolation.
+			p1 (:obj:`float`): First endpoint of interval (``p1``,
+				``p2``).
+			p2 (:obj:`float`): Second endpoint of interval (``p1``,
+				``p2``).
+			p_des (:obj:`float`): Desired percentile. Should be
+				contained in interval (``p1``, ``p2``) for this method
+				to be a linear interpolation.
 
 		Returns:
-			float: Value "alpha" such that linear combination
-			alpha * `p1` + (1 - alpha) * `p2` yields `p_des`.
+			float: Value ``alpha`` such that linear combination
+			``alpha`` * ``p1`` + ``(1 - alpha)`` * ``p2`` yields
+			``p_des``.
 
 		Raises:
-			ValueError: If request is ill-posed because `p1` and `p2`
-				coincide, but `p_des` is a different value.
+			ValueError: If request is ill-posed because ``p1`` and
+				``p2`` coincide, but ``p_des`` is a different value.
 		"""
 
 		if p1 == p2 and p_des == p1:
@@ -1100,11 +1127,11 @@ class DVH(object):
 
 	def dose_at_percentile(self, percentile):
 		"""
-		Read off DVH curve to get dose value at `percentile`.
+		Read off DVH curve to get dose value at ``percentile``.
 
-		Since the `DVH` object maintains the DVH curve of
+		Since the :class:`DVH` object maintains the DVH curve of
 		(dose, percentile) pairs as two sorted vectors, to approximate
-		the the dose d at percentile `percentile`, we retrieve the
+		the the dose d at percentile ``percentile``, we retrieve the
 		index i that yields the nearest percentile value. The
 		corresponding i'th dose is returned. When the nearest percentile
 		is not within 0.5%, the two nearest neighbor percentiles and
@@ -1112,13 +1139,14 @@ class DVH(object):
 		dose at the queried percentile by linear interpolation.
 
 		Arguments:
-			Percentile (int, float or `Percent`): Queried percentile for
-				which to retrieve corresponding dose level.
+			Percentile (:obj:`int`, :obj:`float` or :class:`Percent`):
+				Queried percentile for which to retrieve corresponding
+				dose level.
 
 		Returns:
 			Dose value from DVH curve corresponding to queried
-				percentile, or `nan` if the curve has not been populated
-				with data.
+			percentile, or :attr:`~numpy.nan` if the curve has not been
+			populated with data.
 		"""
 		if isinstance(percentile, Percent):
 			percentile = percentile.value
@@ -1182,5 +1210,5 @@ class DVH(object):
 
 	@property
 	def plotting_data(self):
-		""" Dictionary of `matplotlib`-compatible plotting data. """
+		""" Dictionary of :mod:`matplotlib`-compatible plotting data. """
 		return {'percentile' : self.__percentiles, 'dose' : self.__doses}

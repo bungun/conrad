@@ -1,4 +1,7 @@
 """
+Unit tests for :mod:`conrad.optimization.solver_optkit`.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.

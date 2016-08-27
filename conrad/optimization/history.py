@@ -1,7 +1,8 @@
 """
 Define classes used to record solver inputs/outputs and maintain a
 treatment planning history.
-
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -19,22 +20,22 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-from numpy import nan
-
 from conrad.compat import *
+
+from numpy import nan
 
 class RunProfile(object):
 	"""
 	Record of solver input associated with a treatment planning run.
 
 	Attributes:
-		use_slack (bool): True if solver allowed to construct convex
-			problem with slack variables for each dose constraint.
-		use_2pass (bool): True if solver requested to construct and
-			solve two problems, one incorporating convex restrictions
-			of all percentile-type dose constraints, and a second
-			problem formulating exact constraints based on the feasible
-			output of the first solver run.
+		use_slack (:obj:`bool`): ``True`` if solver allowed to construct
+			convex problem with slack variables for each dose constraint.
+		use_2pass (:obj:`bool`): ``True`` if solver requested to
+			construct and solve two problems, one incorporating convex
+			restrictions of all percentile-type dose constraints, and a
+			second problem formulating exact constraints based on the
+			feasible output of the first solver run.
 		objectives (:obj:`dict`): Dictionary of objective data
 			associated with each structure in plan, keyed by structure
 			labels.
@@ -51,12 +52,12 @@ class RunProfile(object):
 		Initialize and populate a `RunProfile`.
 
 		Arguments:
-			structures (:obj:`list` of `Structure`, optional): List of
-				structures (with attached dose constraints) supplied to
+			structures: Iterable collection of
+				:class:`~conrad.medicine.Structure` objects supplied to
 				solver.
-			use_slack (bool, optional): True if request to solver
+			use_slack (:obj:`bool`, optional): ``True`` if request to solver
 				allowed slacks on dose constraints.
-			use_2pass (bool, optional): True if two-pass planning with
+			use_2pass (:obj:`bool`, optional): ``True`` if two-pass planning with
 				exact dose constraints requested of solver.
 			gamma (optional): Slack penalty scaling supplied to solver.
 		"""
@@ -79,18 +80,16 @@ class RunProfile(object):
 
 	def pull_objectives(self, structures):
 		"""
-		Extract and store dictionaries of objective data from `structures`.
+		Extract and store dictionaries of objective data from ``structures``.
 
 		Arguments:
 			structures: Iterable collection of
-				`conrad.medicine.Structure` objects.
+				:class:`~conrad.medicine.Structure` objects.
 
 		Returns:
 			None
 		"""
-		if isinstance(structures, dict):
-			structures = structures.values()
-		for s in structures:
+		for _, s in enumerate(structures):
 			self.objectives[s.label] = {
 				'label' : s.label,
 				'name' : s.name,
@@ -101,11 +100,11 @@ class RunProfile(object):
 
 	def pull_constraints(self, structures):
 		"""
-		Extract and store dictionaries of constraint data from `structures`.
+		Extract and store dictionaries of constraint data from ``structures``.
 
 		Arguments:
 			structures: Iterable collection of
-				`conrad.medicine.Structure` objects.
+				:class:`~conrad.medicine.Structure` objects.
 
 		Returns:
 			None
@@ -129,10 +128,12 @@ class RunOutput(object):
 			returned by solver. At a minimum, has entries for the beam
 			intensity vectors for the first-pass and second-pass solver
 			runs. May include entries for:
+
 				- x (beam intensities),
 				- y (voxel doses),
 				- mu (dual variable for constraint x>= 0), and
 				- nu (dual variable for constraint Ax == y).
+
 		optimal_dvh_slopes (:obj:`dict`): Dictionary of optimal slopes
 			associated with the convex restriction of each
 			percentile-type dose constraint. Keyed by constraint ID.
@@ -173,11 +174,11 @@ class RunOutput(object):
 class RunRecord(object):
 	"""
 	Attributes:
-		profile (`RunProfile`): Record of the objective weights,
+		profile (:class:`RunProfile`): Record of the objective weights,
 			dose constraints, and relevant solver options passed to the
 			convex solver prior to planning.
-		output (`RunOutput`): Output from the solver, including optimal
-			beam intensities, i.e., the treatment plan.
+		output (:class:`RunOutput`): Output from the solver, including
+			optimal beam intensities, i.e., the treatment plan.
 		plotting_data (:obj:`dict`): Dictionary of plotting data from
 			case, with entries corresponding to the first (and
 			potentially only) plan formed by the solver, as well as
@@ -188,20 +189,20 @@ class RunRecord(object):
 	def __init__(self, structures=None, use_slack=True, use_2pass=False,
 				 gamma='default'):
 		"""
-		Initialize `RunRecord`.
+		Initialize :class:`RunRecord`.
 
-		Pass optional arguments to build `RunRecord.profile`. Initialize
-		(but do not populate) the `RunRecord.output` and
-		`RunRecord.plotting_data` fields.
+		Pass optional arguments to build :attr:`RunRecord.profile`.
+		Initialize (but do not populate) :attr:`RunRecord.output` and
+		:attr:`RunRecord.plotting_data`.
 
 		Arguments:
-			structures (:obj:`list` of `Structure`, optional): List of
-				structures (with attached dose constraints) supplied to
+			structures: Iterable collection of
+				:class:`~conrad.medicine.Structure` objects.
+			use_slack (:obj:`bool`, optional): ``True`` if request to
+				solver allowed slacks on dose constraints.
+			use_2pass (:obj:`bool`, optional): ``True`` if two-pass
+				planning with exact dose constraints requested of
 				solver.
-			use_slack (bool, optional): True if request to solver
-				allowed slacks on dose constraints.
-			use_2pass (bool, optional): True if two-pass planning with
-				exact dose constraints requested of solver.
 			gamma (optional): Slack penalty scaling supplied to solver.
 		"""
 		self.profile = RunProfile(
@@ -234,12 +235,12 @@ class RunRecord(object):
 
 	@property
 	def x_pass1(self):
-		""" Alias for `RunRecord.x`. """
+		""" Alias for :attr:`RunRecord.x`. """
 		return self.x
 
 	@property
 	def x_pass2(self):
-		""" Alias for `RunRecord.x_exact`. """
+		""" Alias for :attr:`RunRecord.x_exact`. """
 		return self.x_exact
 
 	@property
@@ -266,13 +267,13 @@ class RunRecord(object):
 
 class PlanningHistory(object):
 	"""
-	Class for tracking treatment plans generated by a `conrad.Case`.
+	Class for tracking treatment plans generated by a :class:`~conrad.Case`.
 
 	Attributes:
-		runs (:obj:`list` of `RunRecord`): List of treatment plans in
-			history, in chronological order.
+		runs (:obj:`list` of :class:`RunRecord`): List of treatment
+			plans in history, in chronological order.
 		run_tags (:obj:`dict`): Dictionary mapping tags of named plans
-			to their respective indices in `PlanningHistory.runs`
+			to their respective indices in :attr:`PlanningHistory.runs`
 	"""
 
 	def __init__(self):
@@ -291,13 +292,13 @@ class PlanningHistory(object):
 				of a plan in the history's list of plans.
 
 		Returns:
-			`RunRecord`: Record of solver inputs and outputs from
-				requested treatment planning run.
+			:class:`RunRecord`: Record of solver inputs and outputs from
+			requested treatment planning run.
 
 		Raises:
-			ValueError: If `key` is neither the key to a tagged run nor
-				a positive integer than or equal to the number of plans
-				in the history.
+			ValueError: If ``key`` is neither the key to a tagged run
+				nor a positive integer than or equal to the number of
+				plans in the history.
 
 		"""
 		if key in self.run_tags:
@@ -318,17 +319,18 @@ class PlanningHistory(object):
 		"""
 		Overload operator +=.
 
-		Extend case history by appending `other` to
-		`PlanningHistory.runs`.
+		Extend case history by appending ``other`` to
+		:attr:`PlanningHistory.runs`.
 
 		Arguments:
-			other (`RunRecord`): Treatment plan to append to history.
+			other (:class:`RunRecord`): Treatment plan to append to
+				history.
 
 		Returns:
-			Updated `PlanningHistory` object.
+			Updated :class:`PlanningHistory` object.
 
 		Raises:
-			TypeError: If `other` not of type `RunRecord`.
+			TypeError: If ``other`` not of type :class:`RunRecord`.
 
 		"""
 		if isinstance(other, RunRecord):
@@ -353,7 +355,7 @@ class PlanningHistory(object):
 
 		Raises:
 			AttributeError: If no treatment plans exist in history,
-				i.e., `PlanningHistory.runs` has length zero.
+				i.e., :attr:`PlanningHistory.runs` has length zero.
 		"""
 		if len(self.runs) == 0:
 			raise AttributeError('no optimization runs performed, '
@@ -404,7 +406,7 @@ class PlanningHistory(object):
 			tag: Name to apply to most recently added treatment plan.
 				Plan can then be retrieved with slicing syntax::
 
-					# (history is a PlanningHistory object)
+					# (history is a :class:`PlanningHistory` instance)
 					history[tag]
 
 		Returns:

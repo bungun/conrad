@@ -1,4 +1,7 @@
 """
+Unit tests for :mod:`conrad.optimization.problem`.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -16,9 +19,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 import numpy as np
 
-from conrad.compat import *
 from conrad.defs import module_installed
 from conrad.physics.units import Gy
 from conrad.medicine import Structure, Anatomy

@@ -1,4 +1,7 @@
 """
+Unit tests for :mod:`conrad.optimization.history`.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -16,10 +19,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from os import path
 from numpy import ndarray
 
-from conrad.compat import *
 from conrad.medicine import Prescription
 from conrad.optimization.history import *
 from conrad.tests.base import *

@@ -1,5 +1,5 @@
 """
-Define `Structure` class, building block of `conrad.medicine.Anatomy`.
+Define :class:`Structure`, building block of :class:`~conrad.medicine.Anatomy`.
 
 Attributes:
 	W_UNDER_DEFAULT (float): Default objective weight for underdose
@@ -8,7 +8,8 @@ Attributes:
 		penalty on non-target structures.
 	W_NONTARG_DEFAULT (float): Default objective weight for overdose
 		penalty on non-target structures.
-
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -26,10 +27,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from numpy import ndarray, array, squeeze, zeros, ones, nan
 from scipy.sparse import csr_matrix, csc_matrix
 
-from conrad.compat import *
 from conrad.defs import CONRAD_DEBUG_PRINT, positive_real_valued, \
 						sparse_or_dense, vec
 from conrad.physics.units import cm3, Gy, DeliveredDose
@@ -42,9 +44,9 @@ W_NONTARG_DEFAULT = 0.025
 
 class Structure(object):
 	"""
-	The `Structure` object manages the dose information (including
-	dose influence matrix, dose calculation and dose volume histogram),
-	as well as optimization objective information---including dose
+	:class:`Structure` manages the dose information (including the dose
+	influence matrix, dose calculations and dose volume histogram), as
+	well as optimization objective information---including dose
 	constraints---for a set of voxels (volume elements) in the patient
 	volume to be treated as a logically homogeneous unit with respect to
 	the optimization process.
@@ -66,11 +68,11 @@ class Structure(object):
 	to both an underdose and an overdose penalty.
 
 	Attributes:
-		label: (int or :obj:`str`): Label, applied to each voxel in the
-			structure, usually generated during CT contouring step in
-			the clinical workflow for treatment planning.
+		label: (:obj:`int` or :obj:`str`): Label, applied to each voxel
+			in the structure, usually generated during CT contouring
+			step in the clinical workflow for treatment planning.
 		name (:obj:`str`): Clinical or anatomical name.
-		is_target (bool): True if structure is a target.
+		is_target (:obj:`bool`): ``True`` if structure is a target.
 		dvh (:class:`DVH`): Dose volume histogram.
 		constraints (:class:`ConstraintList`): Mutable collection of
 			dose constraints to be applied to structure during
@@ -79,20 +81,20 @@ class Structure(object):
 		 """
 	def __init__(self, label, name, is_target, size=None, **options):
 		"""
-		Description.
+		Initialize target/non-target :class:`Structure` with label and name.
 
 		Arguments:
-			label (int or :obj:`str`): Structure label.
-			name: Name of structure (e.g., "PTV", "body", or
-				"spinal cord").
-			is_target (bool): True if structure is intended to receive
-				a non-zero dose level during treatment.
-			size (int, optional): Number of voxels (volume elements) in
-				structure.
+			label (:obj:`int` or :obj:`str`): Structure label.
+			name: Name of structure (e.g., 'PTV', 'body', or
+				'spinal cord').
+			is_target (:obj:`bool`): ``True`` if structure is intended
+				to receive a non-zero dose level during treatment.
+			size (:obj:`int`, optional): Number of voxels (volume
+				elements) in structure.
 			**options: Arbitrary keyword arguments.
 
 		Raises:
-			TypeError: If `label` is not an `int` or `str`.
+			TypeError: If ``label`` is not an :obj:`int` or :obj:`str`.
 		"""
 		# basic information
 		if not isinstance(label, (int, str)):
@@ -154,7 +156,7 @@ class Structure(object):
 		Structure size (i.e., number of voxels in structure).
 
 		Raises:
-			ValueError: If `size` not an int.
+			ValueError: If ``size`` not an :obj:`int`.
 		"""
 		return self.__size
 
@@ -170,13 +172,13 @@ class Structure(object):
 			self.voxel_weights = ones(self.size)
 
 	def reset_matrices(self):
-		""" Reset structure's dose and mean dose matrices to `None` """
+		""" Reset structure's dose and mean dose matrices to ``None`` """
 		self.__A_full = None
 		self.__A_mean = None
 
 	@property
 	def collapsable(self):
-		""" True if optimization can be performed with mean dose only. """
+		""" ``True`` if optimization can be performed with mean dose only. """
 		return self.constraints.mean_only and not self.is_target
 
 	@property
@@ -185,16 +187,18 @@ class Structure(object):
 		Full dose matrix (dimensions = voxels x beams).
 
 		Setter method will perform two additional tasks:
-			- If `Structure.size` is not set, set it based on number of
-				rows in `A_full`.
-			- Trigger `Structure.A_mean` to be calculated from
-				`Structure.A_full`.
+			- If :attr:`Structure.size` is not set, set it based on
+				number of rows in ``A_full``.
+			- Trigger :attr:`Structure.A_mean` to be calculated from
+				:attr:`Structure.A_full`.
 
 		Raises:
-			TypeError: If `A_full` is not a matrix in `ndarray`,
-				`csc_matrix`, or `sparse.csr_matrix` format.
-			ValueError: If `Structure.size` is set, and the number of
-				rows in `A_full` does not match `Structure.size`.
+			TypeError: If ``A_full`` is not a matrix in
+				:class:`ndarray`, :class:`csc_matrix`, or
+				:class:`csr_matrix` formats.
+			ValueError: If :attr:`Structure.size` is set, and the number
+				of rows in ``A_full`` does not match
+				:attr:`Structure.size`.
 		"""
 		return self.__A_full
 
@@ -225,22 +229,22 @@ class Structure(object):
 	@property
 	def A_mean(self):
 		"""
-		Mean dose matrix (dimensions = 1 x beams).
+		Mean dose matrix (dimensions = ``1`` x ``beams``).
 
-		Setter expects a one dimensional `ndarray` representing the
-		mean dose matrix for the structure. If this optional argument
-		is not provided, the method will attempt to calculate the mean
-		dose from `Structure.A_full`.
+		Setter expects a one dimensional :class:`ndarray` representing
+		the mean dose matrix for the structure. If this optional
+		argument is not provided, the method will attempt to calculate
+		the mean dose from :attr:`Structure.A_full`.
 
 		Raises:
-			TypeError: If `A_mean` providded and not of type `ndarray`,
-				*or* if mean dose matrix is to be calculated from
-				`Structure.A_full`, but full dose matrix is not a
-				`ndarray`, `csr_matrix` or `csc_matrix`.
-			ValueError: If `A_mean` is not dimensioned as a row or
-				column vector, or number of beams implied by `A_mean`
+			TypeError: If ``A_mean`` provided and not of type
+				:class:`ndarray`, *or* if mean dose matrix is to be
+				calculated from :attr:`Structure.A_full`, but full dose
+				matrix is not a :mod:`conrad`-recognized matrix type.
+			ValueError: If ``A_mean`` is not dimensioned as a row or
+				column vector, or number of beams implied by ``A_mean``
 				conflicts with number of beams implied by
-				`Structure.A_full`.
+				:attr:`Structure.A_full`.
 		 """
 		return self.__A_mean
 
@@ -277,7 +281,7 @@ class Structure(object):
 
 	@property
 	def A(self):
-		""" Alias for `Structure.A_full`. """
+		""" Alias for :attr:`Structure.A_full`. """
 		return self.__A_full
 
 	@property
@@ -285,15 +289,15 @@ class Structure(object):
 		"""
 		Voxel weights, or relative volumes of voxels.
 
-		The voxel weights are the 1 vector if the structure volume is
-		regularly discretized, and some other set of integer values if
-		voxels are clustered.
+		The voxel weights are the ``1`` vector if the structure volume
+		is regularly discretized, and some other set of integer values
+		if voxels are clustered.
 
 		Raises:
-			ValueError: If `Structure.voxel_weights` setter called
-				before `Structure.size` is defined, or if length of
-				input does not match `Structure.size`, or if any of the
-				provided weights are negative.
+			ValueError: If :attr:`Structure.voxel_weights` setter called
+				before :attr:`Structure.size` is defined, or if length
+				of input does not match :attr:`Structure.size`, or if
+				any of the provided weights are negative.
 		"""
 		return self.__voxel_weights
 
@@ -317,23 +321,25 @@ class Structure(object):
 
 		Arguments:
 			constr_id (:obj:`str`): Key to a constraint in
-				`Structure.constraints`.
+				:attr:`Structure.constraints`.
 			threshold (optional): Percentile threshold to assign if
-				queried constraint is of type `PercentileConstraint`,
-				no-op otherwise. Must be compatible with the setter
-				method for `PercentileConstraint.percentile`.
+				queried constraint is of type
+				:class:`PercentileConstraint`, no-op otherwise. Must be
+				compatible with the setter method for
+				:attr:`PercentileConstraint.percentile`.
 			relop (optional): Inequality constraint sense. Must be
 				compatible with the setter method for
-				`Constraint.relop`.
+				:attr:`Constraint.relop`.
 			dose (optional): Constraint dose. Must be compatible with
-				setter method for `Constraint.dose`.
+				setter method for :attr:`Constraint.dose`.
 
 		Returns:
 			None
 
 		Raises:
-			ValueError: If `constr_id` is not the key to a constraint in
-				the `Constraintlist` located at `Structure.constraints`.
+			ValueError: If ``constr_id`` is not the key to a constraint
+				in the :class:`Constraintlist` located at
+				:attr:`Structure.constraints`.
 		"""
 		if constr_id in self.constraints.items:
 			if isinstance(self.constraints[constr_id], PercentileConstraint) \
@@ -354,24 +360,24 @@ class Structure(object):
 		Dose level targeted in structure's optimization objective.
 
 		The dose has two components: the precribed dose,
-		`Structure.dose_rx`, and a multiplicative adjustment factor,
-		`Structure.boost`.
+		:attr:`Structure.dose_rx`, and a multiplicative adjustment
+		factor, :attr:`Structure.boost`.
 
 		Once the structure's dose has been initialized, setting
-		`Structure.dose` will change the adjustment factor. This is to
-		distinguish (and allow for differences) between the dose level
-		prescribed to a structure by a clinician and the dose level
-		request to a numerical optimization algorithm that yields a
-		desirable distribution, since the latter may require some
+		:attr:`Structure.dose` will change the adjustment factor. This
+		is to distinguish (and allow for differences) between the dose
+		level prescribed to a structure by a clinician and the dose
+		level request to a numerical optimization algorithm that yields
+		a desirable distribution, since the latter may require some
 		offset relative to the former. To change the reference dose
-		level, use the `Structure.dose_rx` setter.
+		level, use the :attr:`Structure.dose_rx` setter.
 
 		Setter is no-op for non-target structures, since zero dose is
 		prescribed always.
 
 		Raises:
 			TypeError: If requested dose does not have units of
-				`DeliveredDose`.
+				:class:`DeliveredDose`.
 			ValueError: If zero dose is requested to a target structure.
 		"""
 		return self.boost * self.__dose
@@ -402,8 +408,8 @@ class Structure(object):
 		"""
 		Prescribed dose level.
 
-		Setting this field sets `Structure.dose` to the requested value
-		and `Structure.boost` to one.
+		Setting this field sets :attr:`Structure.dose` to the requested
+		value and :attr:`Structure.boost` to ``1``.
 		"""
 		return self.__dose
 
@@ -414,7 +420,9 @@ class Structure(object):
 
 	@property
 	def dose_unit(self):
-		""" One times the `DeliveredDose` unit of the structure dose. """
+		"""
+		One times the :class:`DeliveredDose` unit of the structure dose.
+		"""
 		u = 1 * self.__dose
 		u.value = 1
 		return u
@@ -428,8 +436,8 @@ class Structure(object):
 		raw weight.
 
 		Raises:
-			TypeError: If `w_under` not `int` or `float`.
-			ValueError: If `w_under` negative.
+			TypeError: If ``w_under`` not :obj:`int` or :obj:`float`.
+			ValueError: If ``w_under`` negative.
 		"""
 		if not positive_real_valued(self.size):
 			return nan
@@ -466,8 +474,8 @@ class Structure(object):
 		raw weight.
 
 		Raises:
-			TypeError: If `w_under` not `int` or `float`.
-			ValueError: If `w_under` negative.
+			TypeError: If ``w_over`` not :obj:`int` or :obj:`float`.
+			ValueError: If ``w_over`` negative.
 		"""
 		if not positive_real_valued(self.size):
 			return nan
@@ -492,12 +500,12 @@ class Structure(object):
 		return self.__w_over
 
 	def calculate_dose(self, beam_intensities):
-		""" Alias for `Structure.calc_y`. """
+		""" Alias for :meth:`Structure.calc_y`. """
 		self.calc_y(beam_intensities)
 
 	def calc_y(self, x):
 		"""
-		Calculate voxel doses as `Structure.y` = `Structure.A` * `x`.
+		Calculate voxel doses as :attr:`Structure.y` = :attr:`Structure.A` * ``x``.
 
 		Arguments:
 			x: Vector-like input of beam intensities.
@@ -547,19 +555,19 @@ class Structure(object):
 
 	def satisfies(self, constraint):
 		"""
-		Test whether structure's voxel doses satisfy `constraint`.
+		Test whether structure's voxel doses satisfy ``constraint``.
 
 		Arguments:
-			constraint (`Constraint`): Dose constraint to test against
-				structure's voxel doses.
+			constraint (:class:`Constraint`): Dose constraint to test
+				against structure's voxel doses.
 
 		Returns:
-			bool: True if structure's voxel doses conform to the queried
-				constraint.
+			:obj:`bool`: ``True`` if structure's voxel doses conform to
+			the queried	constraint.
 
 		Raises:
-			TypeError: If `constraint` not of type `Constraint`.
-			ValueError: If `Structure.dvh` not initialized or not
+			TypeError: If ``constraint`` not of type :class:`Constraint`.
+			ValueError: If :attr:`Structure.dvh` not initialized or not
 				populated with dose data.
 		"""
 		if self.dvh is None:
@@ -603,7 +611,7 @@ class Structure(object):
 	@property
 	def plotting_data(self):
 		"""
-		Dictionary of `matplotlib`-compatible plotting data.
+		Dictionary of :mod:`matplotlib`-compatible plotting data.
 
 		Data includes DVH curve, constraints, and prescribed dose.
 	 	"""
@@ -648,7 +656,7 @@ class Structure(object):
 
 	@property
 	def __constr_string(self):
-		""" String of constraints attached to `Structure`. """
+		""" String of constraints attached to :class:`Structure`. """
 		out = ''
 		for key in self.constraints.items:
 			out += self.constraints[key].__str__()

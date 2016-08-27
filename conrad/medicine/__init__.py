@@ -1,7 +1,8 @@
 """
-Export frequently used methods and classes to `conrad.medicine`
+Export frequently used methods and classes to :mod:`conrad.medicine`
 namespace.
-
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.

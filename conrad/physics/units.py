@@ -1,25 +1,26 @@
 """
-Define physical units used throughout CONRAD.
+Define physical units used throughout :mod:`conrad`.
 
-Each unit derives from the `AbstractNonnegativeUnit` base class, and
-is represented as an object with overloaded operators to support syntax
-allowing intuitive unit manipulation, i.e.,
+Each unit derives from the :class:`AbstractNonnegativeUnit` base class,
+and is represented as an object with overloaded operators to support
+syntax allowing intuitive unit manipulation, i.e.,
 
 	$ (2 * MM()) * (2 * MM())
 
-yields a `MM2` object with a `MM2.value` of 4.
+yields a :class:`MM2` object with :attr:`MM2.value`=``4``.
 
 Attributes:
-	mm: Exported instance of `MM` object.
-	mm2: Exported instance of `MM2` object.
-	mm3: Exported instance of `MM3` object.
-	cm: Exported instance of `CM` object.
-	cm2: Exported instance of `CM2` object.
-	cm3: Exported instance of `CM3` object.
-	percent: Exported instance of `Percent` object.
-	Gy: Exported instance of `Gray` object.
-	cGy: Exported instance of `centiGray` object.
-
+	mm: Exported instance of :class:`MM`.
+	mm2: Exported instance of :class:`MM2`.
+	mm3: Exported instance of :class:`MM3`.
+	cm: Exported instance of :class:`CM`.
+	cm2: Exported instance of :class:`CM2`.
+	cm3: Exported instance of :class:`CM3`.
+	percent: Exported instance of :class:`Percent`.
+	Gy: Exported instance of :class:`Gray`.
+	cGy: Exported instance of :class:`centiGray`.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -37,8 +38,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-from numpy import nan
 from conrad.compat import *
+
+from numpy import nan
 
 class AbstractNonnegativeUnit(object):
 	""" Base class for physical units """
@@ -48,8 +50,8 @@ class AbstractNonnegativeUnit(object):
 		Initializer for unit object.
 
 		Arguments:
-			value (float): Initial value, as multiple of the object's
-				unit type.
+			value (:obj:`float`): Initial value, as multiple of the
+				object's unit type.
 		"""
 		self.__value = nan
 		self.value = value
@@ -60,7 +62,8 @@ class AbstractNonnegativeUnit(object):
 	 	Multiple of object's physical units.
 
 		Raises:
-			TypeError: If argument to setter is not `int` or `float`.
+			TypeError: If argument to setter is not :obj:`int` or
+				:obj:`float`.
 			ValueError: If argument to setter is negative.
 		"""
 		return self.__value
@@ -76,15 +79,15 @@ class AbstractNonnegativeUnit(object):
 			self.__value = float(value)
 
 class Percent(AbstractNonnegativeUnit):
-	""" Extend `AbstractNonnegativeUnit` to make percent units. """
+	""" Specialize :obj:`AbstractNonnegativeUnit` to percent units. """
 
 	def __init__(self, value=nan):
-		""" Initialize `Percent` object as `AbstractNonnegativeUnit`. """
+		""" Initialize :obj:`Percent` as :obj:`AbstractNonnegativeUnit`. """
 		AbstractNonnegativeUnit.__init__(self, value=value)
 
 	@property
 	def fraction(self):
-		""" 1/100th of `Percent.value`. """
+		""" 1/100th of :attr:`Percent.value`. """
 		return self.value / 100.
 
 	@fraction.setter
@@ -95,13 +98,16 @@ class Percent(AbstractNonnegativeUnit):
 		"""
 		Overload right multiplication.
 
+		Multiplies :attr:`Percent.value` by ``other``. If
+		:attr:`Percent.value` is ``nan`` (i.e., unintialized) at call
+		time, the returned :class:`Percent` has value set to `other`.
+
 		Arguments:
-			other: Nonnegative scalar to right multiply by `Percent.`
+			other: Nonnegative scalar to right multiply by
+				:class:`Percent.`
 
 		Returns:
-			`Percent`: Percent object with value set to original value
-				times `other`. If original value is `nan` (i.e.,
-				uninitialized), value of returned object set to `other`.
+			:class:`Percent`: Product of multiplication.
 		"""
 		ret = Percent(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
@@ -112,14 +118,15 @@ class Percent(AbstractNonnegativeUnit):
 		Overload operator +.
 
 		Arguments:
-			other: Scalar or `Percent` to add to this object's value.
+			other: Scalar or :class:`Percent` to add to this object's
+				value.
 
 		Returns:
-			`Percent`: Updated version of this `Percent` object.
+			:class:`Percent`: Updated version of this :class:`Percent`.
 
 		Raises:
-			TypeError: If `other` is not of type `int`, `float` or
-				`Percent`.
+			TypeError: If ``other`` is not of type :obj:`int`,
+				:obj:`float` or :class:`Percent`.
 		"""
 		if not isinstance(other, (int, float, Percent)):
 			raise TypeError('addition with {} object only defined when right '
@@ -141,13 +148,14 @@ class Percent(AbstractNonnegativeUnit):
 		Overload operator ==.
 
 		Arguments:
-			other (`Percent`): Compared value.
+			other (:class:`Percent`): Compared percentage.
 
 		Returns:
-			True if `other` and `self` contain equal values.
+			:obj:`bool`: ``True`` if ``other`` and ``self`` contain
+			equal values.
 
 		Raises:
-			TypeError: If compared value not of type `Percent`.
+			TypeError: If compared value not of type :class:`Percent`.
 		"""
 		if not isinstance(other, Percent):
 			raise TypeError('equality comparison with {} object only defined '
@@ -160,9 +168,11 @@ class Percent(AbstractNonnegativeUnit):
 		return '{}%'.format(self.value)
 
 class Length(AbstractNonnegativeUnit):
-	""" Extend abstract unit to form base class of `Length` units. """
+	""" Specialize :class:`AbstractNonnegativeUnit` to lengths. """
 	def __init__(self, value=nan):
-		""" Initialize `Length` object as `AbstractNonnegativeUnit`. """
+		"""
+		Initialize :class:`Length` as :class:`AbstractNonnegativeUnit`.
+		"""
 		AbstractNonnegativeUnit.__init__(self, value=value)
 
 	def to_mm(self):
@@ -174,28 +184,30 @@ class Length(AbstractNonnegativeUnit):
 		raise ValueError('method "to_cm" not implemented.')
 
 class MM(Length):
-	""" Specialize `Length` class to millimeters. """
+	""" Specialize :class:`Length` to millimeters. """
 
 	def __init__(self, value=nan):
-		""" Initialize `MM` object as `Length`. """
+		""" Initialize :class:`MM` as :class:`Length`. """
 		Length.__init__(self, value)
 
 	def __mul__(self, other):
 		"""
 		Overload operator * (left multiplication).
 
-		`Length * Length` yields `Area`.
-		`Length * Area` yields `Volume`.
+		:class:`MM` * :class:`Length` yields :class:`MM2`.
+		:class:`MM` * :class:`Area` yields :class:`MM3`.
 
 		Arguments:
-			Other: `Length` or `Area` to multiply. Assumed to have
-				`to_mm` or `to_mm2` properties, respectively.
+			other: :class:`Length` or :class:`Area` to multiply. Assumed
+				to have ``to_mm`` or ``to_mm2`` properties,
+				respectively.
 
 		Returns:
-			Product in `MM2` or `MM3` units.
+			Product in :class:`MM2` or :class:`MM3` units.
 
 		Raises:
-			TypeError: if `other` is not of type `Length` or `Area`.
+			TypeError: if ``other`` is not of type :class:`Length` or
+				:class:`Area`.
 		"""
 		if isinstance(other, Length):
 			return MM2(self.value * other.to_mm.value)
@@ -210,12 +222,12 @@ class MM(Length):
 		Overload right multiplication.
 
 		Arguments:
-			other: Nonnegative scalar to right multiply by `MM.`
+			other: Nonnegative scalar to right multiply by :class:`MM.`
 
 		Returns:
-			`MM`: Millimeter object with value set to original value
-				times `other`. If original value is `nan` (i.e.,
-				uninitialized), value of returned object set to `other`.
+			:class:`MM`: Millimeter object with value set to original
+			value times ``other``. If original value is ``nan`` (i.e.,
+			uninitialized), value of returned object set to ``other``.
 		"""
 		ret = MM(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
@@ -225,19 +237,19 @@ class MM(Length):
 		"""
 		Overload operator ==.
 
-		Compare values contained in `self`, `other` by first converting
-		both to millimeter units to establish a consistent basis of
-		comparison.
+		Compare values contained in ``self``, ``other`` by first
+		converting both to millimeter units to establish a consistent
+		basis of comparison.
 
 		Arguments:
-			other (`Length`): Compared volume object. Assumed to have
-				property `to_mm`.
+			other (:class:`Length`): Compared volume.
 
 		Returns:
-			True if `other` and `self` contain equivalent values.
+			:obj:`bool`: ``True`` if ``other`` and ``self`` contain
+			equivalent values.
 
 		Raises:
-			TypeError: If `other` not of type `Length`.
+			TypeError: If ``other`` not of type :class:`Length`.
 		"""
 		if not isinstance(other, Length):
 			raise TypeError('equality comparison with {} object only defined '
@@ -260,28 +272,29 @@ class MM(Length):
 		return CM(self.value * 1e-1)
 
 class CM(Length):
-	""" Specialize `Length` class to centimeters. """
+	""" Specialize :class:`Length` to centimeters. """
 
 	def __init__(self, value=nan):
-		""" Initialize `CM` object as `Length`. """
+		""" Initialize :class:`CM` object as :class:`Length`. """
 		Length.__init__(self, value)
 
 	def __mul__(self, other):
 		"""
 		Overload operator * (left multiplication).
 
-		`Length * Length` yields `Area`.
-		`Length * Area` yields `Volume`.
+		:class:`CM` * :class:`Length` yields :class:`CM2`.
+		:class:`CM` * `Area` yields :class:`CM3`.
 
 		Arguments:
-			Other: `Length` or `Area` to multiply. Assumed to have
-				`to_cm` or `to_cm2` properties, respectively.
+			other: :class:`Length` or :class:`Area` to multiply. Assumed
+				to have ``to_cm`` or ``to_cm2`` properties, respectively.
 
 		Returns:
-			Product in `CM2` or `CM3` units.
+			Product in :class:`CM2` or :class:`CM3` units.
 
 		Raises:
-			TypeError: if `other` is not of type `Length` or `Area`.
+			TypeError: if ``other`` is not of type :class:`Length` or
+				:class:`Area`.
 		"""
 		if isinstance(other, Length):
 			return CM2(self.value * other.to_cm.value)
@@ -296,12 +309,12 @@ class CM(Length):
 		Overload right multiplication.
 
 		Arguments:
-			other: Nonnegative scalar to right multiply by `CM.`
+			other: Nonnegative scalar to right multiply by :class:`CM.`
 
 		Returns:
-			`CM`: Centimeter object with value set to original value
-				times `other`. If original value is `nan` (i.e.,
-				uninitialized), value of returned object set to `other`.
+			:class:`CM`: Centimeter object with value set to original
+			value times ``other``. If original value is ``nan`` (i.e.,
+			uninitialized), value of returned object set to ``other``.
 		"""
 		ret = CM(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
@@ -311,19 +324,19 @@ class CM(Length):
 		"""
 		Overload operator ==.
 
-		Compare values contained in `self`, `other` by first converting
-		both to centimeter units to establish a consistent basis of
-		comparison.
+		Compare values contained in ``self``, ``other`` by first
+		converting both to centimeter units to establish a consistent
+		basis of comparison.
 
 		Arguments:
-			other (`Length`): Compared volume object. Assumed to have
-				property `to_cm`.
+			other (:class:`Length`): Compared volume.
 
 		Returns:
-			True if `other` and `self` contain equivalent values.
+			:obj:`bool`: ``True`` if ``other`` and ``self`` contain
+			equivalent values.
 
 		Raises:
-			TypeError: If `other` not of type `Length`.
+			TypeError: If ``other`` not of type :class:`Length`.
 		"""
 		if not isinstance(other, Length):
 			raise TypeError('equality comparison with {} object only defined '
@@ -347,10 +360,10 @@ class CM(Length):
 		return self
 
 class Area(AbstractNonnegativeUnit):
-	""" Extend abstract unit to form base class of `Area` units. """
+	""" Extend abstract unit to form base class of :class:`Area` units. """
 
 	def __init__(self, value=nan):
-		""" Initialize `Area` object. """
+		""" Initialize :class:`Area` object. """
 		AbstractNonnegativeUnit.__init__(self, value=value)
 
 	def to_mm2(self):
@@ -362,27 +375,26 @@ class Area(AbstractNonnegativeUnit):
 		raise ValueError('method "to_cm2" not implemented.')
 
 class MM2(Area):
-	""" Specialize `Area` class to millimeters squared. """
+	""" Specialize :class:`Area` to millimeters squared. """
 
 	def __init__(self, value=nan):
-		""" Initialize `MM2` object as `Area`. """
+		""" Initialize :class:`MM2` object as :class:`Area`. """
 		Area.__init__(self, value)
 
 	def __mul__(self, other):
 		"""
 		Overload operator * (left multiplication).
 
-		`Length * Area` yields `Volume`.
+		:class:`MM2` * :class:`Area` yields :class:`MM3`.
 
 		Arguments:
-			Other: `Length` to multiply. Assumed to have property
-				`to_mm`.
+			Other: :class:`Length` to multiply.
 
 		Returns:
-			Product in `MM3` units.
+			Product in :class:`MM3` units.
 
 		Raises:
-			TypeError: if `other` is not of type `Length`.
+			TypeError: if ``other`` is not of type :class:`Length`.
 		"""
 		if isinstance(other, Length):
 			return MM3(self.value * other.to_mm.value)
@@ -395,12 +407,12 @@ class MM2(Area):
 		Overload right multiplication.
 
 		Arguments:
-			other: Nonnegative scalar to right multiply by `MM2.`
+			other: Nonnegative scalar to right multiply by :class:`MM2.`
 
 		Returns:
-			`MM2`: Millimeter^2 object with value set to original value
-				times `other`. If original value is `nan` (i.e.,
-				uninitialized), value of returned object set to `other`.
+			:class:`MM2`: Millimeter^2 object with value set to original
+			value times ``other``. If original value is ``nan`` (i.e.,
+			uninitialized), value of returned object set to ``other``.
 		"""
 		ret = MM2(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
@@ -410,19 +422,19 @@ class MM2(Area):
 		"""
 		Overload operator ==.
 
-		Compare values contained in `self`, `other` by first converting
-		both to mm^2 units to establish a consistent basis of
+		Compare values contained in ``self``, ``other`` by first
+		converting both to mm^2 units to establish a consistent basis of
 		comparison.
 
 		Arguments:
-			other (`Area`): Compared volume object. Assumed to have
-				property `to_mm2`.
+			other (:class:`Area`): Compared volume.
 
 		Returns:
-			True if `other` and `self` contain equivalent values.
+			:obj:`bool`:``True`` if ``other`` and ``self`` contain
+			equivalent values.
 
 		Raises:
-			TypeError: If `other` not of type `Area`.
+			TypeError: If ``other`` not of type :class:`Area`.
 		"""
 		if not isinstance(other, Area):
 			raise TypeError('equality comparison with {} object only defined '
@@ -445,26 +457,25 @@ class MM2(Area):
 		return CM2(self.value * 1e-2)
 
 class CM2(Area):
-	""" Specialize `Area` class to centimeters squared. """
+	""" Specialize :class:`Area` to centimeters squared. """
 	def __init__(self, value=nan):
-		""" Initialize `CM2` object as `Area`. """
+		""" Initialize :class:`CM2` object as :class:`Area`. """
 		Area.__init__(self, value)
 
 	def __mul__(self, other):
 		"""
 		Overload operator * (left multiplication).
 
-		`Area * Length` yields `Volume`.
+		:class:`CM2` * :class:`Length` yields :class:`CM3`.
 
 		Arguments:
-			Other: `Length` to multiply. Assumed to have property
-				`to_cm`.
+			Other: :class:`Length` to multiply.
 
 		Returns:
-			Product in `CM3` units.
+			Product in :class:`CM3` units.
 
 		Raises:
-			TypeError: if `other` is not of type `Length`.
+			TypeError: if ``other`` is not of type :class:`Length`.
 		"""
 		if isinstance(other, Length):
 			return CM3(self.value * other.to_cm.value)
@@ -481,8 +492,8 @@ class CM2(Area):
 
 		Returns:
 			`CM2`: Centimeter^2 object with value set to original value
-				times `other`. If original value is `nan` (i.e.,
-				uninitialized), value of returned object set to `other`.
+			times `other`. If original value is `nan` (i.e.,
+			uninitialized), value of returned object set to `other`.
 		"""
 		ret = CM2(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
@@ -492,19 +503,19 @@ class CM2(Area):
 		"""
 		Overload operator ==.
 
-		Compare values contained in `self`, `other` by first converting
-		both to cm^2 units to establish a consistent basis of
+		Compare values contained in ``self``, ``other`` by first
+		converting both to cm^2 units to establish a consistent basis of
 		comparison.
 
 		Arguments:
-			other (`Area`): Compared volume object. Assumed to have
-				property `to_cm2`.
+			other (:class:`Area`): Compared volume.
 
 		Returns:
-			True if `other` and `self` contain equivalent values.
+			:obj:`bool`: ``True`` if ``other`` and ``self`` contain
+			equivalent values.
 
 		Raises:
-			TypeError: If `other` not of type `Area`.
+			TypeError: If ``other`` not of type :class:`Area`.
 		"""
 		if not isinstance(other, Area):
 			raise TypeError('equality comparison with {} object only defined '
@@ -528,10 +539,10 @@ class CM2(Area):
 
 
 class Volume(AbstractNonnegativeUnit):
-	""" Extend abstract unit to form base class of `Volume` units. """
+	""" Extend abstract unit to form base class of :class:`Volume` units. """
 
 	def __init__(self, value=nan):
-		""" Initialize `Volume` object. """
+		""" Initialize :class:`Volume` object. """
 		AbstractNonnegativeUnit.__init__(self, value=value)
 
 	def to_mm3(self):
@@ -544,9 +555,9 @@ class Volume(AbstractNonnegativeUnit):
 
 
 class MM3(Volume):
-	""" Specialize `Area` class to millimeters cubed. """
+	""" Specialize :class:`Volume` to millimeters cubed. """
 	def __init__(self, value=nan):
-		""" Initialize `MM3` object as `Volume`. """
+		""" Initialize :class:`MM3` as :class:`Volume`. """
 		Volume.__init__(self, value)
 
 	def __rmul__(self, other):
@@ -554,12 +565,12 @@ class MM3(Volume):
 		Overload right multiplication.
 
 		Arguments:
-			other: Nonnegative scalar to right multiply by `MM3.`
+			other: Nonnegative scalar to right multiply by :class:`MM3.`
 
 		Returns:
-			`MM3`: Millimeter^3 object with value set to original value
-				times `other`. If original value is `nan` (i.e.,
-				uninitialized), value of returned object set to `other`.
+			:class:`MM3`: Millimeter^3 object with value set to original
+			value times ``other``. If original value is ``nan`` (i.e.,
+			uninitialized), value of returned object set to ``other``.
 		"""
 		ret = MM3(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
@@ -574,14 +585,14 @@ class MM3(Volume):
 		comparison.
 
 		Arguments:
-			other (`Volume`): Compared volume object. Assumed to have
-				property `to_mm3`.
+			other (:class:`Volume`): Compared volume.
 
 		Returns:
-			True if `other` and `self` contain equivalent values.
+			:obj:`bool`: ``True`` if ``other`` and ``self`` contain
+			equivalent values.
 
 		Raises:
-			TypeError: If `other` not of type `Volume`.
+			TypeError: If ``other`` not of type :class:`Volume`.
 		"""
 		if not isinstance(other, Volume):
 			raise TypeError('equality comparison with {} object only defined '
@@ -604,10 +615,10 @@ class MM3(Volume):
 		return CM3(self.value * 1e-3)
 
 class CM3(Volume):
-	""" Specialize `Area` class to centimeters cubed. """
+	""" Specialize :class:`Area` to centimeters cubed. """
 
 	def __init__(self, value=nan):
-		""" Initialize `CM3` object as `Volume`. """
+		""" Initialize :class:`CM3` as :class:`Volume`. """
 		Volume.__init__(self, value)
 
 	def __rmul__(self, other):
@@ -615,12 +626,12 @@ class CM3(Volume):
 		Overload right multiplication.
 
 		Arguments:
-			other: Nonnegative scalar to right multiply by `CM3.`
+			other: Nonnegative scalar to right multiply by :class:`CM3.`
 
 		Returns:
-			`CM3`: Centimeter^3 object with value set to original value
-				times `other`. If original value is `nan` (i.e.,
-				uninitialized), value of returned object set to `other`.
+			:class:`CM3`: Centimeter^3 object with value set to original
+			value times ``other``. If original value is ``nan`` (i.e.,
+			uninitialized), value of returned object set to ``other``.
 		"""
 		ret = CM3(self.value)
 		ret.value = other if ret.value is nan else ret.value * other
@@ -630,19 +641,19 @@ class CM3(Volume):
 		"""
 		Overload operator ==.
 
-		Compare values contained in `self`, `other` by first converting
-		both to cm^3 units to establish a consistent basis of
+		Compare values contained in ``self``, ``other`` by first
+		converting both to cm^3 units to establish a consistent basis of
 		comparison.
 
 		Arguments:
-			other (`Volume`): Compared volume object. Assumed to have
-				property `to_cm3`.
+			other (:class:`Volume`): Compared volume.
 
 		Returns:
-			True if `other` and `self` contain equivalent values.
+			:obj:`bool`: ``True`` if ``other`` and ``self`` contain
+			equivalent values.
 
 		Raises:
-			TypeError: If `other` not of type `Volume`.
+			TypeError: If ``other`` not of type :class:`Volume`.
 		"""
 		if not isinstance(other, Volume):
 			raise TypeError('equality comparison with {} object only defined '
@@ -665,9 +676,14 @@ class CM3(Volume):
 		return self
 
 class DeliveredDose(AbstractNonnegativeUnit):
-	""" Extend abstract unit to form base class of `DeliverDose` units. """
+	"""
+	Extend :obj:`AbstractNonnegativeUnit` to form base class of dose units.
+	"""
 
 	def __init__(self, value=nan):
+		"""
+		Initialize :class:`DeliveredDose` as :class:`AbstractNonnegativeUnit`
+		"""
 		AbstractNonnegativeUnit.__init__(self, value=value)
 
 	def to_cGy(self):
@@ -679,7 +695,7 @@ class DeliveredDose(AbstractNonnegativeUnit):
 		raise ValueError('method "to_Gy" not implemented.')
 
 class Gray(DeliveredDose):
-	""" Specialize `DeliveredDose` class to Grays. """
+	""" Specialize :class:`DeliveredDose` to radiological units of Gray. """
 
 	def __init__(self, value=nan):
 		""" Initialize `Gray` object as type `DeliveredDose`. """
@@ -690,16 +706,16 @@ class Gray(DeliveredDose):
 		Overload right multiplication.
 
 		Arguments:
-			other: Nonnegative scalar to right multiply by `Gray.`
+			other: Nonnegative scalar to right multiply by :class:`Gray.`
 
 		Returns:
-			`Gray`: Gray object with value set to original value times
-				`other`. If original value is `nan` (i.e.,
-				uninitialized), value of returned object set to `other`.
+			:class:`Gray`: Gray object with value set to original value
+			times ``other``. If original value is ``nan`` (i.e.,
+			uninitialized), value of returned object set to ``other``.
 
 		Raises:
-			TypeError: If `other` is not of type `int`, `float` or
-				`Percent`.
+			TypeError: If ``other`` is not of type :obj:`int`,
+				:obj:`float` or :class:`Percent`.
 		"""
 		if not isinstance(other, (int, float, Percent)):
 			raise TypeError('right multiplication by {} object only defined '
@@ -717,15 +733,15 @@ class Gray(DeliveredDose):
 		Overload operator +.
 
 		Arguments:
-			other: Scalar or `DeliveredDose` to add to this object's
-				value.
+			other: Scalar or :class:`DeliveredDose` to add to this
+				object's value.
 
 		Returns:
-			`Gray`: Updated version of this dose object.
+			:class:`Gray`: Updated version of this dose object.
 
 		Raises:
-			TypeError: If `other` is not of type `int`, `float` or
-				`DeliveredDose`.
+			TypeError: If ``other`` is not of type :obj:`int`,
+				:obj:`float` or :class:`DeliveredDose`.
 		"""
 		if not isinstance(other, (int, float, DeliveredDose)):
 			raise TypeError('addition with {} object only defined when right '
@@ -745,19 +761,19 @@ class Gray(DeliveredDose):
 		"""
 		Overload operator ==.
 
-		Compare values contained in `self`, `other` by first converting
-		both to Gray units to establish a consistent basis of
+		Compare values contained in ``self``, ``other`` by first
+		converting both to Gray units to establish a consistent basis of
 		comparison.
 
 		Arguments:
-			other (`DeliveredDose`): Compared dose object. Assumed to
-				have property `to_Gy`.
+			other (:class:`DeliveredDose`): Compared dose.
 
 		Returns:
-			True if `other` and `self` contain equivalent values.
+			:obj:`bool`: ``True`` if ``other`` and ``self`` contain
+			equivalent values.
 
 		Raises:
-			TypeError: If `other` not of type `Delivered Dose`.
+			TypeError: If ``other`` not of type :class:`Delivered Dose`.
 		"""
 		if not isinstance(other, DeliveredDose):
 			raise TypeError('equality comparison with {} object only defined '
@@ -781,10 +797,12 @@ class Gray(DeliveredDose):
 		return centiGray(100 * self.value)
 
 class centiGray(DeliveredDose):
-	""" Specialize `DeliveredDose` class to centiGrays. """
+	""" Specialize :class:`DeliveredDose` class to centiGrays. """
 
 	def __init__(self, value=nan):
-		""" Initialize `centiGray` object as type `DeliveredDose`. """
+		"""
+		Initialize :class:`centiGray` object as type :class:`DeliveredDose`.
+		"""
 		DeliveredDose.__init__(self, value=value)
 
 	def __rmul__(self, other):
@@ -792,16 +810,18 @@ class centiGray(DeliveredDose):
 		Overload right multiplication.
 
 		Arguments:
-			other: Nonnegative scalar to right multiply by `centiGray.`
+			other: Nonnegative scalar to right multiply by
+				:class:`centiGray.`
 
 		Returns:
-			`centiGray`: centiGray object with value set to original
-				value times `other`. If original value is `nan` (i.e.,
-				uninitialized), value of returned object set to `other`.
+			:class:`centiGray`: centiGray object with value set to
+			original value times ``other``. If original value is ``nan``
+			(i.e., uninitialized), value of returned object set to
+			``other``.
 
 		Raises:
-			TypeError: If `other` is not of type `int`, `float` or
-				`Percent`.
+			TypeError: If ``other`` is not of type :obj:`int`,
+				:obj:`float` or :class:`Percent`.
 		"""
 		if not isinstance(other, (int, float, Percent)):
 			raise TypeError('right multiplication by {} object only defined '
@@ -819,15 +839,15 @@ class centiGray(DeliveredDose):
 		Overload operator +.
 
 		Arguments:
-			other: Scalar or `DeliveredDose` to add to this object's
-				value.
+			other: Scalar or :class:`DeliveredDose` to add to this
+				object's value.
 
 		Returns:
-			`centiGray`: Updated version of this dose object.
+			:class:`centiGray`: Updated version of this dose object.
 
 		Raises:
-			TypeError: If `other` is not of type `int`, `float` or
-				`DeliveredDose`.
+			TypeError: If ``other`` is not of type :obj:`int`,
+				:obj:`float` or :class:`DeliveredDose`.
 		"""
 		if not isinstance(other, (int, float, DeliveredDose)):
 			raise TypeError('addition with {} object only defined when right '
@@ -848,19 +868,19 @@ class centiGray(DeliveredDose):
 		"""
 		Overload operator ==.
 
-		Compare values contained in `self`, `other` by first converting
-		both to centiGray units to establish a consistent basis of
-		comparison.
+		Compare values contained in ``self``, ``other`` by first
+		converting both to centiGray units to establish a consistent
+		basis of comparison.
 
 		Arguments:
-			other (`DeliveredDose`): Compared dose object. Assumed to
-				have property `to_cGy`.
+			other (:class:`DeliveredDose`): Compared dose.
 
 		Returns:
-			True if `other` and `self` contain equivalent values.
+			:obj:`bool`: ``True`` if ``other`` and ``self`` contain
+			equivalent values.
 
 		Raises:
-			TypeError: If `other` not of type `Delivered Dose`.
+			TypeError: If ``other`` not of type :class:`Delivered Dose`.
 		"""
 		if not isinstance(other, DeliveredDose):
 			raise TypeError('equality comparison with {} object only defined '

@@ -1,24 +1,29 @@
 """
-Define base class for interfaces between CONRAD and Python modules
-with convex solvers, e.g., `cvxpy`.
+Define base class for interfaces between :mod:`conrad` and Python
+modules with convex solver interfaces, e.g., :mod:`cvxpy`.
 
 Attributes:
-	GAMMA_DEFAULT (float): Default scaling to apply to objective term
-		penalizing weighted sum of slack variables, when dose constraint
-		slacks are allowed.
-	RELTOL_DEFAULT (float): Default relative tolerance for solver.
-	ABSTOL_DEFAULT (float): Default absolute tolerance for solver.
-	VERBOSE_DEFAULT (int): Default solver verbosity.
-	MAXITER_DEFAULT (int): Default maximum solver iterations.
-	INDIRECT_DEFAULT (bool): Default solver mode (applies to SCS only).
-	GPU_DEFAULT (bool): Default solver device (applies to SCS, POGS).
-	PRIORITY_1 (int): Penalty scaling for slack on high priority
+	GAMMA_DEFAULT (:obj:`float`): Default scaling to apply to objective
+		term penalizing weighted sum of slack variables, when dose
+		constraint slacks are allowed.
+	RELTOL_DEFAULT (:obj:`float`): Default relative tolerance for
+		solver.
+	ABSTOL_DEFAULT (:obj:`float`): Default absolute tolerance for
+		solver.
+	VERBOSE_DEFAULT (:obj:`int`): Default solver verbosity.
+	MAXITER_DEFAULT (:obj:`int`): Default maximum solver iterations.
+	INDIRECT_DEFAULT (:obj:`bool`): Default solver mode (applies to SCS
+		only).
+	GPU_DEFAULT (:obj:`bool`): Default solver device (applies to SCS,
+		POGS).
+	PRIORITY_1 (:obj:`int`): Penalty scaling for slack on high priority
 		dose constraints.
-	PRIORITY_2 (int): Penalty scaling for slack on medium priority
+	PRIORITY_2 (:obj:`int`): Penalty scaling for slack on medium
+		priority dose constraints.
+	PRIORITY_3 (:obj:`int`): Penalty scaling for slack on low priority
 		dose constraints.
-	PRIORITY_3 (int): Penalty scaling for slack on low priority
-		dose constraints.
-
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -36,8 +41,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-from numpy import diff, zeros
 from conrad.compat import *
+
+from numpy import diff, zeros
 
 GAMMA_DEFAULT = 1e-2
 RELTOL_DEFAULT = 1e-3
@@ -53,13 +59,15 @@ PRIORITY_3 = 1
 
 class Solver(object):
 	"""
-	Base class for translating CONRAD planning requests to convex problems.
+	Base class for translating :mod:`conrad` planning requests to convex
+	problems.
 
 	Attributes:
-		use_2pass (bool): When True, enables exact percentile-type dose
-			constraints to be built (other conditions must hold).
-		use_slack (bool): When True, dose constraints are built with
-			slack.
+		use_2pass (:obj:`bool`): When ``True``, enables exact
+			percentile-type dose constraints to be built (other
+			conditions must hold).
+		use_slack (:obj:`bool`): When ``True``, dose constraints are
+			built with slack.
 		dvh_vars (:obj:`dict`): Dictionary, keyed by constraint ID, of
 			values for slope variables associated with the convex
 			restriction of each percentile-type dose constraint in the
@@ -67,8 +75,8 @@ class Solver(object):
 		slack_vars (:obj:`dict`): Dictionary, keyed by constraint ID, of
 			values for slack variables associated with each dose
 			constraint in the problem.
-		feasible (bool): True if most recent optimization run was
-			feasible.
+		feasible (:obj:`bool`): ``True`` if most recent optimization run
+			was feasible.
 	"""
 	def __init__(self):
 		"""
@@ -97,24 +105,29 @@ class Solver(object):
 
 	@staticmethod
 	def get_cd_from_wts(wt_under, wt_over):
-		"""
+		r"""
 		Convert piecewise linear weights to absolute value + affine.
 
 		Given an objective function f_i: R -> R that consists of
-		separate affine penalties for underdosing and overdosing::
-			# f_i = w_+ (y_i - dose_i) + w_i (y_i - dose_i)
+		separate affine penalties for underdosing and overdosing:
 
-		rephrase as mixture of absolute value plus affine terms::
-			# f_i = c |y_i - dose_i| + d (y_i - dose_i)
+		:math: f_i = w_+ (y_i - \mbox{dose}_i) + w_i (y_i - \mbox{dose}_i)
+
+		rephrase as mixture of absolute value plus affine terms:
+
+		:math: f_i = c |y_i - \mbox{dose}_i| + d (y_i - \mbox{dose}_i)
+
+		where
 
 		Arguments:
-			wt_under (float): Underdose weight, value should be
+			wt_under (:obj:`float`): Underdose weight, value should be
 				nonnegative.
-			wt_over (float): Overdose weight, value should be positive.
+			wt_over (:obj:`float`): Overdose weight, value should be
+				positive.
 
 		Returns:
 			:obj:`tuple` of float: Weights for absolute value and affine
-				terms that result in an equivalent objective function.
+			terms that result in an equivalent objective function.
 		"""
 		c = (wt_over + wt_under) / 2.
 		d = (wt_over - wt_under) / 2.
@@ -125,15 +138,17 @@ class Solver(object):
 		Calculate penalty scaling for slack variable.
 
 		Arguments:
-			priority (int): Constraint priority, should be 1, 2 or 3.
+			priority (:obj:int): Constraint priority, should be ``1``,
+				``2`` or ``3``.
 
 		Returns:
 			float: Constraint-specific penalty obtained by multiplying
-				master scaling for slack variable penalties
-				(`Solver.gamma`) times priority-based scaling.
+			master scaling for slack variable penalties
+			(:attr:`Solver.gamma`) times priority-based scaling.
 
 		Raises:
-			ValueError: If `priority` is not one of 1, 2 or 3.
+			ValueError: If ``priority`` is not one of ``1``, ``2`` or
+				``3``.
 
 		"""
 		priority = int(priority)
@@ -165,16 +180,16 @@ class Solver(object):
 
 		Arguments:
 			structures: Iterable collection of
-				`conrad.medicine.Structure` objects.
+				:class:`~conrad.medicine.Structure` objects.
 
 		Returns:
-			int: Number of beams in treatment plan, corresponds to
-				number of columns in dose matrix for each structure
-				(should be equal across all structures).
+			:obj:`int`: Number of beams in treatment plan, corresponds
+			to number of columns in dose matrix for each structure
+			(should be equal across all structures).
 
 		Raises:
-			ValueError: If any `conrad.medicine.Structure` in
-				`structures` is lacking dose matrix (or mean dose
+			ValueError: If any :class:`~conrad.medicine.Structure` in
+				``structures`` is lacking dose matrix (or mean dose
 				matrix) data, or if the dose matrices have inconsistent
 				numbers of columns.
 		"""
@@ -197,11 +212,11 @@ class Solver(object):
 		return cols[0]
 
 	def __gather_matrix_and_coefficients(self, structures):
-		"""
-		Gather dose matrix and objective parameters from structures.
+		r"""
+		Gather dose matrix and objective parameters from ``structures``.
 
 		The objective to be built is of the form::
-			# w_abs^T * |Ax - dose| + w_lin * (Ax - dose)
+		:math: w_{abs}^T |Ax - \mbox{dose}| + w_{lin} (Ax - \mbox{dose})
 
 		Procedure for gathering dose matrix::
 			# Set A = [] empty matrix with 0 rows and N columns.
@@ -227,12 +242,12 @@ class Solver(object):
 
 		Arguments:
 			structures: Iterable collection of
-				`conrad.medicine.Structure` objects.
+				:class:`~conrad.medicine.Structure` objects.
 
 		Returns:
 			:obj:`tuple`: Tuple of dose matrix, target dose vector,
-				absolute value penalty weight vector and affine penalty
-				weight vector.
+			absolute value penalty weight vector and affine penalty
+			weight vector.
 		"""
 		cols = self.__check_dimensions(structures)
 		rows = sum([s.size if not s.collapsable else 1 for s in structures])
@@ -268,11 +283,12 @@ class Solver(object):
 		Document how structure data converted to an optimization.
 
 		Arguments:
-			structures: Iterable collection of `Structure` objects.
+			structures: Iterable collection of
+				:class:`~conrad.medicine.Structure` objects.
 
 		Returns:
-			:obj:`str`: String documenting how data in `structures`
-				are parsed to form an optimization problem.
+			:obj:`str`: String documenting how data in ``structures``
+			are parsed to form an optimization problem.
 		"""
 		report = []
 		for structure in structures:

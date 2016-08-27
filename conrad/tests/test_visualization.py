@@ -1,4 +1,7 @@
 """
+Unit tests for :mod:`conrad.visualization.plot`
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -16,9 +19,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from os import remove as os_remove
 
-from conrad.compat import *
 from conrad.defs import vec
 from conrad.medicine import Anatomy, Structure
 from conrad.tests.base import *

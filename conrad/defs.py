@@ -2,15 +2,16 @@
 Frequently used constants and utilities.
 
 Attributes:
-	CONRAD_DEBUG (bool): Toggle for debugging-specific code branches.
-	CONRAD_DEBUG_PRINT (bool): Toggle for debugging-specifc print
+	CONRAD_DEBUG (:obj:`bool`): Toggle for debugging-specific code
+		branches.
+	CONRAD_DEBUG_PRINT (:obj:`bool`): Toggle for debugging-specifc print
 		statements.
 	SOLVER_OPTIONS (:obj:`list` of :obj:`str`): Enumeration of solver
-		names usable with `cvpxy`.
-	MAX_VERBOSITY (int):
-	CONRAD_MATRIX_TYPES (:obj:`tuple`): Enumeration of `numpy` and
-		`scipy` matrix types used int CONRAD.
-
+		names usable with :mod:`cvpxy`.
+	CONRAD_MATRIX_TYPES (:obj:`tuple`): Enumeration of :mod:`numpy` and
+		:mod:`scipy` matrix types used in :mod:`conrad`.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -28,36 +29,39 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-from __future__ import print_function
+from conrad.compat import *
+
 from os import getenv
 from pip import get_installed_distributions
 from numpy import nan, squeeze, array, ndarray
 from scipy.sparse import csr_matrix, csc_matrix
-from conrad.compat import *
+
+def println(*args):
+	print(*args)
 
 CONRAD_DEBUG = getenv('CONRAD_DEBUG', False)
-CONRAD_DEBUG_PRINT = print if CONRAD_DEBUG else lambda x : None
+CONRAD_DEBUG_PRINT = println if CONRAD_DEBUG else lambda x : None
 
 SOLVER_OPTIONS = ['ECOS', 'SCS']
 
 CONRAD_MATRIX_TYPES = (ndarray, csr_matrix, csc_matrix)
 
 def vec(vectorlike):
-	""" Convert input to one-dimensional `numpy.ndarray`. """
+	""" Convert input to one-dimensional :class:`~numpy.ndarray`. """
 	return squeeze(array(vectorlike))
 
 def is_vector(vectorlike):
-	""" True if instance is one-dimensional `numpy.ndarray`. """
+	""" ``True`` if input is one-dimensional :class:`~numpy.ndarray`. """
 	if isinstance(vectorlike, ndarray):
 		return len(vectorlike) == vectorlike.shape[0]
 	return False
 
 def sparse_or_dense(matrixlike):
 	"""
-	True if input is a CONRAD-recognized matrix type.
+	``True`` if input is a :mod:`conrad`-recognized matrix type.
 
-	Accepted types include: two-dimensional `ndarray`, `csr_matrx` and
-	`csc_matrix`.
+	Accepted types include: two-dimensional :class:`ndarray`,
+	:class:`csr_matrx` and :class:`csc_matrix`.
 	"""
 	if matrixlike is None:
 		return False
@@ -69,7 +73,7 @@ def sparse_or_dense(matrixlike):
 	return sparse or dense
 
 def positive_real_valued(val):
-	""" True if input is a positive scalar. """
+	""" ``True`` if input is a positive scalar. """
 	if val is not None and val is not nan and isinstance(val, (int, float)):
 		if val > 0:
 			return True
@@ -86,8 +90,9 @@ def module_installed(name, version_string=None):
 			to query.
 
 	Returns:
-		bool: True if queried module has a matching string in dictionary
-			values returned by `pip.get_installed_distributions`.
+		:obj:`bool`: ``True`` if queried module has a matching string in
+		dictionary values returned by
+		:func:`pip.get_installed_distributions`.
 	"""
 	modules = get_installed_distributions()
 	index = -1

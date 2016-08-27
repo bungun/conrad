@@ -1,28 +1,30 @@
 """
-Define `Case` object, the top level interface for treatment planning.
-
-Copyright 2016 Baris Ungun, Anqi Fu
-
-This file is part of CONRAD.
-
-CONRAD is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-CONRAD is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
+Define :class:`Case`, the top level interface for treatment planning.
 """
+"""
+# Copyright 2016 Baris Ungun, Anqi Fu
+
+# This file is part of CONRAD.
+
+# CONRAD is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# CONRAD is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
+"""
+from conrad.compat import *
+
 from operator import add
 from warnings import warn
 from numpy import ndarray, array, squeeze, zeros, nan
 
-from conrad.compat import *
 from conrad.physics import Physics
 from conrad.medicine import Anatomy, Prescription
 from conrad.optimization.problem import PlanningProblem
@@ -32,47 +34,51 @@ class Case(object):
 	"""
 	Top level interface for treatment planning.
 
-	The `Case` object has four major components:
-		- `Case.physics` is an object of type `Physics`, and contains
-			physical information for the case, including the number of
-			voxels, beams, beam layout, voxel labels and dose influence
-			matrix.
+	A :class:`Case` has four major components.
 
-		- `Case.anatomy` is an object of type `Antomy`, and manages the
-			structures in the patient anatomy, including optimization
-			objectives and dose constraints applied to each structure.
+	:attr:`Case.physics` is of type :class:`Physics`, and contains
+	physical information for the case, including the number of
+	voxels, beams, beam layout, voxel labels and dose influence
+	matrix.
 
-		- `Case.prescription` specifies a clinical prescription for the
-			case, including prescribed doses for target structures and
-			prescribed dose constraints (e.g., RTOG recommendations).
+	:attr:`Case.anatomy` is of type :class:`Antomy`, and manages the
+	structures in the patient anatomy, including optimization
+	objectives and dose constraints applied to each structure.
 
-		- `Case.problem` is a tool that forms and manages the
-			mathematical representation of treatment planning problem
-			specified by case anatomy, physics and prescription; it
-			serves as the interface to convex solvers that run the
-			treatment plan optimization.
+	:attr:`Case.prescription` is of type :class:`Prescription`, and
+	specifies a clinical prescription for the case, including prescribed
+	doses for target structures and prescribed dose constraints (e.g.,
+	RTOG recommendations).
+
+	:attr:`Case.problem` is of type :class:`PlanningProblem`, and is a
+	tool that forms and manages the mathematical representation of
+	treatment planning problem specified by case anatomy, physics and
+	prescription; it serves as the interface to convex solvers that run
+	the treatment plan optimization.
 	"""
+
 	def __init__(self, anatomy=None, physics=None, prescription=None,
 				 suppress_rx_constraints=False):
 		"""
 		Initialize case with anatomy, physics and prescription data.
 
-		If `prescription` provided and `anatomy` not provided,
-		`Case.anatomy` populated with structures from `prescription`.
+		If ``prescription`` provided and ``anatomy`` not provided,
+		:attr:`Case.anatomy` populated with structures from
+		``prescription``.
 
 		Arguments:
-			anatomy (optional): Must be compatible with `Anatomy`
+			anatomy (optional): Must be compatible with :class:`Anatomy`
 				initializer.
-			physics (optional): Must be compatible with `Physics`
+			physics (optional): Must be compatible with :class:`Physics`
 				initializer.
 			prescription (optional): Must be compatible with
-				`Presription` initializer; i.e., can be `Prescription`
-				object, a suitably formatted :obj:`list` with
-				prescription data, or the path to a valid JSON or YAML
-				file with suitably formatted prescription data.
-			suppress_rx_constraints (bool, optional): Suppress
-				constraints in `prescription` from being attached to
-				structures in `Case.anatomy`.
+				:class:`Presription` initializer; i.e., can be
+				:class:`Prescription`, a suitably formatted :obj:`list`
+				with prescription data, or the path to a valid JSON or
+				YAML file with suitably formatted prescription data.
+			suppress_rx_constraints (:obj:`bool`, optional): Suppress
+				constraints in ``prescription`` from being attached to
+				structures in :attr:`Case.anatomy`.
 		"""
 		self.__physics = None
 		self.__anatomy = None
@@ -90,7 +96,7 @@ class Case(object):
 
 	@property
 	def physics(self):
-		""" Object containing all dose physics information. """
+		""" Patient anatomy, contains all dose physics information. """
 		return self.__physics
 
 	@physics.setter
@@ -99,7 +105,7 @@ class Case(object):
 
 	@property
 	def anatomy(self):
-		""" Object containing all planning structures. """
+		""" Container for all planning structures. """
 		return self.__anatomy
 
 	@anatomy.setter
@@ -109,10 +115,11 @@ class Case(object):
 	@property
 	def prescription(self):
 		"""
-		Object specifying clinical goals and limits.
+		Container for clinical goals and limits.
 
-		Structure list from prescription used to populate `Case.anatomy`
-		if anatomy is empty when `Case.prescription` setter is invoked.
+		Structure list from prescription used to populate
+		:attr:`Case.anatomy` if anatomy is empty when
+		:attr:`Case.prescription` setter is invoked.
 		"""
 		return self.__prescription
 
@@ -129,13 +136,13 @@ class Case(object):
 
 	@property
 	def structures(self):
-		""" Dictionary of structures contained in `Case.anatomy`. """
+		""" Dictionary of structures contained in :attr:`Case.anatomy`. """
 		return self.anatomy.structures
 
 	@property
 	def A(self):
 		"""
-		Dose matrix from current planning frame of `Case.physics`.
+		Dose matrix from current planning frame of :attr:`Case.physics`.
 		"""
 		if self.physics is None:
 			return None
@@ -143,13 +150,13 @@ class Case(object):
 
 	@property
 	def n_structures(self):
-		""" Number of structures in `Case.anatomy`. """
+		""" Number of structures in :attr:`Case.anatomy`. """
 		return self.anatomy.n_structures
 
 	@property
 	def n_voxels(self):
 		"""
-		Number of voxels in current planning frame of `Case.physics`.
+		Number of voxels in current planning frame of :attr:`Case.physics`.
 		"""
 		if self.physics.voxels is nan:
 			return None
@@ -158,7 +165,7 @@ class Case(object):
 	@property
 	def n_beams(self):
 		"""
-		Number of beams in current planning frame of `Case.physics`.
+		Number of beams in current planning frame of :attr:`Case.physics`.
 		"""
 		if self.physics.beams is nan:
 			return None
@@ -168,9 +175,10 @@ class Case(object):
 		"""
 		Push constraints in prescription onto structures in anatomy.
 
-		Assume each structure label represented in `Case.prescription`
-		is represented in `Case.anatomy`. Any existing constraints on
-		structures in `Case.anatomy` are preserved.
+		Assume each structure label represented in
+		:attr:`Case.prescription` is represented in
+		:attr:`Case.anatomy`. Any existing constraints on structures in
+		:attr:`Case.anatomy` are preserved.
 
 		Arguments:
 			None
@@ -184,11 +192,12 @@ class Case(object):
 
 	def add_constraint(self, structure_label, constraint):
 		"""
-		Add `constraint` to structure specified by `structure_label`.
+		Add ``constraint`` to structure specified by ``structure_label``.
 
 		Arguments:
 			structure_label: Must correspond to label or name of a
-				`conrad.medicine.Structure` in `Case.anatomy`.
+				:class:`~conrad.medicine.Structure` in
+				:attr:`Case.anatomy`.
 			constraint (:class:`conrad.medicine.Constraint`): Dose
 				constraint to add to constraint list of specified
 				structure.
@@ -203,15 +212,15 @@ class Case(object):
 		"""
 		Remove constraint from case.
 
-		If `constr_id` is a valid key to a constraint in the
-		`conrad.medicine.dose.ConstraintList` attached to one of the
-		structures in `Case.anatomy`, that constraint will be removed
-		from the structure's constraint list. Call is no-op if key does
-		not exist.
+		If ``constr_id`` is a valid key to a constraint in the
+		:class:`~conrad.medicine.dose.ConstraintList` attached to one of
+		the structures in :attr:`Case.anatomy`, that constraint will be
+		removed from the structure's constraint list. Call is no-op if
+		key does not exist.
 
 		Arguments:
 			constr_id: Key to a constraint on one of the structures in
-				`Case.anatomy`.
+				:attr:`Case.anatomy`.
 
 		Returns:
 			None
@@ -223,7 +232,7 @@ class Case(object):
 
 	def clear_constraints(self):
 		"""
-		Remove all constraints from all structures in case.
+		Remove all constraints from all structures in :class:`Case`.
 
 		Arguments:
 			None
@@ -236,24 +245,25 @@ class Case(object):
 	def change_constraint(self, constr_id, threshold=None, direction=None,
 						  dose=None):
 		"""
-		Modify constraint in case.
+		Modify constraint in :class:`Case`.
 
-		If `constr_id` is a valid key to a constraint in the
-		`conrad.medicine.dose.ConstraintList` attached to one of the
-		structures in `Case.anatomy`, that constraint will be modified
-		according to the remaining arguments. Call is no-op if key does
-		not exist.
+		If ``constr_id`` is a valid key to a constraint in the
+		:class:`~conrad.medicine.dose.ConstraintList` attached to one of
+		the structures in :attr:`Case.anatomy`, that constraint will be
+		modified according to the remaining arguments. Call is no-op if
+		key does not exist.
 
 		Arguments:
 			constr_id: Key to a constraint on one of the structures in
-				`Case.anatomy`.
+				:attr:`Case.anatomy`.
 			threshold (optional): If constraint in question is a
-				`conrad.medicine.dose.PercentileConstraint`, percentile
-				threshold set to this value. No effect otherwise.
-			direction (:obj:str, optional): Constraint direction set to
-				this value. Should be one of: '<' or '>'.
-			dose (`conrad.physics.units.DeliveredDose`, optional): Dose
-				constraint's dose level set to this value.
+				:class:`~conrad.medicine.dose.PercentileConstraint`,
+				percentile threshold set to this value. No effect
+				otherwise.
+			direction (:obj:`str`, optional): Constraint direction set
+				to this value. Should be one of: '<' or '>'.
+			dose (:class:`~conrad.physics.units.DeliveredDose`, optional):
+				Constraint dose level set to this value.
 
 		Returns:
 			None
@@ -266,16 +276,17 @@ class Case(object):
 
 	def change_objective(self, label, dose=None, w_under=None, w_over=None):
 		"""
-		Modify objective for structure in case.
+		Modify objective for structure in :class:`Case`.
 
 		Arguments:
-			label: Label or name of a `conrad.medicine.Structure` in
-				`Case.anatomy`.
-			dose (`conrad.physics.units.DeliveredDose`, optional): Set
-				target dose for structure.
-			w_under (float, optional): Set underdose weight for
+			label: Label or name of a :class:`~conrad.medicine.Structure`
+				in :attr:`Case.anatomy`.
+			dose (:class:`~conrad.physics.units.DeliveredDose`, optional):
+				Set target dose for structure.
+			w_under (:obj:`float`, optional): Set underdose weight for
 				structure.
-			w_over (float, optional): Set overdose weight for structure.
+			w_over (:obj:`float`, optional): Set overdose weight for
+				structure.
 
 		Returns:
 			None
@@ -292,25 +303,27 @@ class Case(object):
 		"""
 		Transfer data from physics to each structure.
 
-		The label associated with each structure in `Case.anatomy` is
-		used to retrieve the dose matrix data and voxel weights from
-		`Case.physics` for the voxels bearing that label.
+		The label associated with each structure in :attr:`Case.anatomy`
+		is used to retrieve the dose matrix data and voxel weights from
+		:attr:`Case.physics` for the voxels bearing that label.
 
-		The method marks the `Case.physics.dose_matrix` as seen, in
-		order to prevent redundant data transfers.
+		The method marks the :attr:`Case.physics.dose_matrix` as seen,
+		in order to prevent redundant data transfers.
 
 		Arguments:
-			overwrite(bool, optional): If True, dose matrix data from
-				`Case.physics` will overwrite dose matrices assigned to
-				each structure in `Case.anatomy`.
+			overwrite(:obj:`bool`, optional): If ``True``, dose matrix
+				data from :attr:`Case.physics` will overwrite dose
+				matrices assigned to each structure in
+				:attr:`Case.anatomy`.
 
 		Returns:
 			None
 
 		Raises:
-			ValueError: If `Case.anatomy` has assigned dose matrices,
-				`Case.physics` not marked as having updated dose matrix
-				data, and flag `overwrite` set to False.
+			ValueError: If :attr:`Case.anatomy` has assigned dose
+				matrices, :attr:`Case.physics` not marked as having
+				updated dose matrix data, and flag ``overwrite`` set to
+				``False``.
 
 		"""
 		if not overwrite:
@@ -332,7 +345,7 @@ class Case(object):
 
 	def calculate_doses(self, x):
 		"""
-		Calculate voxel doses for each structure in `Case.anatomy`.
+		Calculate voxel doses for each structure in :attr:`Case.anatomy`.
 
 		Arguments:
 			x: Vector-like array of beam intensities.
@@ -345,14 +358,14 @@ class Case(object):
 	@property
 	def plannable(self):
 		"""
-		True if case meets minimum requirements for `Case.plan` call.
+		``True`` if case meets minimum requirements for :meth:`Case.plan` call.
 
 		Arguments:
 			None
 
 		Returns:
-			bool: True if `Case.physics.plannable` and
-				`Case.anatomy.plannable`
+			:obj:`bool`: ``True`` if anatomy has one or more target
+			structures and dose matrices from the case physics.
 		"""
 		plannable = True
 		if not self.physics.plannable:
@@ -364,27 +377,27 @@ class Case(object):
 
 	def plan(self, use_slack=True, use_2pass=False, **options):
 		"""
-		Invoke numerical solver to optimize plan given state of case.
+		Invoke numerical solver to optimize plan, given state of :class:`Case`.
 
 		At call time, the objectives, dose constraints, dose matrix,
 		and other relevant data associated with each structure in
-		`Case.anatomy` is passed to `Case.problem` to build and solve
-		a convex optimization problem.
+		:attr:`Case.anatomy` is passed to :attr:`Case.problem` to build
+		and solve a convex optimization problem.
 
 		Arguments:
-			use_slack (bool, optional): Allow slacks on each dose
+			use_slack (:obj:`bool`, optional): Allow slacks on each dose
 				constraint.
-			use_2pass (bool, optional): Execute two-pass planing method
-				to enforce exact versions, rather than convex
+			use_2pass (:obj:`bool`, optional): Execute two-pass planing
+				method to enforce exact versions, rather than convex
 				restrictions of any percentile-type dose constraints
 				included in the plan.
 			**options: Arbitrary keyword arguments.
 
 		Returns:
-			(bool, `conrad.optimization.history.RunRecord`): Tuple with
-				`bool` indicator of planning problem feasibility and a
-				`conrad.optimization.history.RunRecord` object with data
-				from the setup, execution and output of the planning run.
+			:obj:`tuple`: Tuple with :obj:`bool` indicator of planning
+			problem feasibility and a
+			:class:`~conrad.optimization.history.RunRecord` with data
+			from the setup, execution and output of the planning run.
 
 		Raises:
 			ValueError: If case not plannable due to missing information.
@@ -432,11 +445,11 @@ class Case(object):
 
 	def plotting_data(self, x=None):
 		"""
-		Dictionary of `matplotlib`-compatible plotting data.
+		Dictionary of :mod:`matplotlib`-compatible plotting data.
 
 		Includes data for dose volume histograms, prescribed doses, and
 		dose volume (percentile) constraints for each structure in
-		`Case.anatomy`.
+		:attr:`Case.anatomy`.
 
 		Arguments:
 			x (optional): Vector of beam intensities from which to
@@ -445,7 +458,7 @@ class Case(object):
 
 		Returns:
 			:obj:`dict`: Plotting data for each structure, keyed by
-				structure label.
+			structure label.
 		"""
 		if x is not None:
 			self.calculate_doses(x)

@@ -1,13 +1,18 @@
+from __future__ import print_function
 """
 Python 2/3 comptability module for CONRAD.
 
 Attributes:
-	xrange: Alias python3 `range` in namespace to match python2 `xrange`.
-	listmap: Wrap python3 `map` to match python2 implementation.
-	listfilter: Wrap python3 `filter` to match python2 implementation.
-	reduce: Import python3 `functools.reduce` into namespace.
-	CONRAD_PY_VERSION: Constant, set to match `sys.version_info.major`.
-
+	xrange: Alias python3 :func:`range` in namespace to match python2
+		:func:`xrange`.
+	listmap: Wrap python3 :func:`map` to match python2 implementation.
+	listfilter: Wrap python3 :func: `filter` to match python2
+		implementation.
+	reduce: Import python3 :func:`functools.reduce` into namespace.
+	CONRAD_PY_VERSION: Constant, set to match
+		:attr:`sys.version_info.major`.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -25,7 +30,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-from __future__ import print_function
 from sys import version_info
 
 if version_info.major > 2:

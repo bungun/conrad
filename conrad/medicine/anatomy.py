@@ -1,6 +1,7 @@
 """
-Define `Anatomy` class, container for treatment planning structures.
-
+Define :class:`Anatomy`, container for treatment planning structures.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -18,17 +19,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from numpy import nan
 
-from conrad.compat import *
 from conrad.medicine.structure import Structure
 
 class Anatomy(object):
 	"""
-	Iterable container class for treatment planning `Structure` objects.
+	Iterable container class for treatment planning structures.
 
-	Provides simple syntax via overloaded operators, including addition
-	or removal of structures from anatomy::
+	Provides simple syntax via overloaded operators, including addition,
+	retrieval, and removal of structures from anatomy::
 
 		anatomy = Anatomy()
 
@@ -51,19 +53,20 @@ class Anatomy(object):
 		# remove structure s2 by label
 		anatomy -= 12
 
-	and retrieval::
 		# retrieve structure s1 by name
 		anatomy[4]
 		anatomy['target']
 	"""
 	def __init__(self, structures=None):
 		"""
-		Initialize `Anatomy` object, empty by default.
+		Initialize :class:`Anatomy` object, empty by default.
 
 		Arguments:
-			structures (optional): Iterable collection of `Structure`
-				objects to append to `Anatomy`. If `structures` is of
-				type `Anatomy`, initializer acts as a copy constructor.
+			structures (optional): Iterable collection of
+				:class:`Structure` objects to append to
+				:class:`Anatomy`. If ``structures`` is of type
+				:class:`Anatomy`, initializer acts as a copy
+				constructor.
 		"""
 		self.__structures = {}
 		self.__label_order = None
@@ -88,13 +91,13 @@ class Anatomy(object):
 		"""
 		Dictionary of structures in anatomy, keyed by label.
 
-		Setter method accepts any iterable collection of `Structure`
-		objects.
+		Setter method accepts any iterable collection of
+		:class:`Structure` objects.
 
 		Raises:
 			TypeError: If input to setter is not iterable.
 			ValueError: If input to setter contains elements of a type
-				other than `Structure`.
+				other than :class:`Structure`.
 		"""
 		return self.__structures
 
@@ -117,13 +120,13 @@ class Anatomy(object):
 
 	@property
 	def list(self):
-		""" List of structures in anatomy. """
+		""" List of structures in :class:`Anatomy`. """
 		return [self[label] for label in self.label_order]
 
 	@property
 	def label_order(self):
 		"""
-		Ranked list of labels of structures in anatomy.
+		Ranked list of labels of structures in :class:`Anatomy`.
 
 		Raises:
 			ValueError: If input to setter contains labels for
@@ -151,17 +154,17 @@ class Anatomy(object):
 
 	@property
 	def is_empty(self):
-		""" True if anatomy contains no structures. """
+		""" ``True`` if :class:`Anatomy` contains no structures. """
 		return self.n_structures == 0
 
 	@property
 	def n_structures(self):
-		""" Number of structures in anatomy. """
+		""" Number of structures in :class:`Anatomy`. """
 		return len(self.structures)
 
 	@property
 	def size(self):
-		""" Total number of voxels in all structures in anatomy. """
+		""" Total number of voxels in all structures in :class:`Anatomy`. """
 		if self.is_empty:
 			return 0
 		elif any([s.size is None for s in self]):
@@ -171,13 +174,13 @@ class Anatomy(object):
 
 	@property
 	def labels(self):
-		""" List of labels of structures in anatomy. """
+		""" List of labels of structures in :class:`Anatomy`. """
 		return self.structures.keys()
 
 	@property
 	def plannable(self):
 		"""
-		True if all structures plannable and at least one is a target.
+		``True`` if all structures plannable and at least one is a target.
 		"""
 		if self.is_empty:
 			return False
@@ -192,7 +195,7 @@ class Anatomy(object):
 
 	def clear_constraints(self):
 		"""
-		Clear all constraints from all structures in anatomy.
+		Clear all constraints from all structures in :class:`Anatomy`.
 
 		Arguments:
 			None
@@ -205,7 +208,7 @@ class Anatomy(object):
 
 	def calculate_doses(self, beam_intensities):
 		"""
-		Calculate voxel doses to each structure in anatomy.
+		Calculate voxel doses to each structure in :class:`Anatomy`.
 
 		Arguments:
 			beam_intensities: Beam intensities to provide to each
@@ -219,7 +222,7 @@ class Anatomy(object):
 
 	def dose_summary_data(self, percentiles = [2, 98]):
 		"""
-		Collimate dose summaries from each structure in anatomy.
+		Collimate dose summaries from each structure in :class:`Anatomy`.
 
 		Arguments:
 			percentiles (:obj:`list`): List of percentiles to include
@@ -227,7 +230,7 @@ class Anatomy(object):
 
 		Returns:
 			:obj:`dict`: Dictionary of dose summaries obtained by
-				calling `Structure.summary` for each structure.
+			calling `Structure.summary` for each structure.
 		"""
 		d = {}
 		for s in self:
@@ -237,14 +240,14 @@ class Anatomy(object):
 	@property
 	def dose_summary_string(self):
 		"""
-		Collimate dose summary strings from each structure in anatomy.
+		Collimate dose summary strings from each structure in :class:`Anatomy`.
 
 		Arguments:
 			None
 
 		Returns:
 			:obj:`dict`: Dictionary of dose summaries obtained by
-				calling `Structure.summary_string` for each structure.
+			calling `Structure.summary_string` for each structure.
 		"""
 		out = ''
 		for s in self.structures.values():
@@ -255,14 +258,14 @@ class Anatomy(object):
 		"""
 		Overload operator +=.
 
-		Append structure(s) in argument to anatomy.
+		Append structure(s) in argument to :class:`Anatomy`.
 
 		Arguments:
-			other: Singleton or iterable collection of `Structure`
-				objects.
+			other: Singleton or iterable collection of
+				:class:`Structure` objects.
 
 		Returns:
-		 	`Anatomy`: Updated anatomy.
+		 	:class:`Anatomy`: Updated anatomy.
 		"""
 		if isinstance(other, Structure):
 			self.__structures[other.label] = other
@@ -277,10 +280,10 @@ class Anatomy(object):
 		Overload operator -=.
 
 		Arguments:
-			other: Name or label of structure to remove from anatomy.
+			other: Name or label of structure to remove from :class:`Anatomy`.
 
 		Returns:
-			`Anatomy`: Downdated anatomy.
+			:class:`Anatomy`: Downdated anatomy.
 		"""
 		key = other
 		for s in self:
@@ -297,7 +300,9 @@ class Anatomy(object):
 		return self
 
 	def __str__(self):
-		""" Collimate strings for each `Structure` in anatomy. """
+		"""
+		Collimate strings for each :class:`Structure` in :class:`Anatomy`.
+		"""
 		ret_string = str(
 				'\n{} with {} structures:\n'.format(
 						Anatomy, self.n_structures))
@@ -308,7 +313,7 @@ class Anatomy(object):
 	@property
 	def plotting_data(self):
 		"""
-		Dictionary of `matplotlib`-compatible plotting data for all structures.
+		Dictionary of :mod:`matplotlib`-compatible plotting data for all structures.
 		"""
 		d = {}
 		for structure in self:

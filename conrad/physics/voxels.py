@@ -1,8 +1,9 @@
 """
-Define `VoxelGrid` object to describe dose grids used in dose
+Define :class:`VoxelGrid` to describe dose grids used in dose
 calculations, or other regular voxel grids used in treatment planning,
 such as CT/MRI/PET scan data sets.
-
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -20,17 +21,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from numpy import nan
 
-from conrad.compat import *
 from conrad.physics.grid import Grid3D
 
 class VoxelGrid(Grid3D):
-	""" Specialize `Grid3D` to (regular) voxel grids. """
+	""" Specialize :class:`Grid3D` to (regular) voxel grids. """
 
 	def __init__(self, x_voxels=None, y_voxels=None, z_voxels=None, grid=None):
 		"""
-		Initialize `VoxelGrid` as `Grid3D` instance.
+		Initialize :class:`VoxelGrid` as :class:`Grid3D` instance.
 
 		Arguments:
 			x_voxels (int, optional): Number of voxels in grid's
@@ -39,8 +41,9 @@ class VoxelGrid(Grid3D):
 				y-dimension.
 			z_voxels (int, optional): Number of voxels in grid's
 				z-dimension.
-			grid (`Grid3D`, optional): Pre-existing three-dimensional
-				grid from which to initialize grid shape.
+			grid (:class:`Grid3D`, optional): Pre-existing
+				three-dimensional grid from which to initialize grid
+				shape.
 		"""
 		if isinstance(grid, Grid3D):
 			Grid3D.__init__(self, *grid.shape)

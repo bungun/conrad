@@ -1,4 +1,7 @@
 """
+Unit tests for :mod:`conrad.physics.beams`.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -16,6 +19,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from conrad.physics.units import cm, mm
 from conrad.physics.beams import *
 from conrad.tests.base import *

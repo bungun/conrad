@@ -13,7 +13,8 @@ Attributes:
 	CENTIGRAY_STRINGS (:obj:`list` of :obj:`str`): List of expected
 		variants to test for when parsing strings for centiGray dose
 		units.
-
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -52,10 +53,11 @@ def volume_unit_from_string(input_str):
 		input_str (:obj:`str`): String to parse.
 
 	Returns:
-		Instance of a `Volume` object, namely `CM3` if `input_str`
-			contains any of the entries of the list `CM3_STRINGS`, or
-			`MM3` if any substrings equal an entry from the list
-			`MM3_STRINGS`. Returns `None` if no matches produced.
+		Instance of a :class:`Volume` object, namely :class:`CM3` if
+		``input_str`` contains any of the entries of the list
+		:attr:`CM3_STRINGS`, or :class:`MM3` if any substrings equal an
+		entry from the list :attr:`MM3_STRINGS`. Returns ``None`` if no
+		matches produced.
 	"""
 	input_str = str(input_str)
 
@@ -74,11 +76,11 @@ def dose_unit_from_string(input_str):
 		input_str (:obj:`str`): String to parse.
 
 	Returns:
-		Instance of a `DeliveredDose` object, namely `Gray` if
-			`input_str` contains any of the entries of the list
-			`GRAY_STRINGS`, or `centiGray` if any substrings equal an
-			entry from the list `CENTIGRAY_STRINGS`. Returns `None` if
-			no matches produced.
+		Instance of a :class:`DeliveredDose` object, namely
+		:class:`Gray` if ``input_str`` contains any of the entries of
+		the list :attr:`GRAY_STRINGS`, or `centiGray` if any substrings
+		equal an entry from the list :attr:`CENTIGRAY_STRINGS`. Returns
+		``None`` if no matches produced.
 	"""
 	input_str = str(input_str)
 
@@ -91,10 +93,10 @@ def dose_unit_from_string(input_str):
 
 def strip_percent_units(input_str):
 	"""
-	Remove known percent unit representations from `input_str`.
+	Remove known percent unit representations from ``input_str``.
 
-	Specifically, strip all members of `PERCENT_STRINGS` from
-	`input_str`.
+	Specifically, strip all members of :attr:`PERCENT_STRINGS` from
+	``input_str``.
 	"""
 	input_str = str(input_str)
 
@@ -105,10 +107,10 @@ def strip_percent_units(input_str):
 
 def strip_volume_units(input_str):
 	"""
-	Remove known volume unit representations from `input_str`.
+	Remove known volume unit representations from ``input_str``.
 
-	Specifically, strip all members of `CM3_STRINGS` and `MM3_STRINGS`
-	from `input_str`.
+	Specifically, strip all members of :attr:`CM3_STRINGS` and
+	:attr:`MM3_STRINGS` from ``input_str``.
 	"""
 	input_str = str(input_str)
 
@@ -119,10 +121,10 @@ def strip_volume_units(input_str):
 
 def strip_dose_units(input_str):
 	"""
-	Remove known dose unit representations from `input_str`.
+	Remove known dose unit representations from ``input_str``.
 
-	Specifically, strip all members of `CENTIGRAY_STRINGS` and
-	`GRAY_STRINGS` from `input_str`.
+	Specifically, strip all members of :attr:`CENTIGRAY_STRINGS` and
+	:attr:`GRAY_STRINGS` from ``input_str``.
 	"""
 	input_str = str(input_str)
 
@@ -133,49 +135,51 @@ def strip_dose_units(input_str):
 
 def float_value_from_percent_string(input_str):
 	"""
-	Strip percent unit-related strings and convert remainder to float.
+	Strip percent unit-related strings and convert remainder to :obj:`float`.
 	"""
 	return float(strip_percent_units(input_str))
 
 def float_value_from_volume_string(input_str):
 	"""
-	Strip volume unit-related strings and convert remainder to float.
+	Strip volume unit-related strings and convert remainder to :obj:`float`.
 	"""
 	return float(strip_volume_units(input_str))
 
 def float_value_from_dose_string(input_str):
 	"""
-	Strip dose unit-related strings and convert remainder to float.
+	Strip dose unit-related strings and convert remainder to :obj:`float`.
 	"""
 	return float(strip_dose_units(input_str))
 
 def volume_from_string(input_str):
-	""" Parse string as volume, extracting units and value. """
+	""" Parse string as :class:`Volume`, extracting units and value. """
 	unit = volume_unit_from_string(input_str)
 	if unit is None:
 		return None
 	return float_value_from_volume_string(input_str) * unit
 
 def dose_from_string(input_str):
-	""" Parse string as dose, extracting units and value. """
+	"""
+	Parse string as :class:`DeliveredDose`, extracting units and value.
+	"""
 	unit = dose_unit_from_string(input_str)
 	if unit is None:
 		return None
 	return float_value_from_dose_string(input_str) * unit
 
 def percent_from_string(input_str):
-	""" Parse string as percent, extracting units and value. """
+	""" Parse string as :class:`Percent`, extracting units and value. """
 	return float_value_from_percent_string(input_str) * Percent()
 
 def fraction_or_percent_from_string(input_str):
-	""" Parse string as percent or fraction. """
+	""" Parse string as :class:`Percent` or fraction (:obj:`float`). """
 	if strip_percent_units(input_str) == input_str:
 		return float(input_str)
 	else:
 		return percent_from_string(input_str)
 
 def percent_or_dose_from_string(input_str):
-	""" Parse string as percent or dose. """
+	""" Parse string as :class:`Percent` or :class:`DeliveredDose`. """
 	unit = dose_unit_from_string(input_str)
 	if isinstance(unit, DeliveredDose):
 		return dose_from_string(input_str)

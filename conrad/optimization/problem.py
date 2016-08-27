@@ -1,6 +1,8 @@
 """
-Define `PlanningProblem` class, interface between case and solvers.
-
+Define :class:`PlanningProblem`, interface between :class:`~conrad.Case`
+and solvers.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -18,33 +20,35 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from os import getenv
 from numpy import inf, array, squeeze, ones, zeros, copy as np_copy
 
-from conrad.compat import *
 from conrad.medicine.dose import PercentileConstraint
 from conrad.optimization.solver_cvxpy import SolverCVXPY
 from conrad.optimization.solver_optkit import SolverOptkit
+from conrad.optimization.history import RunOutput
 
 class PlanningProblem(object):
 	"""
-	Interface between `conrad.Case` and convex solvers.
+	Interface between :class:`~conrad.Case` and convex solvers.
 
 	Builds and solves specified treatment planning problem using fastest
 	available solver, then extracts solution data and solver metadata
-	(e.g., timing results) for use by clients of the `PlanningProblem`
-	object (e.g., a `conrad.Case` object).
+	(e.g., timing results) for use by clients of the
+	:class:`PlanningProblem` object (e.g., a :class:`~conrad.Case`).
 
 	Attributes:
-		solver_cvxpy (`SolverCVXPY` or `NoneType`): CVXPY solver, if
-			available.
-		solver_pogs (`SolverOptkit` or `NoneType`): POGS solver, if
-			available.
+		solver_cvxpy (:class:`SolverCVXPY` or :class:`NoneType`):
+			:mod:`cvxpy`-baed solver, if available.
+		solver_pogs (:class:`SolverOptkit` or :class:`NoneType`): POGS
+			solver, if available.
 	"""
 
 	def __init__(self):
 		"""
-		Initialize a bare `PlanningProblem` with all available solvers.
+		Initialize a bare :class:`PlanningProblem` with all available solvers.
 
 		Arguments:
 			None
@@ -71,11 +75,11 @@ class PlanningProblem(object):
 		Pull solver results pertaining to constraint slacks.
 
 		Arguments:
-			structure (`conrad.medicine.Structure`): Structure for which
-				to retrieve constraint data.
-			slack_tol (float, optional): Numerical tolerance; if the
-				magnitude of the slack variable's value is smaller than
-				this tolerance, it is treated as zero.
+			structure (:class:`~conrad.medicine.Structure`): Structure
+				for which to retrieve constraint data.
+			slack_tol (:obj:`float`, optional): Numerical tolerance; if
+				the magnitude of the slack variable's value is smaller
+				than this tolerance, it is treated as zero.
 
 		Returns:
 			None
@@ -96,10 +100,11 @@ class PlanningProblem(object):
 		Calculate structure dose from solver's optimal beam intensities.
 
 		Arguments:
-			structure (`conrad.medicine.Structure`): Structure for which
-				to calculate dose.
-			exact (bool, optional): If False (i.e., first-pass results),
-				trigger call to update constraints as well.
+			structure (:class:`~conrad.medicine.Structure`): Structure
+				for which to calculate dose.
+			exact (:obj:`bool`, optional): If ``False`` (i.e.,
+				reading first-pass results), trigger call to update
+				constraints as well.
 
 		Returns:
 			None
@@ -110,18 +115,24 @@ class PlanningProblem(object):
 
 	def __gather_solver_info(self, run_output, exact=False):
 		"""
-		Transfer solver metadata to a `RunOutput` object.
+		Transfer solver metadata to a :class:RunOutput` instance.
 
 		Arguments:
-			run_output (`conrad.optimization.history.RunOutput`): Container
-				for solver data. Data stored as dictionary entries in
-				`run_output.solver_info`.
-			exact (bool, optional): If True, append `_exact` to keys
-				of dictionary entries.
+			run_output (:class:`RunOutput`):
+				Container for solver data. Data stored as dictionary
+				entries in :attr:`RunOutput.solver_info`.
+			exact (:obj:`bool`, optional): If ``True``, append '_exact'
+				to keys of dictionary entries.
 
 		Returns:
 			None
+
+		Raises:
+			TypeError: If ``run_output`` not of type :class:`RunOutput`.
 		"""
+		if not isinstance(run_output, RunOutput):
+			raise TypeError('Argument "run_output" must be of type {}'
+							''.format(RunOutput))
 		keymod = '_exact' if exact else ''
 		run_output.solver_info['status' + keymod] = self.solver.status
 		run_output.solver_info['time' + keymod] = self.solver.solvetime
@@ -130,18 +141,25 @@ class PlanningProblem(object):
 
 	def __gather_solver_vars(self, run_output, exact=False):
 		"""
-		Transfer solver variables to a `RunOutput` object.
+		Transfer solver variables to a :class:`RunOutput` instance.
 
 		Arguments:
-			run_output (`conrad.optimization.history.RunOutput`): Container
-				for solver data. Data stored as dictionary entries in
-				`run_output.optimal_variables`.
-			exact (bool, optional): If True, append `_exact` to keys
-				of dictionary entries.
+			run_output (:class: `RunOutput`): Container for solver data.
+				Data stored as dictionary entries in
+				:attr:`RunOutput.optimal_variables`.
+			exact (:obj:`bool`, optional): If ``True``, append '_exact'
+				to keys of dictionary entries.
 
 		Returns:
 			None
+
+		Raises:
+			TypeError: If ``run_output`` not of type :class:`RunOutput`.
 		"""
+		if not isinstance(run_output, RunOutput):
+			raise TypeError('Argument "run_output" must be of type {}'
+							''.format(RunOutput))
+
 		keymod = '_exact' if exact else ''
 		run_output.optimal_variables['x' + keymod] = self.solver.x
 		run_output.optimal_variables['mu' + keymod] = self.solver.x_dual
@@ -153,22 +171,29 @@ class PlanningProblem(object):
 
 	def __gather_dvh_slopes(self, run_output, structures):
 		"""
-		Transfer optimal DVH constraint slopes to a `RunOutput` object.
+		Transfer optimal DVH constraint slopes to :class:`RunOutput`.
 
-		For each percentile-type dose constraint in each `Structure` in
-		`structures`, retrieve the optimal value of the slope variable
+		For each percentile-type dose constraint in each structure in
+		``structures``, retrieve the optimal value of the slope variable
 		used in the convex restriction to the constraint.
 
 		Arguments:
-			run_output (`conrad.optimization.history.RunOutput`): Container
-				for solver data. Data stored as dictionary entries in
-				`run_output.optimal_dvh_slopes`.
+			run_output (:class:`RunOutput`): Container for solver data.
+				Data stored as dictionary entries in
+				:attr:`RunOutput.optimal_dvh_slopes`.
 			structures: Iterable collection of
-				`conrad.medicine.Structure` objects.
+				:class:`~conrad.medicine.Structure` objects.
 
 		Returns:
 			None
+
+		Raises:
+			TypeError: If ``run_output`` not of type :class:`RunOutput`.
 		"""
+		if not isinstance(run_output, RunOutput):
+			raise TypeError('Argument "run_output" must be of type {}'
+							''.format(RunOutput))
+
 		# recover dvh constraint slope variables
 		for s in structures:
 			for cid in s.constraints:
@@ -179,15 +204,15 @@ class PlanningProblem(object):
 		"""
 		Set active solver to fastest solver than can handle problem.
 
-		If `structures` includes any dose constraints, only CVXPY-based
-		solvers can be used. If no dose constraints are present,
-		and the module `optkit` is installed, the POGS solver is the
-		fastest option.
+		If ``structures`` includes any dose constraints, only
+		:mod:`cvxpy`-based solvers can be used. If no dose constraints
+		are present, and the module :mod:`optkit` is installed, the POGS
+		solver is the fastest option.
 
 		Arguments:
 			structures: Iterable collection of
-				`conrad.medicine.Structure` objects, passed to the
-				`SolverOptkit.can_solve` method.
+				:class:`~conrad.medicine.Structure` objects, passed to
+				:meth:`SolverOptkit.can_solve`.
 
 		Returns:
 			None
@@ -212,12 +237,12 @@ class PlanningProblem(object):
 
 		Arguments:
 			structures: Iterable collection of
-				`conrad.medicine.Structure` objects to be check for
+				:class:`~conrad.medicine.Structure` objects to check for
 				percentile constraints.
 
 		Returns:
-			bool: True if any structure in `structures` has a percentile
-				dose constraint.
+			:obj:`bool`: ``True`` if any structure in ``structures`` has
+			a percentile dose constraint.
 		"""
 		percentile_constraints_included = False
 		for s in structures:
@@ -233,26 +258,26 @@ class PlanningProblem(object):
 
 		Arguments:
 			structures: Iterable collection of
-				`conrad.medicine.Structure` objects with attached
-				objective, constraint, and dose matrix information.
-				Build convex model of treatment planning problem using
-				these data.
-			run_output (`conrad.optimization.history.RunOutput`): Object
-				for saving solver results.
-			slack (bool, optional): If True, build dose constraints
-				with slack.
-			exact_constraints (bool, optional): If True *and* at least
-				one structure has a percentile-type dose constraint,
-				execute the two-pass planning algorithm, using convex
-				restrictions of the percentile constraints on the first
-				pass, and exact versions of the constraints on the
-				second pass.
+				:class:`~conrad.medicine.Structure` objects with
+				attached objective, constraint, and dose matrix
+				information. Build convex model of treatment planning
+				problem using these data.
+			run_output (:class:`RunOutput`): Container for saving solver
+				results.
+			slack (:obj:`bool`, optional): If ``True``, build dose
+				constraints with slack.
+			exact_constraints (:obj:`bool`, optional): If ``True`` *and*
+				at least one structure has a percentile-type dose
+				constraint, execute the two-pass planning algorithm,
+				using convex restrictions of the percentile constraints
+				on the firstpass,  and exact versions of the constraints
+				on the second pass.
 			**options: Abitrary keyword arguments.
 
 		Returns:
-			int: Number of feasible solver runs performed: 0 if first
-				pass infeasible, 1 if first pass feasible, 2 if two-pass
-				method requested and both passes feasible.
+			:obj:`int`: Number of feasible solver runs performed: ``0``
+			if first pass infeasible, ``1`` if first pass feasible,
+			``2`` if two-pass method requested and both passes feasible.
 
 		Raises:
 			AttributeError: If no solvers avaialable.

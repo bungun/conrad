@@ -5,7 +5,8 @@ configurations of candidate beams in treatment planning.
 Attributes:
 	BEAM_TYPES (`BeamTypes`): Constant, enumerates beam types---namely,
 		photon, electron, proton, and (heavier) particle beams.
-
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -23,9 +24,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from numpy import nan
 
-from conrad.compat import *
 from conrad.physics.grid import Grid2D, Grid3D
 
 class BeamTypes(object):
@@ -44,7 +46,7 @@ class BeamTypes(object):
 			beamtype (:obj:`str`): Value to be tested.
 
 		Returns:
-			bool: True if input matches an enumerated beam type.
+			:obj:`bool`: ``True`` if input matches an enumerated beam type.
 		"""
 		return beamtype in self.__types
 
@@ -61,7 +63,7 @@ class AbstractBeam(object):
 	"""
 
 	def __init__(self):
-		""" Initialize empty `AbstractBeam`. """
+		""" Initialize empty :class:`AbstractBeam`. """
 		self.__type = '<unknown beam type>'
 		self.__energy = nan
 		self.__limit = nan
@@ -80,12 +82,14 @@ class AbstractBeam(object):
 	def energy(self, energy):
 		self.__energy = float(energy)
 
-	# TODO: position (x, y, z? or r, phi, theta")
+	# TODO: position (x, y, z? or r, phi, theta?)
 	# TODO: unit normal (orientation, cartesian?)
 
 	@property
 	def type(self):
-		""" Beam type: one of values enumerated by `BEAM_TYPES`. """
+		"""
+		Beam type: one of values enumerated by :attr:`BEAM_TYPES`.
+		"""
 		return self.__type
 
 	@type.setter
@@ -157,58 +161,58 @@ class AbstractBeam(object):
 
 class Beam(AbstractBeam):
 	"""
-	Specialize `AbstractBeam` to `Beam`.
+	Specialize :class:`AbstractBeam` to :class:`Beam`.
 
 	This beam type is generic, with no additional assoicataed clinical
 	data.
 	"""
 	def __init__(self):
-		""" Initialize `Beam` as `AbstractBeam` instance. """
+		""" Initialize as :class:`AbstractBeam` instance. """
 		AbstractBeam.__init__(self)
 
 	@property
 	def count(self):
-		""" The `Beam` object is taken to be unitary. """
+		""" The :class:`Beam` object is taken to be unitary. """
 		return 1
 
 	# TODO: convert between this and fluence map
 
 class Beamlet(AbstractBeam):
 	"""
-	Specialize `AbstractBeam` to `Beamlet`.
+	Specialize :class:`AbstractBeam` to :class:`Beamlet`.
 
 	This beam type is generally a subdivision of another beam type, such
 	as a fluence map.
 	"""
 	def __init__(self):
-		""" Initialize `Beamlet` as `AbstractBeam` instance. """
+		""" Initialize as :class:`AbstractBeam` instance. """
 		AbstractBeam.__init__(self)
 
 	@property
 	def count(self):
-		""" `Beamlet` objects are taken to be unitary. """
+		""" :class:`Beamlet` objects are taken to be unitary. """
 		return 1
 
 class Aperture(AbstractBeam):
 	"""
-	Specialize `AbstractBeam` to `Aperture`.
+	Specialize :class:`AbstractBeam` to :class:`Aperture`.
 
 	An aperture is a beam with a shape achievable by treatment hardware,
 	such as a multileaf collimator (MLC). An aperture acts as a unitary
 	beam.
 	"""
 	def __init__(self):
-		""" Description. """
+		""" Initialize as :class:`AbstractBeam` instance. """
 		AbstractBeam.__init__(self)
 
 	# TODO: convert between this and fluence map
 
 class BixelGrid(Grid2D):
-	""" Specializes `Grid2D` to (regular) bixel grids. """
+	""" Specializes :class:`Grid2D` to (regular) bixel grids. """
 
 	def __init__(self, x_bixels=None, y_bixels=None):
 		"""
-		Initialize `BixelGrid` as `Grid2D` instance.
+		Initialize as :class:`Grid2D` instance.
 
 		Arguments:
 			x_bixels (int, optional): Number of bixels in grid's
@@ -235,16 +239,18 @@ class BixelGrid(Grid2D):
 
 class FluenceMap(AbstractBeam):
 	"""
-	Specialize `AbstractBeam` to `FluenceMap` with bixels in a `BixelGrid`.
+	Specialize :class:`AbstractBeam` to :class:`FluenceMap`.
+
+	A :class:`FluenceMap` consists of bixels in a `BixelGrid`.
 	"""
 
 	def __init__(self, size1, size2):
 		"""
-		Initialize `FluenceMap` object as `AbstractBeam` instance.
+		Initialize as :class:`AbstractBeam` instance.
 
 		Arguments:
-			size1 (int): First dimension of fluence map's `BixelGrid`.
-			size2 (int): Second dimension of fluence map's `BixelGrid`.
+			size1 (int): First dimension of fluence map's :class:`BixelGrid`.
+			size2 (int): Second dimension of fluence map's :class:`BixelGrid`.
 		"""
 		AbstractBeam.__init__(self)
 		self.__bixel_grid = BixelGrid(size1, size2)
@@ -257,10 +263,10 @@ class FluenceMap(AbstractBeam):
 	# TODO: methods for converting to aperture
 
 class BeamSet(AbstractBeam):
-	""" Specialize `AbstractBeam` to any set or collection of beams. """
+	""" Specialize :class:`AbstractBeam` to any set or collection of beams. """
 
 	def __init__(self, beams=None):
-		""" Initialize `BeamSet` as an `AbstractBeam` instance. """
+		""" Initialize as an :class:`AbstractBeam` instance. """
 		AbstractBeam.__init__(self)
 		self.__beams = []
 		if beams:
@@ -271,7 +277,7 @@ class BeamSet(AbstractBeam):
 
 	@property
 	def count(self):
-		""" Description. """
+		""" Number of beams in the :class:`BeamSet`. """
 		if len(self.beams) == 0:
 			return 0
 		else:
@@ -280,11 +286,11 @@ class BeamSet(AbstractBeam):
 	@property
 	def beams(self):
 		"""
-		The list of beams in the `BeamSet`.
+		The list of beams in the :class:`BeamSet`.
 
 		Raises:
 			TypeError: If setter method cannot parse the input as a list
-				of `AbstractBeam`-derived objects.
+				of :class:`AbstractBeam`-derived objects.
 		"""
 		return self.__beams
 
@@ -308,16 +314,18 @@ class BeamSet(AbstractBeam):
 		"""
 		Overload operator +=.
 
-		Extend the `BeamSet` by adding
+		Extend the :class:`BeamSet` by adding beams.
 
 		Arguments:
-			other (`AbstractBeam`): One or more beams to add to set.
+			other (:class:`AbstractBeam`): One or more beams to add to
+				set.
 
 		Returns:
-			`BeamSet`: Original beam set, plus added beam(s).
+			:class:`BeamSet`: Original beam set, plus added beam(s).
 
 		Raises:
-			TypeError: If `other` not derived from type `AbstractBeam`.
+			TypeError: If ``other`` not derived from type
+				:class:`AbstractBeam`.
 		"""
 		if isinstance(other, AbstractBeam):
 			self.__beams.append(other)

@@ -1,6 +1,7 @@
 """
 Define base classes for abstract, 2-D, and 3-D regular grids.
-
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -18,10 +19,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from numpy import nan
 from operator import mul
 
-from conrad.compat import *
 from conrad.physics.units import mm, mm2, cm3, Length
 
 class AbstractGrid(object):
@@ -29,7 +31,7 @@ class AbstractGrid(object):
 
 	def __init__(self):
 		"""
-		Initialize `AbstractGrid`.
+		Initialize :class:`AbstractGrid`.
 
 		By default, up to 3 dimensions allowed, all dimensions assigned
 		size zero, all unit cell lengths set to nan (with length units
@@ -52,7 +54,7 @@ class AbstractGrid(object):
 	@staticmethod
 	def validate_nonnegative_int(var, name):
 		"""
-		Check whether `var` is integer >= 0.
+		Check whether ``var`` is :obj:`int` >= 0.
 
 		Arguments:
 			var: Variable to validate.
@@ -62,8 +64,8 @@ class AbstractGrid(object):
 			None
 
 		Raises:
-			TypeError: If `var` is not an integer.
-			ValueError: If `var` is negative.
+			TypeError: If ``var`` is not an integer.
+			ValueError: If ``var`` is negative.
 		"""
 		if not isinstance(var, int):
 			raise TypeError(
@@ -74,7 +76,7 @@ class AbstractGrid(object):
 	@staticmethod
 	def validate_positive_int(var, name):
 		"""
-		Check whether `var` is integer > 0.
+		Check whether ``var`` is :obj:`int` > 0.
 
 		Arguments:
 			var: Variable to validate.
@@ -84,8 +86,8 @@ class AbstractGrid(object):
 			None
 
 		Raises:
-			TypeError: If `var` is not an integer.
-			ValueError: If `var` is not positive.
+			TypeError: If ``var`` is not an integer.
+			ValueError: If ``var`` is not positive.
 		"""
 		if not isinstance(var, int):
 			raise TypeError(
@@ -96,7 +98,7 @@ class AbstractGrid(object):
 	@staticmethod
 	def validate_length(var, name):
 		"""
-		Check whether `var` is of type `Length`.
+		Check whether ``var`` is of type :class:`Length`.
 
 		Arguments:
 			var: Variable to validate.
@@ -106,14 +108,25 @@ class AbstractGrid(object):
 			None
 
 		Raises:
-			TypeError: If `var` is not of type `Length`.
+			TypeError: If ``var`` is not of type :class:`Length`.
 		"""
 		if not isinstance(var, Length):
 			raise TypeError(
 					'argument "{}" must be of type {}'.format(name, Length))
 
 	def calculate_strides(self):
-		""" Description. """
+		"""
+		Trigger calculation of grid strides.
+
+		Grid strides calculated based on sizes and order of grid
+		dimensions.
+
+		Arguments:
+			None
+
+		Returns:
+			None
+		"""
 		span = 1
 		lengths = {}
 		strides = {}
@@ -172,16 +185,15 @@ class AbstractGrid(object):
 		pass
 
 class Grid2D(AbstractGrid):
-	""" Specialize `AbstractGrid` to two-dimensional regular grids. """
+	""" Specialize :class:`AbstractGrid` to two-dimensional regular grids. """
 
 	def __init__(self, x=None, y=None):
 		"""
-		Initialize `Grid3D`.
+		Initialize :class:`Grid2D`.
 
 		Arguments:
-			x (int, optional):
-			y (int, optional):
-			z (int, optional):
+			x (:obj:`int`, optional): Size of grid's x-dimension.
+			y (:obj:`int`, optional): Size of grid's y-dimension.
 		"""
 		AbstractGrid.__init__(self)
 		self._AbstractGrid__order = 'xy'
@@ -205,8 +217,8 @@ class Grid2D(AbstractGrid):
 			None
 
 		Raises:
-			TypeError: If `order` not of type `str`.
-			ValueError: If `order` not one of {'xy', 'yx'}.
+			TypeError: If ``order`` not of type :obj:`str`.
+			ValueError: If ``order`` not one of {'xy', 'yx'}.
 		"""
 		if not isinstance(order, str):
 			raise TypeError('argument "order" must be of type {}'.format(str))
@@ -221,11 +233,11 @@ class Grid2D(AbstractGrid):
 		Set grid dimensions.
 
 		Trigger recalculation of the grid traversal strides, given the
-		`Grid2D` object's current traversal order.
+		:class:`Grid2D` object's current traversal order.
 
 		Arguments:
-			x (int): Number of grid units in x dimension.
-			y (int): Number of grid units in y dimension.
+			x (:obj:`int`): Number of grid units in x dimension.
+			y (:obj:`int`): Number of grid units in y dimension.
 
 		Returns:
 			None
@@ -243,8 +255,10 @@ class Grid2D(AbstractGrid):
 		Trigger calculation of unit cell area.
 
 		Arguments:
-			x_length (int): Length of of grid unit cell in x dimension.
-			y_length (int): Length of grid unit cell in y dimension.
+			x_length (:class:`Length`): Length of grid unit cell in x
+				dimension.
+			y_length (:class:`Length`): Length of grid unit cell in y
+				dimension.
 
 		Returns:
 			None
@@ -277,17 +291,17 @@ class Grid2D(AbstractGrid):
 
 	def index2position(self, index):
 		"""
-		Convert `index` to (x, y) position in grid.
+		Convert ``index`` to (x, y) position in grid.
 
 		Arguments:
-			index (int): Index of grid element.
+			index (:obj:`int`): Index of grid element.
 
 		Returns:
 			:obj:`tuple` of :obj:`int`: Tuple representing (x, y) grid
-				position of element at requested index.
+			position of element at requested index.
 
 		Raises:
-			ValueError: If `index` exceeds grid bounds.
+			ValueError: If ``index`` exceeds grid bounds.
 		"""
 		index = int(index)
 		self.validate_nonnegative_int(index, 'index')
@@ -306,17 +320,17 @@ class Grid2D(AbstractGrid):
 
 	def position2index(self, x, y):
 		"""
-		Convert (x, y) position in grid to grid element index.
+		Convert (``x``, ``y``) position in grid to grid element index.
 
 		Arguments:
-			x (int): x position of grid element.
-			y (int): y position of grid element.
+			x (:obj:`int`): x position of grid element.
+			y (:obj:`int`): y position of grid element.
 
 		Returns:
-			int: Index of grid element at requested position.
+			:obj:`int`: Index of grid element at requested position.
 
 		Raises:
-			ValueError: If (`x`, `y`) exceeds grid bounds.
+			ValueError: If (``x``, ``y``) exceeds grid bounds.
 		"""
 		for arg in [(x, 'x'), (y, 'y')]:
 			self.validate_nonnegative_int(arg[0], arg[1])
@@ -338,16 +352,18 @@ class Grid2D(AbstractGrid):
 				   '\n\ttraversal order: {}'.format(*args))
 
 class Grid3D(AbstractGrid):
-	""" Specialize `AbstractGrid` to three-dimensional regular grids. """
+	"""
+	Specialize :class:`AbstractGrid` to three-dimensional regular grids.
+	"""
 
 	def __init__(self, x=None, y=None, z=None):
 		"""
-		Initialize `Grid3D`.
+		Initialize :class:`Grid3D`.
 
 		Arguments:
-			x (int, optional):
-			y (int, optional):
-			z (int, optional):
+			x (:obj:`int`, optional): Size of grid's x-dimension.
+			y (:obj:`int`, optional): Size of grid's y-dimension.
+			z (:obj:`int`, optional): Size of grid's z-dimension.
 		"""
 		AbstractGrid.__init__(self)
 		self.__unit_volume = nan * cm3
@@ -361,12 +377,12 @@ class Grid3D(AbstractGrid):
 		Set grid dimensions.
 
 		Trigger recalculation of the grid traversal strides, given the
-		`Grid2D` object's current traversal order.
+		:class:`Grid3D` object's current traversal order.
 
 		Arguments:
-			x (int): Number of grid units in x dimension.
-			y (int): Number of grid units in y dimension.
-			z (int): Number of grid units in z dimension.
+			x (:obj:`int`): Number of grid units in x dimension.
+			y (:obj:`int`): Number of grid units in y dimension.
+			z (:obj:`int`): Number of grid units in z dimension.
 
 		Returns:
 			None
@@ -386,9 +402,12 @@ class Grid3D(AbstractGrid):
 		Trigger calculation of unit cell volume.
 
 		Arguments:
-			x_length (int): Length of of grid unit cell in x dimension.
-			y_length (int): Length of grid unit cell in y dimension.
-			z_length (int): Length of grid unit cell in z dimension.
+			x_length (:class:`Length`): Length of grid unit cell in x
+				dimension.
+			y_length (:class:`Length`): Length of grid unit cell in y
+				dimension.
+			z_length (:class:`Length`): Length of grid unit cell in z
+				dimension.
 
 		Returns:
 			None
@@ -406,7 +425,7 @@ class Grid3D(AbstractGrid):
 		Grid traversal order.
 
 		Traversal order determines grid strides. For instance, a
-		5 x 3 x 4 grid in order `xyz` has unit stride in the
+		5 x 3 x 4 grid in order 'xyz' has unit stride in the
 		x-dimension, stride 5 in the y dimension, and stride 15 in the
 		z-dimension.
 
@@ -417,8 +436,8 @@ class Grid3D(AbstractGrid):
 			None
 
 		Raises:
-			TypeError: If `order` not of type `str`.
-			ValueError: If `order` not a permutation of 'xyz'.
+			TypeError: If ``order`` not of type :obj:`str`.
+			ValueError: If ``order`` not a permutation of 'xyz'.
 		"""
 		contains_xyz = all(listmap(lambda v: v in order, ('x', 'y', 'z')))
 
@@ -463,17 +482,17 @@ class Grid3D(AbstractGrid):
 
 	def index2position(self, index):
 		"""
-		Convert `index` to (x, y, z) position in grid.
+		Convert ``index`` to (x, y, z) position in grid.
 
 		Arguments:
-			index (int): Index of grid element.
+			index (:obj:`int`): Index of grid element.
 
 		Returns:
 			:obj:`tuple` of :obj:`int`: Tuple representing (x, y, z)
 				grid position of element at requested index.
 
 		Raises:
-			ValueError: If `index` exceeds grid bounds.
+			ValueError: If ``index`` exceeds grid bounds.
 		"""
 		index = int(index)
 		self.validate_nonnegative_int(index, 'index')
@@ -492,18 +511,18 @@ class Grid3D(AbstractGrid):
 
 	def position2index(self, x, y, z):
 		"""
-		Convert (x, y, z) position in grid to grid element index.
+		Convert (``x``,``y``,``z``) position in grid to grid element index.
 
 		Arguments:
-			x (int): x position of grid element.
-			y (int): y position of grid element.
-			z (int): z position of grid element.
+			x (:obj:`int`): x position of grid element.
+			y (:obj:`int`): y position of grid element.
+			z (:obj:`int`): z position of grid element.
 
 		Returns:
 			int: Index of grid element at requested position.
 
 		Raises:
-			ValueError: If (`x`, `y`, `z`) exceeds grid bounds.
+			ValueError: If (``x``, ``y``, ``z``) exceeds grid bounds.
 		"""
 		for arg in [(x, 'x'), (y, 'y'), (z, 'z')]:
 			self.validate_nonnegative_int(arg[0], arg[1])

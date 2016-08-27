@@ -1,4 +1,7 @@
 """
+Unit tests for :mod:`conrad.case`.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -16,9 +19,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 from os import path
 
-from conrad.compat import *
 from conrad.physics import Gy
 from conrad.medicine import D, Structure
 from conrad.case import *

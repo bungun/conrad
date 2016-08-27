@@ -7,5 +7,6 @@ Medicine
    :maxdepth: 2
    :hidden:
    
-   anatomy
+   dose
    prescription
+   anatomy

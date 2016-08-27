@@ -1,4 +1,7 @@
 """
+Unit tests for :mod:`conrad.medicine.dose`.
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -16,10 +19,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
+from conrad.compat import *
+
 import numpy as np
 import scipy.sparse as sp
 
-from conrad.compat import *
 from conrad.defs import CONRAD_DEBUG_PRINT
 from conrad.physics.units import DeliveredDose, Gy, cGy, percent, mm3, cm3
 from conrad.medicine.dose import *

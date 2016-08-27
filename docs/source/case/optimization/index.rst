@@ -9,4 +9,6 @@ Optimization
 
    problem
    solvers
+   cvxpy
+   pogs
 
