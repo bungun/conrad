@@ -20,7 +20,7 @@ import mock
 
 # to import conrad:
 sys.path.insert(0, os.path.abspath('../..'))
-__version__ = "0.0.1a"
+__version__ = "0.0.1"
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
