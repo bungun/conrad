@@ -39,7 +39,7 @@ setup(
     long_description=LONG_DESC,
     install_requires=['cvxpy',
                       'numpy >= 1.9',
-		                  'scipy',
+		                  'scipy >= 0.15',
                       'pyyaml',
                       'nose'],
     test_suite='nose.collector',
