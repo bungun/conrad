@@ -38,7 +38,7 @@ setup(
     description='A convex optimization framework for radiation therapy treament planning',
     long_description=LONG_DESC,
     install_requires=['cvxpy',
-                      'numpy',
+                      'numpy >= 1.9',
 		                  'scipy',
                       'pyyaml',
                       'nose'],
