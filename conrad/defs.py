@@ -37,7 +37,7 @@ from numpy import nan, squeeze, array, ndarray
 from scipy.sparse import csr_matrix, csc_matrix
 
 def println(*args):
-	print(*args)
+	print(args)
 
 CONRAD_DEBUG = getenv('CONRAD_DEBUG', False)
 CONRAD_DEBUG_PRINT = println if CONRAD_DEBUG else lambda x : None
