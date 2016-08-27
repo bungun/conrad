@@ -508,8 +508,8 @@ class PercentileConstraint(Constraint):
 
 		   \begin{array}{rl}
 		   \mathbf{0.} & \mbox{Define} \\
-		   	& p = \mbox{% non-violating} \cdot \mbox{structure size}
-			    = \mbox{% non-violating} \cdot \mathbf{len}(y) \\
+		   	& p = \mbox{percent non-violating} \cdot \mbox{structure size}
+			    = \mbox{percent non-violating} \cdot \mathbf{len}(y) \\
 		   \mathbf{1.} & \mbox{Get margins: } y - \mbox{dose bound}. \\
 		   \mathbf{2.} & \mbox{Sort margin indices by margin values.} \\
 		   \mathbf{3.} & \mbox{If upper constraint, return indices of
