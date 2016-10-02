@@ -609,7 +609,7 @@ class Structure(object):
 		return (status, dose_achieved)
 
 	@property
-	def plotting_data(self):
+	def plotting_data(self, constraints_only=False):
 		"""
 		Dictionary of :mod:`matplotlib`-compatible plotting data.
 

@@ -220,7 +220,7 @@ class Anatomy(object):
 		for s in self:
 			s.calculate_dose(beam_intensities)
 
-	def dose_summary_data(self, percentiles = [2, 98]):
+	def dose_summary_data(self, percentiles=[2, 98]):
 		"""
 		Collimate dose summaries from each structure in :class:`Anatomy`.
 
@@ -311,11 +311,11 @@ class Anatomy(object):
 		return ret_string
 
 	@property
-	def plotting_data(self):
+	def plotting_data(self, constraints_only=False):
 		"""
 		Dictionary of :mod:`matplotlib`-compatible plotting data for all structures.
 		"""
-		d = {}
-		for structure in self:
-			d[structure.label] = structure.plotting_data
-		return d
+		if constraints_only:
+			return {s.label: s.plotting_data['constraints'] for s in self}
+		else:
+			return {s.label: s.plotting_data for s in self}
