@@ -1,4 +1,4 @@
-"""
+ """
 Define :class:`DoseFrame` and :class:`Physics` classes for treatment
 planning.
 """
@@ -23,6 +23,8 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 from conrad.compat import *
 
 from numpy import ndarray, ones, nan
+from scipy.sparse import csr_matrix
+
 
 from conrad.defs import vec, sparse_or_dense, CONRAD_MATRIX_TYPES
 from conrad.physics.beams import BeamSet
@@ -604,7 +606,22 @@ class Physics(object):
 		else:
 			b_indices = xrange(self.frame.beams)
 
-		return self.dose_matrix[v_indices, :][:, b_indices]
+		if isinstance(self.dose_matrix, ndarray):
+			return self.dose_matrix[v_indices, :][:, b_indices]
+		elif isinstance(self.dose_matrix, csr_matrix):
+			# CSR format, row slicing is efficient
+			if beam_label is None:
+				# only row slicing requested
+				return self.dose_matrix[v_indixes, :]
+			else:
+				return self.dose_matrix[v_indixes, :].tocsc()[:, b_indices]
+		else:
+			# CSC format, column slicing is efficient
+			if voxel_label is None:
+				# only column slicing requested
+				return self.dose_matrix[:, b_indices]
+			else:
+				return self.dose_matrix[:, b_indices].tocsr()[v_indices, :]
 
 	def voxel_weights_by_label(self, label):
 		""" Subvector of voxel weights, filtered by ``label``. """
