@@ -230,7 +230,7 @@ else:
 					self.series_colors[label] = colors[idx]
 
 
-		def plot(self, plot_data, show=False, clear=True, xmax=None, legend=False,
+		def plot(self, plot_data, show=False, clear=True, xmax=None, legend=True,
 				 title=None, self_title=False, large_markers=False,
 				 suppress_constraints=False, suppress_xticks=False,
 				 suppress_yticks=False, suppress_xlabel=True, suppress_ylabel=True,
@@ -566,7 +566,8 @@ else:
 				KeyError: If ``subset`` is specified but contains items
 					that are not recognized as valid structure labels.
 			"""
-			plotfile = options.pop('file', None)
+			if plotfile is None:
+				plotfile = options.pop('file', None)
 			if isinstance(data, RunRecord):
 				if second_pass and data.plotting_data['exact'] is not None:
 					data = data.plotting_data['exact']
