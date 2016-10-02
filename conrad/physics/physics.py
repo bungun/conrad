@@ -506,7 +506,7 @@ class Physics(object):
 		if key in self.__frames:
 			raise ValueError('key "{}" already exists in {} frame '
 							 'dictionary'.format(key, Physics))
-		self.__frames[key] = DoseFrame()
+		self.__frames[key] = DoseFrame(**frame_args)
 
 	def change_dose_frame(self, key):
 		"""
