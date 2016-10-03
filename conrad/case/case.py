@@ -462,7 +462,9 @@ class Case(object):
 			:obj:`dict`: Plotting data for each structure, keyed by
 			structure label.
 		"""
-		if x is not None:
-			self.calculate_doses(x)
-
-		return self.anatomy.plotting_data(constraints_only=constraints_only)
+		if constraints_only:
+			return self.anatomy.constraint_plotting_data
+		else:
+			if x is not None:
+				self.calculate_doses(x)
+			return self.anatomy.plotting_data

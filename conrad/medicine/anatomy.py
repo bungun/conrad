@@ -315,7 +315,13 @@ class Anatomy(object):
 		"""
 		Dictionary of :mod:`matplotlib`-compatible plotting data for all structures.
 		"""
-		if constraints_only:
-			return {s.label: s.plotting_data['constraints'] for s in self}
-		else:
-			return {s.label: s.plotting_data for s in self}
+		return {s.label: s.plotting_data for s in self}
+
+	@property
+	def constraint_plotting_data(self):
+		"""
+		Dictionary of :mod:`matplotlib`-compatible plotting data for all
+		constraints on each structure.
+		"""
+		return {s.label: s.plotting_data['constraints'] for s in self}
+

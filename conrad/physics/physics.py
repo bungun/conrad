@@ -1,4 +1,4 @@
- """
+"""
 Define :class:`DoseFrame` and :class:`Physics` classes for treatment
 planning.
 """
