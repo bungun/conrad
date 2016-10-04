@@ -1125,6 +1125,29 @@ class DVH(object):
 			# alpha = (p_des - p2) / (p1 - p2)
 			return float(p_des - p2) / float(p1 - p2)
 
+	def percentile_at_dose(self, dose):
+		"""
+		Read off DVH curve to get precentile value at ``dose``.
+
+		Arguments:
+			dose (:obj:`int`, :obj:`float`, or :class:`DeliveredDose`):
+				Quertied dose for which to retrieve the corresponding
+				percentile. Assumed to have same units as DVH data.
+
+		Returns:
+			Percentile value from DVH curve corresponding to queried
+			dose, or :attr:`~numpy.nan` if the curve has not been
+			populated with data.
+		"""
+		if isinstance(dose, DeliveredDose):
+			dose = dose.value
+
+		if self.__doses is None: return nan
+
+		return 100. * (
+				sum(self.__dose_buffer < dose) /
+				float(self.__dose_buffer.size))
+
 	def dose_at_percentile(self, percentile):
 		"""
 		Read off DVH curve to get dose value at ``percentile``.
@@ -1139,7 +1162,7 @@ class DVH(object):
 		dose at the queried percentile by linear interpolation.
 
 		Arguments:
-			Percentile (:obj:`int`, :obj:`float` or :class:`Percent`):
+			percentile (:obj:`int`, :obj:`float` or :class:`Percent`):
 				Queried percentile for which to retrieve corresponding
 				dose level.
 
@@ -1153,8 +1176,10 @@ class DVH(object):
 
 		if self.__doses is None: return nan
 
-		if percentile == 100: return self.min_dose
-		if percentile == 0: return self.max_dose
+		if percentile == 100:
+			return self.min_dose
+		if percentile == 0:
+			return self.max_dose
 
 		# bisection retrieval of index @ percentile
 		# ----------------------------------------
