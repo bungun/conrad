@@ -1118,7 +1118,7 @@ class DVH(object):
 		elif p1 == p2 and p_des != p1:
 			raise ValueError('arguments "p1", "p2" must be distinct to '
 							 'perform interpolation.\nprovided interval: '
-							 '[{},{}]\ntaget value: {}'.format(p1, p2, p_des))
+							 '[{},{}]\ntarget value: {}'.format(p1, p2, p_des))
 		else:
 			# alpha * p1 + (1 - alpha) * p2 = p_des
 			# (p1 - p2) * alpha = p_des - p2
@@ -1195,52 +1195,6 @@ class DVH(object):
 			alpha = self.__interpolate_percentile(self.__percentiles[i],
 				self.__percentiles[i + 1], percentile)
 			return alpha * self.__doses[i] + (1 - alpha) * self.__doses[i + 1]
-	
-	def percentile_at_dose(self, dose):
-		if self.__percentiles is None: return nan
-
-		if dose <= self.min_dose: return 100
-		if dose >= self.max_dose: return 0
-
-		# bisection retrieval of index @ percentile
-		# ----------------------------------------
-		u = len(self.__doses) - 1
-		l = 1
-		i = int(l + (u - l) / 2)
-
-		# set tolerance based on bucket width
-		tol = (self.__doses[-2] - self.__doses[-1]) / 2
-
-		# get to within 0.5 of a dose if possible
-		abstol = 0.5
-
-		while (u - l > 5):
-			# dose sorted descending
-			if self.__doses[i] > dose:
-				l = i
-			else:
-				u = i
-			i = int(l + (u - l) / 2)
-
-		# break to iterative search
-		# -------------------------
-		idx = None
-		for i in xrange(l, u):
-			if abs(self.__doses[i] - dose) < tol:
-				idx = i
-				break
-
-		# retrieve percentile from index, interpolate if needed
-		# -----------------------------------------------
-		if idx is None: idx = u
-		if abs(self.__doses[idx] - dose) <= abstol:
-			# return percentile if available dose bucket is close enough
-			return self.__percentiles[idx]
-		else:
-			# interpolate percentile by interpolating doses if not close enough
-			alpha = self.__interpolate_percentile(self.__doses[i],
-				self.__doses[i + 1], dose)
-			return alpha * self.__percentiles[i] + (1 - alpha) * self.__percentiles[i + 1]
 
 	@property
 	def min_dose(self):
