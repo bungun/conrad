@@ -1131,7 +1131,7 @@ class DVH(object):
 
 		Since the :class:`DVH` object maintains the DVH curve of
 		(dose, percentile) pairs as two sorted vectors, to approximate
-		the the dose d at percentile ``percentile``, we retrieve the
+		the dose d at percentile ``percentile``, we retrieve the
 		index i that yields the nearest percentile value. The
 		corresponding i'th dose is returned. When the nearest percentile
 		is not within 0.5%, the two nearest neighbor percentiles and
@@ -1195,6 +1195,52 @@ class DVH(object):
 			alpha = self.__interpolate_percentile(self.__percentiles[i],
 				self.__percentiles[i + 1], percentile)
 			return alpha * self.__doses[i] + (1 - alpha) * self.__doses[i + 1]
+	
+	def percentile_at_dose(self, dose):
+		if self.__percentiles is None: return nan
+
+		if dose <= self.min_dose: return 100
+		if dose >= self.max_dose: return 0
+
+		# bisection retrieval of index @ percentile
+		# ----------------------------------------
+		u = len(self.__doses) - 1
+		l = 1
+		i = int(l + (u - l) / 2)
+
+		# set tolerance based on bucket width
+		tol = (self.__doses[-2] - self.__doses[-1]) / 2
+
+		# get to within 0.5 of a dose if possible
+		abstol = 0.5
+
+		while (u - l > 5):
+			# dose sorted descending
+			if self.__doses[i] > dose:
+				l = i
+			else:
+				u = i
+			i = int(l + (u - l) / 2)
+
+		# break to iterative search
+		# -------------------------
+		idx = None
+		for i in xrange(l, u):
+			if abs(self.__doses[i] - dose) < tol:
+				idx = i
+				break
+
+		# retrieve percentile from index, interpolate if needed
+		# -----------------------------------------------
+		if idx is None: idx = u
+		if abs(self.__doses[idx] - dose) <= abstol:
+			# return percentile if available dose bucket is close enough
+			return self.__percentiles[idx]
+		else:
+			# interpolate percentile by interpolating doses if not close enough
+			alpha = self.__interpolate_percentile(self.__doses[i],
+				self.__doses[i + 1], dose)
+			return alpha * self.__percentiles[i] + (1 - alpha) * self.__percentiles[i + 1]
 
 	@property
 	def min_dose(self):
