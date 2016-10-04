@@ -233,8 +233,9 @@ else:
 		def plot(self, plot_data, show=False, clear=True, xmax=None, legend=True,
 				 title=None, self_title=False, large_markers=False,
 				 suppress_constraints=False, suppress_xticks=False,
-				 suppress_yticks=False, suppress_xlabel=True, suppress_ylabel=True,
-				 **options):
+				 suppress_yticks=False, x_label='Dose (Gy)',
+				 suppress_xlabel=False, y_label='Percentile',
+				 suppress_ylabel=False, **options):
 			"""
 			Plot ``plot_data`` to the object's :class:`matplotlib.Figure`.
 
@@ -284,8 +285,10 @@ else:
 					drawing of x-axis ticks.
 				suppress_yticks (:obj:`bool`, optional): Suppress
 					drawing of y-axis ticks.
+				x_label (:obj:`str`, optional): x-axis label.
 				suppress_xlabel (:obj:`bool`, optional): Suppress
 					drawing of x-axis label.
+				y_label (:obj:`str`, optional): y-axis label.
 				suppress_ylabel (:obj:`bool`, optional): Suppress
 					drawing of y-axis label.
 				**options: Arbitrary keyword arguments, passed to
@@ -362,9 +365,9 @@ else:
 			else:
 				plt.yticks(fontsize=14)
 			if not suppress_xlabel:
-				plt.xlabel('Dose (Gy)', fontsize=16)
+				plt.xlabel(str(x_label), fontsize=16)
 			if not suppress_ylabel:
-				plt.ylabel('Percentile')
+				plt.ylabel(str(y_label))
 			if legend:
 				plt.legend(ncol=1, loc='upper right', columnspacing=1.0,
 						   labelspacing=0.0, handletextpad=0.0,
