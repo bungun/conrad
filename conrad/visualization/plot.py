@@ -367,7 +367,7 @@ else:
 			if not suppress_xlabel:
 				plt.xlabel(str(x_label), fontsize=16)
 			if not suppress_ylabel:
-				plt.ylabel(str(y_label))
+				plt.ylabel(str(y_label), fontsize=16)
 			if legend:
 				plt.legend(ncol=1, loc='upper right', columnspacing=1.0,
 						   labelspacing=0.0, handletextpad=0.0,
