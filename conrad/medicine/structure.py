@@ -621,9 +621,9 @@ class Structure(object):
 			maxlength (:obj:`int`, optional): If specified, re-sample
 				the structure's DVH plotting data to have a maximum
 				series length of ``maxlength``.
-	 	"""
-	 	if constraints_only:
-	 		return self.constraints.plotting_data
+		"""
+		if constraints_only:
+			return self.constraints.plotting_data
 		else:
 			return {'curve': self.dvh.resample(maxlength).plotting_data,
 					'constraints': self.constraints.plotting_data,
