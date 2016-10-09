@@ -311,17 +311,17 @@ class Anatomy(object):
 		return ret_string
 
 	@property
-	def plotting_data(self, constraints_only=False):
-		"""
-		Dictionary of :mod:`matplotlib`-compatible plotting data for all structures.
-		"""
-		return {s.label: s.plotting_data for s in self}
-
-	@property
-	def constraint_plotting_data(self):
+	def plotting_data(self, constraints_only=False, maxlength=None):
 		"""
 		Dictionary of :mod:`matplotlib`-compatible plotting data for all
-		constraints on each structure.
-		"""
-		return {s.label: s.plotting_data['constraints'] for s in self}
+		structures.
 
+		Args:
+			constraints_only (:obj:`bool`, optional): If ``True``,
+				return only the constraints associated with each
+				structure.
+			maxlength (:obj:`int`, optional): If specified, re-sample
+				each structure's DVH plotting data to have a maximum
+				series length of ``maxlength``.
+		"""
+		return {s.label: s.plotting_data(maxlength=maxlength) for s in self}

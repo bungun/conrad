@@ -1047,6 +1047,7 @@ class DVH(object):
 		self.__percentiles[1:] = linspace(100, 0, length - 1)
 		self.__DATA_ENTERED = False
 
+
 	@property
 	def populated(self):
 		""" True if DVH curve is populated. """
@@ -1237,3 +1238,23 @@ class DVH(object):
 	def plotting_data(self):
 		""" Dictionary of :mod:`matplotlib`-compatible plotting data. """
 		return {'percentile' : self.__percentiles, 'dose' : self.__doses}
+
+	def resample(self, maxlength):
+		"""
+		Re-sampled copy of this :class`DVH`
+
+		Args:
+			maxlength (:obj:`int`): Maximum length at which to series
+				re-sample data.
+
+		Returns:
+			:class:`DVH`: Re-sampled DVH curve; return original curve
+			if ``maxlength`` is ``None``.
+
+		"""
+		if maxlength is None:
+			return self
+
+		dvh = DVH(self.__dose_buffer.size, maxlength=int(maxlength))
+		dvh.data = self.__dose_buffer
+		return dvh

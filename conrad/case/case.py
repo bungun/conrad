@@ -443,7 +443,7 @@ class Case(object):
 		status = (feas == int(1 + int(use_2pass)))
 		return status, run
 
-	def plotting_data(self, x=None, constraints_only=False):
+	def plotting_data(self, x=None, constraints_only=False, maxlength=None):
 		"""
 		Dictionary of :mod:`matplotlib`-compatible plotting data.
 
@@ -456,14 +456,18 @@ class Case(object):
 				calculate structure doses prior to emitting plotting
 				data.
 			constraints_only (:obj:`bool`, optional): If ``True``, only
-				include constraint data in returneed dictionary.
+				include each structure's constraint data in returned
+				dictionary.
+			maxlength (:obj:`int`, optional): If specified, re-sample
+				each structure's DVH plotting data to have a maximum
+				series length of ``maxlength``.
 
 		Returns:
 			:obj:`dict`: Plotting data for each structure, keyed by
 			structure label.
 		"""
 		if constraints_only:
-			return self.anatomy.constraint_plotting_data
+			return self.anatomy.plotting_data(constraints_only=True)
 		else:
 			if x is not None:
 				self.calculate_doses(x)

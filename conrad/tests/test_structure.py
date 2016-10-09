@@ -445,11 +445,11 @@ class StructureTestCase(ConradTestCase):
 
 		s.constraints += D(40) >= 30 * Gy
 		s.dose_rx = 42 * Gy
-		self.assertTrue( isinstance(s.plotting_data, dict) )
-		self.assertTrue( 'curve' in s.plotting_data )
-		self.assertTrue( 'constraints' in s.plotting_data )
-		self.assertTrue( 'rx' in s.plotting_data )
-		self.assertTrue( 'target' in s.plotting_data )
+		self.assertTrue( isinstance(s.plotting_data(), dict) )
+		self.assertTrue( 'curve' in s.plotting_data() )
+		self.assertTrue( 'constraints' in s.plotting_data() )
+		self.assertTrue( 'rx' in s.plotting_data() )
+		self.assertTrue( 'target' in s.plotting_data() )
 
 	def test_print_objective(self):
 		s = Structure('LABEL', 'NAME', True)

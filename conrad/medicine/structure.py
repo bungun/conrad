@@ -608,17 +608,27 @@ class Structure(object):
 
 		return (status, dose_achieved)
 
-	@property
-	def plotting_data(self, constraints_only=False):
+	def plotting_data(self, constraints_only=False, maxlength=None):
 		"""
 		Dictionary of :mod:`matplotlib`-compatible plotting data.
 
 		Data includes DVH curve, constraints, and prescribed dose.
+
+		Args:
+			constraints_only (:obj:`bool`, optional): If ``True``,
+				return only the constraints associated with the
+				structure.
+			maxlength (:obj:`int`, optional): If specified, re-sample
+				the structure's DVH plotting data to have a maximum
+				series length of ``maxlength``.
 	 	"""
-		return {'curve': self.dvh.plotting_data,
-				'constraints': self.constraints.plotting_data,
-				'rx': self.dose_rx.value,
-				'target': self.is_target}
+	 	if constraints_only:
+	 		return self.constraints.plotting_data
+		else:
+			return {'curve': self.dvh.resample(maxlength).plotting_data,
+					'constraints': self.constraints.plotting_data,
+					'rx': self.dose_rx.value,
+					'target': self.is_target}
 
 	@property
 	def __header_string(self):
