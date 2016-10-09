@@ -31,6 +31,7 @@ setup(
               'conrad.medicine',
               'conrad.physics',
               'conrad.optimization',
+              'conrad.case',
               'conrad.visualization',
               'conrad.tests'],
     license='GPLv3',
