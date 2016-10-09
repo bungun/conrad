@@ -314,7 +314,7 @@ else:
 				name = self.series_names[label] if legend else '_nolegend_'
 
 				plt.plot(data['curve']['dose'], data['curve']['percentile'],
-					color=color, label=name, **options)
+					color=color, mfc=color, mec=color, label=name, **options)
 				if self_title:
 					plt.title(name)
 				elif title is not None:
