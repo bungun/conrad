@@ -471,4 +471,4 @@ class Case(object):
 		else:
 			if x is not None:
 				self.calculate_doses(x)
-			return self.anatomy.plotting_data
+			return self.anatomy.plotting_data(maxlength=maxlength)

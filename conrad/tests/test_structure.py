@@ -451,6 +451,11 @@ class StructureTestCase(ConradTestCase):
 		self.assertTrue( 'rx' in s.plotting_data() )
 		self.assertTrue( 'target' in s.plotting_data() )
 
+		maxlength = 25
+		self.assertTrue(
+				len(s.plotting_data(maxlength=25)['curve']['dose']) <=
+				maxlength + 2 )
+
 	def test_print_objective(self):
 		s = Structure('LABEL', 'NAME', True)
 		self.assertTrue(

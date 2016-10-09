@@ -310,7 +310,6 @@ class Anatomy(object):
 			ret_string += str(s)
 		return ret_string
 
-	@property
 	def plotting_data(self, constraints_only=False, maxlength=None):
 		"""
 		Dictionary of :mod:`matplotlib`-compatible plotting data for all

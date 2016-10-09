@@ -750,3 +750,9 @@ class DVHTestCase(ConradTestCase):
 		self.assertTrue( pd['dose'][0] == 0 )
 		self.assertTrue( pd['percentile'][0] == 100 )
 		self.assertTrue( pd['percentile'][-1] == 0 )
+
+		# test re-sampling
+		maxlength = 20
+		dvh_r = dvh.resample(maxlength)
+		pd = dvh_r.plotting_data
+		self.assertTrue( len(pd['dose']) <= maxlength + 2 )
