@@ -79,7 +79,7 @@ try:
 				return
 
 			self.anatomy.calculate_doses(rand(self.beams))
-			d.plot(self.anatomy.plotting_data)
+			d.plot(self.anatomy.plotting_data())
 			self.assertTrue( isinstance(d.fig, Figure) )
 
 			# TODO: test options
@@ -137,7 +137,7 @@ try:
 				return
 
 			self.anatomy.calculate_doses(rand(self.beams))
-			cp.plot(self.anatomy.plotting_data)
+			cp.plot(self.anatomy.plotting_data())
 			self.assertTrue( isinstance(cp.dvh_plot.fig, Figure) )
 
 			# TODO: test options
