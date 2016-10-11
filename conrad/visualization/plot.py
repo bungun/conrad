@@ -235,7 +235,8 @@ else:
 				 suppress_constraints=False, suppress_xticks=False,
 				 suppress_yticks=False, x_label='Dose (Gy)',
 				 suppress_xlabel=False, y_label='Percentile',
-				 suppress_ylabel=False, **options):
+				 suppress_ylabel=False, legend_coordinates=None,
+				 legend_alignment=None, **options):
 			"""
 			Plot ``plot_data`` to the object's :class:`matplotlib.Figure`.
 
@@ -291,6 +292,14 @@ else:
 				y_label (:obj:`str`, optional): y-axis label.
 				suppress_ylabel (:obj:`bool`, optional): Suppress
 					drawing of y-axis label.
+				legend_coordinates (:obj:`list`, optional): Position, as
+				 	(x,y)-coordinates, of legend anchor relative to
+				 	figure; passed as kewyword argument ``bbox_to_anchor``
+				 	in  :meth:`matplotlib.Figure.legend`.
+				legend_alignment (:obj:`str`, optional): String defining
+					alignment of legend relative to anchor, passed as
+					keyword argument ``loc`` in
+					:meth:`matplotlib.Figure.legend`.
 				**options: Arbitrary keyword arguments, passed to
 					:meth:`matplotlib.Figure.plot`.
 
@@ -369,9 +378,21 @@ else:
 			if not suppress_ylabel:
 				plt.ylabel(str(y_label), fontsize=16)
 			if legend:
-				plt.legend(ncol=1, loc='upper right', columnspacing=1.0,
-						   labelspacing=0.0, handletextpad=0.0,
-						   handlelength=1.5, fancybox=True, shadow=True)
+				legend_args = {
+					'ncol':1,
+					'loc':'upper right',
+					'columnspacing':1.0,
+					'labelspacing':0.0,
+					'handletextpad':0.0,
+					'handlelength':1.5,
+					'fancybox':True,
+					'shadow':True
+				}
+				if legend_alignment is not None:
+					legend_args['loc'] = legend_alignment
+				if legend_coordinates is not None:
+					legend_args['bbox_to_anchor'] = legend_coordinates
+				plt.legend(**legend_args)
 
 			if show:
 				SHOW()
