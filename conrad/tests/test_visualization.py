@@ -121,6 +121,15 @@ try:
 			self.assertTrue( all(
 				[cp.label_is_valid(label) for label in label_list]) )
 
+			subset = [0, 2]
+			white_list = [0, 2, 'PTV', 'OAR2']
+			black_list = [1, 'OAR1']
+			cp2 = CasePlotter(self.case, subset=subset)
+			self.assertTrue( all(
+				[cp2.label_is_valid(label) for label in white_list]) )
+			self.assertFalse( any(
+				[cp2.label_is_valid(label) for label in black_list]) )
+
 		def test_case_plotter_set_display_groups(self):
 			self.case.anatomy.label_order = [0, 1, 2]
 

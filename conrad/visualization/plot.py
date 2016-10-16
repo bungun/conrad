@@ -792,7 +792,7 @@ else:
 			>>> plotter.plot(run, **options)
 		"""
 
-		def __init__(self, case):
+		def __init__(self, case, subset=None):
 			"""
 			Initialize :class:`CasePlotter`.
 
@@ -803,6 +803,8 @@ else:
 			Args:
 				case (:class:`Case`): Treatment planning case to use as
 					basis for configuring object's :class:`DVHPlot`
+				subset (:obj:`list`, optional): List of labels of
+					structures to use in a restricted plotting context.
 
 			Raises:
 				TypeError: If argument is not of type :class:`Case`
@@ -810,17 +812,20 @@ else:
 			if not isinstance(case, Case):
 				TypeError('argument "case" must be of type conrad.Case')
 
+			if subset is None:
+				subset = case.anatomy.label_order
+
 			# plot setup
-			panels_by_structure = {label: 1 for label in case.anatomy.label_order}
+			panels_by_structure = {label: 1 for label in subset}
 			names_by_structure = {
-					label: case.anatomy[label].name for
-					label in case.anatomy.label_order}
+					label: case.anatomy[label].name for label in subset}
 			self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
 			self.__labels = {}
 			self.__grouping = 'together'
 			for s in case.anatomy:
-				self.__labels[s.label] = s.label
-				self.__labels[s.name] = s.label
+				if s.label in subset:
+					self.__labels[s.label] = s.label
+					self.__labels[s.name] = s.label
 
 		def label_is_valid(self, label):
 			return label in self.__labels
@@ -864,18 +869,18 @@ else:
 								 '"separate", or "list")')
 
 			if grouping == 'together':
-				for k in self.dvh_plot.series_panels:
-					self.dvh_plot.series_panels[k] = 0
+				for key in self.dvh_plot.series_panels:
+					self.dvh_plot.series_panels[key] = 0
 			elif grouping == 'separate':
-				for i, k in enumerate(self.dvh_plot.series_panels):
-					self.dvh_plot.series_panels[k] = i
+				for i, key in enumerate(self.dvh_plot.series_panels):
+					self.dvh_plot.series_panels[key] = i
 			elif grouping == 'list':
 				valid = isinstance(group_list, list)
 				valid &= all(map(lambda x: isinstance(x, tuple), group_list))
 				if valid:
 					for i, group in enumerate(group_list):
 						for label in group:
-							if label in self.__labels:
+							if self.label_is_valid(label):
 								self.dvh_plot.series_panels[
 										self.__labels[label]] = i
 							else:
