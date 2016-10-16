@@ -628,7 +628,8 @@ class Structure(object):
 			return {'curve': self.dvh.resample(maxlength).plotting_data,
 					'constraints': self.constraints.plotting_data,
 					'rx': self.dose_rx.value,
-					'target': self.is_target}
+					'target': self.is_target,
+					'name': self.name}
 
 	@property
 	def __header_string(self):
