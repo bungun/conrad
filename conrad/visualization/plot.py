@@ -51,12 +51,12 @@ from conrad.case import Case
 if module_installed('matplotlib'):
 	PLOTTING_INSTALLED = True
 
-	import matplotlib
+	import matplotlib as mpl
 	if getenv('DISPLAY') is not None:
 		import matplotlib.pyplot as plt
 		SHOW = plt.show
 	else:
-		matplotlib.use('Agg')
+		mpl.use('Agg')
 		import matplotlib.pyplot as plt
 		SHOW = lambda : None
 
@@ -66,36 +66,213 @@ else:
 	PLOTTING_INSTALLED = False
 
 
-def panels_to_cols(n_panels):
-	"""
-	Convert number of panels to number of subplot columns.
+class ConradColorUtility(object):
+	####################################################################
+	# http://stackoverflow.com/questions/214359/
+	# converting-hex-color-to-rgb-and-vice-versa/214657#214657
+	@staticmethod
+	def hex_to_rgb(value):
+		value = value.lstrip('#')
+		lv = len(value)
+		return tuple(
+			int(value[i:i + lv // 3], 16)
+			for i in range(0, lv, lv // 3))
 
-	Used to standardize and balance subplot layout when using multiple
-	plans. Prioritizes horizontal expansion over vertical expansion up
-	to a maximum of 4 columns.
+	@staticmethod
+	def rgb_to_hex(rgb):
+		return '#%02x%02x%02x' % rgb
+	####################################################################
+	@staticmethod
+	def normalize_rgb(rgb):
+		rgb_normalized = tuple(value / 255.0 for value in rgb[:3])
+		if len(rgb) == 4:
+			rgb_normalized += (rgb[-1],)
+		return rgb_normalized
 
-	Args:
-		n_panels (:obj:`int`): number of subplot panels.
+	@staticmethod
+	def rgb_to_rgba(rgb):
+		return rgb + (1,)
 
-	Returns:
-		:obj:`int`: number of subplot columns.
+	@staticmethod
+	def scale_rgb(rgb, factor=1.0):
+		factor = max(min(float(factor), 1.0), 0.0)
+		rgb_scaled = tuple(val * factor for val in rgb[:3])
+		if len(rgb) == 4:
+			rgb_scaled += (rgb[-1],)
+		return rgb_scaled
 
-	Raises:
-		None
-	"""
-	n_cols = 1
-	if n_panels > 1:
-		n_cols += 1
-	if n_panels > 4:
-		n_cols += 1
-	if n_panels > 6:
-		n_cols += 1
-	return n_cols
+
+class LineAesthetic(object):
+	color_utils = ConradColorUtility()
+
+	def __init__(self, aesthetic='dvh_curve'):
+		self.style = '-'
+		self.weight = 1
+		self.marker = None
+		self.markersize = 5
+		self.fill = 'none'
+		self.num_markers = 20
+		self.alpha = 1.0
+		self.color_attenuation = 1.0
+
+		if 'dvh_constraint' in aesthetic:
+			self.style = ''
+			if aesthetic == 'dvh_constraint_large':
+				self.markersize = 16
+			else:
+				self.markersize = 12
+		elif 'slack' in aesthetic:
+			self.alpha = 0.6
+
+	def attenuate_color(self, color):
+		if self.color_attenuation < 1.0:
+			if isinstance(color, str):
+				color = self.color_utils.normalize_rgb(
+						self.color_utils.hex_to_rgb(color))
+			color = self.color_utils.scale_rgb(color, self.color_attenuation)
+		return color
+
+	def plot_args(self, color, series_length=None):
+		if isinstance(series_length, int):
+			sample_factor = 1 + series_length // self.num_markers
+		else:
+			sample_factor = 1
+
+		return {'linestyle': self.style,
+				'linewidth': self.weight,
+				'marker': self.marker,
+				'markersize': self.markersize,
+				'markevery': (1, sample_factor),
+				'fillstyle': self.fill,
+				'color': self.attenuate_color(color),
+				'alpha': self.alpha,}
+
 
 if not PLOTTING_INSTALLED:
+	DVHSubplot = lambda arg1: None
 	DVHPlot = lambda arg1, arg2: None
 	CasePlotter = lambda arg1: None
 else:
+	class DVHSubplot(object):
+		def __init__(self, subplot_axes, left=True, bottom=True):
+			self.subplot_axes = subplot_axes
+			self.__left = bool(left)
+			self.__bottom = bool(bottom)
+
+		@property
+		def left(self):
+			return self.__left
+
+		@property
+		def bottom(self):
+			return self.__bottom
+
+		def entitle(self, title):
+			self.subplot_axes.set_title(title, loc='left',
+					fontdict={'fontsize':12, 'fontweight':'bold'})
+
+		def enable_legend(self):
+			legend = self.subplot_axes.legend(loc='best')
+			frame = legend.get_frame()
+			frame.set_facecolor('1.0')
+			frame.set_edgecolor('1.0')
+
+		def format(self, xlimit, xlabel, ylabel, minimal_axes=True):
+			ax = self.subplot_axes
+
+			ax.set_xlim(0, xlimit)
+			ax.set_ylim(0, 103)
+
+			ax.spines['top'].set_visible(False)
+			ax.spines['right'].set_visible(False)
+			ax.tick_params(axis='x', bottom=True, top=False, direction='out')
+			ax.tick_params(axis='y', left=True, right=False, direction='out')
+
+			# put ticks and gridlines behind plotted curves
+			ax.set_axisbelow(True)
+
+			# offset spines
+			for spine in ax.spines.values():
+				spine.set_position(('outward', 5))
+
+			if self.bottom:
+				ax.set_xlabel(str(xlabel), fontsize=16)
+			else:
+				ax.tick_params(axis='x', bottom=False, labelbottom=False)
+				ax.spines['bottom'].set_visible(False)
+
+			if self.left:
+				ax.set_ylabel(str(ylabel), fontsize=16)
+			else:
+				ax.tick_params(axis='y', left=not minimal_axes,
+									labelleft=not minimal_axes)
+				ax.spines['left'].set_visible(not minimal_axes)
+
+			ax.grid(axis='y', color='0.9', linestyle='-', linewidth=1)
+
+
+		def plot_dvh(self, data, color, label='_nolegend_',
+					 aesthetic=None, **options):
+			if aesthetic is None:
+				aesthetic = LineAesthetic()
+
+			for key, value in aesthetic.plot_args(color, data['dose'].size).items():
+				options[key] = value
+
+			dvh = self.subplot_axes.plot(
+					data['dose'], data['percentile'], **options)[0]
+
+			if label is None:
+				label = '_nolegend_'
+			dvh.set_label(label)
+
+			return dvh
+
+		def plot_rx(self, rx, color):
+			self.subplot_axes.axvline(x=rx, linewidth=1.5, color=color,
+					   		linestyle='dotted', label='_nolegend_')
+
+		def plot_dose_constraints(self, data, color, large_markers=False):
+			style_spec = 'dvh_constraint_large' if large_markers else \
+						 'dvh_constraint_small'
+
+			for constraint, _ in data:
+				# TODO: What should we plot for other constraints
+				# like mean, min, max, etc?
+				if constraint['type'] is 'percentile':
+					symbol = constraint['symbol']
+					slack = abs(constraint['dose'][1] -
+								constraint['dose'][0])
+
+					aesthetic = LineAesthetic(aesthetic=style_spec)
+					aesthetic.marker = symbol
+
+					constraint_achieved = self.subplot_axes.plot(
+							constraint['dose'][1],
+							constraint['percentile'][1],
+							label='_nolegend_',
+							**aesthetic.plot_args(color))[0]
+
+					if slack > 0.1:
+						aesthetic = LineAesthetic(aesthetic=style_spec)
+						aesthetic.marker = symbol
+						aesthetic.alpha = 0.55
+
+						constraint_requested = self.subplot_axes.plot(
+								constraint['dose'][0],
+								constraint['percentile'][0],
+								label='_nolegend_',
+								**aesthetic.plot_args(color))[0]
+
+						aesthetic = LineAesthetic(aesthetic='slack')
+
+						slack_line = self.subplot_axes.plot(
+								constraint['dose'],
+								constraint['percentile'],
+								label='_nolegend_',
+								**aesthetic.plot_args(color))[0]
+
+
 	class DVHPlot(object):
 		"""
 		Tool for visualizing dose volume histograms.
@@ -107,13 +284,15 @@ else:
 		series.
 
 		Attributes:
-			fig (:class:`matplotlib.Figure`): Canvas for rendering
+			figure (:class:`matplotlib.Figure`): Canvas for rendering
 				dose volume histograms.
+			subplots (:obj:`list` of :class:`matplotlib.AxesSubplot`):
+				Subplots within canvas.
 			n_structures (:obj:`int`): Number of structures for which to
 				render DVH curves.
 		"""
 
-		def __init__(self, panels_by_structure, names_by_structure):
+		def __init__(self, panels_by_structure, names_by_structure, layout='auto'):
 			"""
 			Initialize :class:`DVHPlot`.
 
@@ -127,27 +306,95 @@ else:
 				 	subplot indices keyed by series (structure) labels.
 				 names_by_structure: (:obj:`dict`): Dictionary of series
 				 	names keyed by series (structure) labels.
+				 layout: (:obj:`str`): Layout for subplots, used to set
+				 	property :prop:`DVHPlot.layout`.
 			"""
-			self.fig = plt.figure()
+			self.figure = None
+			self.subplots = {}
+			self.__panel_subplots = {}
 			self.__panels_by_structure = {}
 			self.__names_by_structure = {}
 			self.__colors_by_structure = {}
 			self.__cols = 1
 			self.__rows = 1
+			self.__layout = 'auto'
+			self.__legend_series = []
+			self.__legend_names = []
 
 			self.n_structures = len(panels_by_structure)
 			self.series_names = names_by_structure
+			self.layout = layout
 			self.series_panels = panels_by_structure
 
 			# set colors using default scheme to start
 			self.autoset_series_colors()
 
+		def clear(self):
+			if self.figure is not None:
+				plt.close(self.figure)
+				self.figure = None
+				self.subplots = {}
+				self.__panel_subplots = {}
+				self.__legend_names = []
+				self.__legend_series = []
+
+		def build(self):
+			self.figure, subplots = plt.subplots(
+					self.rows, self.cols, sharex='col', sharey='row')
+			self.figure.set_size_inches(3.25 * self.cols, 3.25 * self.rows)
+
+			# build label->subplot dictionary and panel->subplot dicitonary
+			for label in self.series_panels:
+				panel = self.series_panels[label]
+				row = panel // self.cols
+				col = panel % self.cols
+
+				if self.n_panels == 1:
+					subplot_axes = subplots
+				elif self.rows == 1:
+					subplot_axes = subplots[col]
+				elif self.cols == 1:
+					subplot_axes = subplots[row]
+				else:
+					subplot_axes = subplots[row, col]
+
+				self.subplots[label] = DVHSubplot(
+						subplot_axes, left=bool(col==0),
+						bottom=bool(row==self.rows - 1))
+
+				if not panel in self.__panel_subplots:
+					self.__panel_subplots[panel] = self.subplots[label]
+
 		@property
-		def series_panels(self):
+		def upper_right_subplot(self):
+			return self.__panel_subplots[self.cols - 1]
+
+		@staticmethod
+		def panels_to_cols(n_panels):
 			"""
-			Dictionary of series subplot indices keyed by series labels.
+			Convert number of panels to number of subplot columns.
+
+			Used to standardize and balance subplot layout when using
+			multiple structures. Prioritizes horizontal expansion over
+			vertical expansion up to a maximum of 4 columns.
+
+			Args:
+				n_panels (:obj:`int`): number of subplot panels.
+
+			Returns:
+				:obj:`int`: number of subplot columns.
+
+			Raises:
+				None
 			"""
-			return self.__panels_by_structure
+			n_cols = 1
+			if n_panels > 1:
+				n_cols += 1
+			if n_panels > 4:
+				n_cols += 1
+			if n_panels > 6:
+				n_cols += 1
+			return n_cols
 
 		@property
 		def rows(self):
@@ -164,18 +411,56 @@ else:
 			""" Total number of suplots. """
 			return self.cols * self.rows
 
+		@property
+		def layout(self):
+			"""
+			Subplot layout: ``'auto'``, ``'vertical'``, or ``'horizontal'``.
+
+			Raises:
+				ValueError: If argument to setter is not one of the
+					three accepted layout strings.
+			"""
+			return self.__layout
+
+		@layout.setter
+		def layout(self, layout):
+			layout = str(layout)
+			if layout not in ('auto', 'vertical', 'horizontal'):
+				raise ValueError('argument `layout` must be one of:\n'
+								 '-"auto"\n-"vertical"\n-"horizontal"')
+			if layout != self.__layout:
+				self.__layout = layout
+				self.clear()
+				self.calculate_panels()
+				self.build()
+
+		def calculate_panels(self, n_panels=None):
+			n_panels = max(self.series_panels.values()) + 1
+			if self.layout == 'vertical':
+				self.__cols = 1
+				self.__rows = n_panels
+			elif self.layout == 'horizontal':
+				self.__cols = n_panels
+				self.__rows = 1
+			else:  # if self.layout == 'auto':
+				self.__cols = self.panels_to_cols(n_panels)
+				self.__rows = int(ceil(float(n_panels) / self.__cols))
+
+		@property
+		def series_panels(self):
+			"""
+			Dictionary of series subplot indices keyed by series labels.
+			"""
+			return self.__panels_by_structure
+
 		@series_panels.setter
 		def series_panels(self, panels_by_structure):
 			self.__panels_by_structure = {}
-			n_panels = 1
 			for label in panels_by_structure:
 				panel = panels_by_structure[label]
 				self.__panels_by_structure[label] = panel
-				n_panels = max(n_panels, panel)
 
-			# subplot dimensions
-			self.__cols = panels_to_cols(n_panels)
-			self.__rows = int(ceil(float(n_panels) / self.__cols))
+			self.calculate_panels()
 
 		@property
 		def series_names(self):
@@ -199,7 +484,7 @@ else:
 				self.__colors_by_structure[label] = colors_by_structure[label]
 
 		def autoset_series_colors(self, structure_order_dict=None,
-								  colormap=None):
+								  colormap='viridis'):
 			"""
 			Set series colors with (possibly default) :class:`LinearSegmentedColormap`.
 
@@ -219,7 +504,7 @@ else:
 				colors = listmap(colormap, linspace(
 						0.1, 0.9, self.n_structures))
 			else:
-				cmap = get_cmap('rainbow')
+				cmap = get_cmap(colormap)
 				colors = listmap(cmap, linspace(
 						0.9, 0.1, self.n_structures))
 
@@ -229,14 +514,101 @@ else:
 				else:
 					self.series_colors[label] = colors[idx]
 
+		@staticmethod
+		def get_max_dose(data, suppress_constraints=False):
+			xmax = 0
+			for series in data.values():
+				xmax = max(xmax, series['curve']['dose'][-1])
+				if not suppress_constraints:
+					for constraint in series['constraints']:
+						xmax = max(xmax, constraint[1]['dose'][0])
+			return xmax
 
-		def plot(self, plot_data, show=False, clear=True, xmax=None, legend=True,
-				 title=None, self_title=False, large_markers=False,
-				 suppress_constraints=False, suppress_xticks=False,
-				 suppress_yticks=False, x_label='Dose (Gy)',
-				 suppress_xlabel=False, y_label='Percentile',
-				 suppress_ylabel=False, legend_coordinates=None,
-				 legend_alignment=None, **options):
+		def entitle_panel(self, panel, title):
+			self.__panel_subplots[panel].entitle(title)
+
+		def enable_meta_legend(self, series, names, legend_alignment=None,
+							   legend_coordinates=None, **legend_options):
+			fancybox = bool(legend_options.pop('fancybox', False))
+			shadow = bool(legend_options.pop('shadow', True))
+			legend_border = bool(legend_options.pop('legend_border', True))
+			fontsize = int(legend_options.pop('fontsize', 12))
+
+			legend_args = {
+				'ncol':1,
+				'loc':'upper right',
+				'columnspacing':1.0,
+				'labelspacing':0.0,
+				'handletextpad':0.0,
+				'handlelength':2.0,
+				'fontsize':fontsize,
+				'fancybox':fancybox,
+				'shadow':shadow,
+			}
+			if legend_alignment is not None:
+				legend_args['loc'] = legend_alignment
+			if legend_coordinates is not None:
+				legend_args['bbox_to_anchor'] = legend_coordinates
+			legend = self.figure.legend(series, names, **legend_args)
+			if not legend_border:
+				frame = legend.get_frame()
+				frame.set_edgecolor('1.0')
+				frame.set_facecolor('1.0')
+
+		def plot_structure_data(self, label, data, aesthetic=None,
+								large_markers=False,
+								suppress_constraints=False, suppress_rx=False,
+								self_title=False, add_to_legend=True,
+								**options):
+			add_to_legend = bool(add_to_legend) and not self_title
+
+			structure_name = data['name']
+			series_name = self.series_names[label] if add_to_legend else None
+			color = self.series_colors[label]
+			subplot = self.subplots[label]
+
+
+			dvh = subplot.plot_dvh(data['curve'], color, aesthetic=aesthetic,
+						  		   label=series_name, **options)
+			if add_to_legend:
+				self.__legend_series.append(dvh)
+				self.__legend_names.append(series_name)
+
+			if not suppress_constraints:
+				subplot.plot_dose_constraints(data['constraints'], color,
+											  large_markers=large_markers)
+
+			if data['rx'] > 0 and not suppress_rx:
+				subplot.plot_rx(data['rx'], color)
+
+			if self_title:
+				subplot.entitle(structure_name)
+
+
+
+		def plot_virtual(self, series_names, series_aesthetics,
+						 legend_alignment=None, legend_coordinates=None,
+						 **legend_options):
+			#subplot or upper right panel
+			upper_right = self.upper_right_subplot
+			series = []
+
+			for name, aesthetic in zip(series_names, series_aesthetics):
+				virtual_line = mpl.lines.Line2D(
+						[], [], label=name, **aesthetic.plot_args('#222222'))
+				series.append(virtual_line)
+
+			self.enable_meta_legend(series, series_names,
+									legend_alignment=legend_alignment,
+									legend_coordinates=legend_coordinates,
+									**legend_options)
+
+		def plot(self, plot_data, show=False, clear=True, xmax=None,
+				 legend=True, title=None, self_title_subplots=False,
+				 large_markers=False, suppress_constraints=False,
+				 x_label='Dose (Gy)', y_label='Percentile',
+				 legend_coordinates=None, legend_alignment=None,
+				 aesthetic=None, minimal_axes=True, **options):
 			"""
 			Plot ``plot_data`` to the object's :class:`matplotlib.Figure`.
 
@@ -254,10 +626,10 @@ else:
 								dose: [float, float], #(value, value +/- slack)
 							  	percentile: [float, float],
 							  	symbol: char #(i.e., '<' or '>')
-							 }, ...
+							 }, ..
 						]
 					},
-					...
+					..
 				}
 
 			Args:
@@ -274,24 +646,19 @@ else:
 					set to this value if provided. Otherwise, upper
 					limit set to 110% of largest dose encountered in
 					``plot_data``.
-				legend (:obj:`bool`, optional): Enable legend in
-					:class:`matplotlib.Figure`.
+				legend (optional): Enable legend in
+					:class:`matplotlib.Figure`. Set overall legend if
+					value is ``True``, set legend per subplot if value
+					is ``'each'``, set legend in upper-right-most
+					subplot if value is ``'upper_right'``.
 				title (:obj:`str`, optional): Contents drawn as title of
 					:class:`matplotlib.Figure`.
 				large_markers (:obj:`bool`, optional): Draw dose volume
 					constraints with larger size markers.
 				suppress_constraints (:obj:`bool`, optional): Suppress
 					rendering of dose volume constraints.
-				suppress_xticks (:obj:`bool`, optional): Suppress
-					drawing of x-axis ticks.
-				suppress_yticks (:obj:`bool`, optional): Suppress
-					drawing of y-axis ticks.
 				x_label (:obj:`str`, optional): x-axis label.
-				suppress_xlabel (:obj:`bool`, optional): Suppress
-					drawing of x-axis label.
 				y_label (:obj:`str`, optional): y-axis label.
-				suppress_ylabel (:obj:`bool`, optional): Suppress
-					drawing of y-axis label.
 				legend_coordinates (:obj:`list`, optional): Position, as
 				 	(x,y)-coordinates, of legend anchor relative to
 				 	figure; passed as kewyword argument ``bbox_to_anchor``
@@ -307,95 +674,61 @@ else:
 				None
 			"""
 			if clear:
-				self.fig.clf()
+				self.clear()
 
-			max_dose = max([
-					data['curve']['dose'].max() for
-					data in plot_data.values()])
-			marker_size = 16 if large_markers else 12
+			# get figure, subplot axes,
+			if self.figure is None:
+				self.build()
 
-			for label, data in plot_data.items():
-				plt.subplot(
-						self.__rows, self.__cols,
-						self.series_panels[label])
-
-				color = self.series_colors[label]
-				name = self.series_names[label] if legend else '_nolegend_'
-
-				plt.plot(data['curve']['dose'], data['curve']['percentile'],
-					color=color, mfc=color, mec=color, label=name, **options)
-				if self_title:
-					plt.title(name)
-				elif title is not None:
-					plt.title(title)
-
-				if data['rx'] > 0:
-					plt.axvline(x=data['rx'], linewidth=1, color=color,
-								linestyle='dotted', label='_nolegend_')
-
-				if suppress_constraints:
-					continue
-
-				for constraint in data['constraints']:
-					# TODO: What should we plot for other constraints like mean, min, max, etc?
-					if constraint[1]['type'] is 'percentile':
-						plt.plot(
-								constraint[1]['dose'][0],
-								constraint[1]['percentile'][0],
-								constraint[1]['symbol'], alpha=0.55,
-								color=color, markersize=marker_size,
-								label='_nolegend_', **options)
-						plt.plot(
-								constraint[1]['dose'][1],
-								constraint[1]['percentile'][1],
-								constraint[1]['symbol'], label='_nolegend_',
-								color=color, markersize=marker_size, **options)
-						slack = abs(constraint[1]['dose'][1] -
-									constraint[1]['dose'][0])
-						if slack > 0.1:
-							plt.plot(constraint[1]['dose'],
-									 constraint[1]['percentile'], ls='-',
-									 alpha=0.6, label='_nolegend_',
-									 color=color)
-
-						# So we don't cut off DVH constraint labels
-						max_dose = max(max_dose, constraint[1]['dose'][0])
-
+			# get x-axis limits
+			max_dose = self.get_max_dose(
+					plot_data, suppress_constraints=suppress_constraints)
 			xlim_upper = xmax if xmax is not None else 1.1 * max_dose
 
-			plt.xlim(0, xlim_upper)
-			plt.ylim(0, 103)
-			if suppress_yticks:
-				plt.yticks([])
-			else:
-				plt.yticks(fontsize=14)
-			if suppress_xticks:
-				plt.suppress_xticks([])
-			else:
-				plt.yticks(fontsize=14)
-			if not suppress_xlabel:
-				plt.xlabel(str(x_label), fontsize=16)
-			if not suppress_ylabel:
-				plt.ylabel(str(y_label), fontsize=16)
-			if legend:
-				legend_args = {
-					'ncol':1,
-					'loc':'upper right',
-					'columnspacing':1.0,
-					'labelspacing':0.0,
-					'handletextpad':0.0,
-					'handlelength':1.5,
-					'fancybox':True,
-					'shadow':True
-				}
-				if legend_alignment is not None:
-					legend_args['loc'] = legend_alignment
-				if legend_coordinates is not None:
-					legend_args['bbox_to_anchor'] = legend_coordinates
-				plt.legend(**legend_args)
+			# plot title
+			if title is not None:
+				self.figure.suptitle(title)
+
+			# format subplots:
+			counter = 0
+			for subplot in self.subplots.values():
+				counter += 1
+				subplot.format(xlim_upper, x_label, y_label,
+							   minimal_axes=minimal_axes)
+
+			self.figure.subplots_adjust(left=0.09, bottom=0.1, right=0.99,
+										top=0.99, wspace=0.1, hspace=0.15)
+
+			# plot data
+			for label, data in plot_data.items():
+				self.plot_structure_data(
+						label, data, aesthetic=aesthetic,
+						large_markers=large_markers, add_to_legend=legend,
+						suppress_constraints=suppress_constraints,
+						self_title=self_title_subplots, **options)
+
+
+			# draw legends, per subplot or overall
+			for subplot in self.subplots.values():
+				subplot_legend = legend == 'each'
+				subplot_legend |= bool(legend == 'upper_right' and
+									   subplot == self.upper_right_subplot)
+
+				if subplot_legend:
+					subplot.enable_legend()
+
+			if bool(isinstance(legend, bool) and legend and
+					len(self.__legend_series) > 0):
+				self.enable_meta_legend(
+						self.__legend_series, self.__legend_names,
+						legend_alignment=legend_alignment,
+						legend_coordinates=legend_coordinates, **options)
 
 			if show:
-				SHOW()
+				self.show()
+
+		def show(self):
+			SHOW()
 
 		def save(self, filepath, overwrite=True, verbose=False):
 			"""
@@ -430,7 +763,7 @@ else:
 				try:
 					if verbose:
 						print("SAVING TO ", filepath)
-					plt.savefig(filepath, bbox_inches='tight')
+					self.figure.savefig(filepath, bbox_inches='tight')
 				except:
 					raise RuntimeError(
 							'could not save plot to file: {}'.format(filepath))
@@ -439,7 +772,7 @@ else:
 			"""
 			Close object's :class:`matplotlib.Figure` when out of scope.
 			"""
-			plt.close(self.fig)
+			self.clear()
 
 	class CasePlotter(object):
 		"""
@@ -484,6 +817,7 @@ else:
 					label in case.anatomy.label_order}
 			self.dvh_plot = DVHPlot(panels_by_structure, names_by_structure)
 			self.__labels = {}
+			self.__grouping = 'together'
 			for s in case.anatomy:
 				self.__labels[s.label] = s.label
 				self.__labels[s.name] = s.label
@@ -531,10 +865,10 @@ else:
 
 			if grouping == 'together':
 				for k in self.dvh_plot.series_panels:
-					self.dvh_plot.series_panels[k] = 1
+					self.dvh_plot.series_panels[k] = 0
 			elif grouping == 'separate':
 				for i, k in enumerate(self.dvh_plot.series_panels):
-					self.dvh_plot.series_panels[k] = i + 1
+					self.dvh_plot.series_panels[k] = i
 			elif grouping == 'list':
 				valid = isinstance(group_list, list)
 				valid &= all(map(lambda x: isinstance(x, tuple), group_list))
@@ -543,7 +877,7 @@ else:
 						for label in group:
 							if label in self.__labels:
 								self.dvh_plot.series_panels[
-										self.__labels[label]] = i + 1
+										self.__labels[label]] = i
 							else:
 								raise ValueError(
 										'specified label {} in tuple {} '
@@ -555,9 +889,13 @@ else:
 					raise TypeError('argument "group_list" must be a {} '
 									'of {}s'.format(list, tuple))
 
+			self.dvh_plot.clear()
+			self.__grouping = grouping
+			self.dvh_plot.calculate_panels()
+			self.dvh_plot.build()
 
 		def plot(self, data, second_pass=False, show=False, clear=True,
-				 subset=None, plotfile=None, **options):
+				 subset=None, plotfile=None, aesthetic=None, **options):
 			"""
 			Plot dose volume histograms from argument `data`.
 
@@ -578,6 +916,8 @@ else:
 				plotfile (:obj:`str`, optional): Passed to to the
 					:class:`DVHPlot` as a target filepath to save the
 					drawn plot.
+				aesthetic (:class:`LineAesthetic`, optional): Passed to
+					:meth:`~DVHPlot.plot` to apply to the DVH curves.
 				**options: Arbitrary keyword arguments passed through to
 					:meth:`~DVHPlot.plot`.
 
@@ -613,10 +953,108 @@ else:
 				for label in subset:
 					data[label] = data_[label]
 
-			self.dvh_plot.plot(
-					data,
-					show=show,
-					clear=clear,
-					**options)
+
+			if 'self_title_subplots' in options:
+				options['self_title_subplots'] &= self.__grouping == 'separate'
+
+			self.dvh_plot.plot(data, clear=clear, aesthetic=aesthetic,
+							   **options)
+			if show:
+				self.dvh_plot.show()
+			if plotfile is not None:
+				self.dvh_plot.save(plotfile)
+
+		def plot_multi(self, data, run_names, reference_data=None,
+					   reference_name='reference', show=False, clear=True,
+				 	   subset=None, plotfile=None, layout='auto',
+				 	   vary_markers=True, vary_marker_sizes=False,
+				 	   marker_size_increasing=True,
+				 	   universal_marker=None, vary_line_weights=False,
+				 	   vary_line_colors=False, vary_line_styles=False,
+				 	   darken_reference=True, **options):
+			"""
+			Plot data from multiple runs.
+
+			Args:
+				data (:obj:`list` of :class:`RunRecord` or :obj:`dict`):
+				reference_data (:class:`RunRecord` or :obj:`dict`, optinal):
+				varied_property (:obj:`str`, optional): Should be one of
+					``'linestyle'``, ``'symbol'``, ``'color'``
+			"""
+			n_compared = len(data) + int(reference_data is not None)
+			run_aesthetics = [LineAesthetic() for i in xrange(n_compared)]
+
+			line_styles = ['-', '-.', '--', ':']
+			if len(data) > 4 and vary_line_styles:
+				vary_markers = True
+
+			vary_markers &= universal_marker is None
+			vary_marker_sizes |= universal_marker is not None
+			marker_styles = ['o', 's', '^']
+			fill_styles = ['none', 'full']
+			if len(data) > 6 and vary_markers:
+				vary_line_styles = True
+
+			weight_step = 0.5
+			min_weight = 0.5
+			max_weight = 2.0
+			if vary_line_weights:
+				max_weight = max(
+						max_weight, min_weight + weight_step * n_compared)
+
+			max_attenuation = 0.7
+			min_attentuation = 1.0
+			attenuation_step = -0.5 / n_compared
+
+			# set layout
+			self.dvh_plot.layout = layout
+
+			# set aesthetics for each data series
+			for i, run_data in enumerate(data):
+				if vary_line_styles:
+					run_aesthetics[i].style = line_styles[i % 4]
+				if universal_marker is not None:
+					run_aesthetics[i].marker = universal_marker
+				if vary_markers:
+					run_aesthetics[i].marker = marker_styles[i % 3]
+					run_aesthetics[i].fill = fill_styles[i % 2]
+				if vary_marker_sizes:
+					if marker_size_increasing:
+						run_aesthetics[i].markersize = 4 + 2 * i
+					else:
+						run_aesthetics[i].markersize = 4 + 2 * (n_compared - 1 - i)
+				if vary_line_weights:
+					run_aesthetics[i].weight = min_weight + i * weight_step
+				if vary_line_colors:
+					run_aesthetics[i].color_attenuation = 1.0 - i * attenuation_step
+
+			# set reference aesthetics
+			if reference_data is not None:
+				data.append(reference_data)
+				run_names.append(str(reference_name))
+
+				run_aesthetics[-1].weight = max_weight
+				if darken_reference:
+					run_aesthetics[-1].color_attenuation = max_attenuation
+
+
+			options['xmax'] = max([self.dvh_plot.get_max_dose(d) for d in data])
+
+			# plot each data series
+			if clear:
+				self.dvh_plot.clear()
+
+			for i in xrange(n_compared):
+				if i == 0:
+					options['self_title_subplots'] = True
+
+				self.plot(data[i], clear=False, subset=subset, legend=False,
+						  aesthetic=run_aesthetics[i], **options)
+
+			# plot legend
+			self.dvh_plot.plot_virtual(run_names, run_aesthetics)
+
+			if show:
+				self.dvh_plot.show()
 			if plotfile is not None:
 				self.dvh_plot.save(plotfile)
