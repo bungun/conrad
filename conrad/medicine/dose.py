@@ -1237,7 +1237,7 @@ class DVH(object):
 	@property
 	def plotting_data(self):
 		""" Dictionary of :mod:`matplotlib`-compatible plotting data. """
-		return {'percentile' : self.__percentiles, 'dose' : self.__doses}
+		return {'percentile' : self.__percentiles, 'dose' : self.__doses.copy()}
 
 	def resample(self, maxlength):
 		"""
