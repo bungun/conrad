@@ -65,13 +65,21 @@ if module_installed('matplotlib'):
 else:
 	PLOTTING_INSTALLED = False
 
-
 class ConradColorUtility(object):
 	####################################################################
 	# http://stackoverflow.com/questions/214359/
 	# converting-hex-color-to-rgb-and-vice-versa/214657#214657
 	@staticmethod
 	def hex_to_rgb(value):
+		"""
+		Convert hexadecimal color code ``value`` to RGB tuple.
+
+		Args:
+			value (:obj:`str`): Hexadecimal color code.
+
+		Returns:
+			:obj:`tuple`: RGB equivalent of input hex color code.
+		"""
 		value = value.lstrip('#')
 		lv = len(value)
 		return tuple(
@@ -80,21 +88,49 @@ class ConradColorUtility(object):
 
 	@staticmethod
 	def rgb_to_hex(rgb):
-		return '#%02x%02x%02x' % rgb
+		"""
+		Convert tuple ``rgb`` to hexadecimal color code.
+
+		Args:
+			rgb (:obj:`tuple`): RGB or RGBA tuple. Alpha value is
+				ignored, if provided.
+
+		Returns:
+			:obj:`str`: Hex string equivalent of input RGB/A tuple.
+
+
+		"""
+		return '#%02x%02x%02x' % rgb[:3]
 	####################################################################
 	@staticmethod
 	def normalize_rgb(rgb):
+		"""
+		Scale all color entries of tuple ``rgb`` to lie in [0, 1]
+		instead of [0, 255].
+
+		Args:
+			rgb (:obj:`tuple`): RGB or RGBA tuple.
+
+		Returns:
+			:obj:`tuple`: Normalized version of input RGB or RGBA tuple.
+		"""
 		rgb_normalized = tuple(value / 255.0 for value in rgb[:3])
 		if len(rgb) == 4:
 			rgb_normalized += (rgb[-1],)
 		return rgb_normalized
 
 	@staticmethod
-	def rgb_to_rgba(rgb):
-		return rgb + (1,)
-
-	@staticmethod
 	def scale_rgb(rgb, factor=1.0):
+		"""
+		Scale all color entries of tuple ``rgb`` by ``factor``.
+
+		Args:
+			rgb (:obj:`tuple`): RGB or RGBA tuple.
+			factor (:obj:`float`, optional): Scalar in [0, 1].
+
+		Returns:
+			:obj:`tuple`: Scaled version of input RGB or RGBA tuple.
+		"""
 		factor = max(min(float(factor), 1.0), 0.0)
 		rgb_scaled = tuple(val * factor for val in rgb[:3])
 		if len(rgb) == 4:
@@ -103,13 +139,36 @@ class ConradColorUtility(object):
 
 
 class LineAesthetic(object):
+	"""
+	Abstraction of :mod:`matplotlib` line styling, intended for use with
+	a family of lines with all style aspects shared *except* color.
+
+	The :class:`LineAesthetic` does not specify a color; it must be
+	paired with a color to create a full specification that can be
+	applied to :mod:`matplotlib` plotting methods.
+
+	Attributes:
+		style (:obj:`str`): Line style. Must be compatible with styles
+			specified in :mod:`matplotlib.lines`.
+		weight (:obj:`float`): Line weight.
+		marker (:obj:`str` or ``None``): Marker style to apply to line.
+		fill (:obj:`str`): Fill style to apply to line's markers.
+		num_markers (:obj:`int`): Number of markers to draw when
+			rendering line.
+		alpha (:obj:`float`): Value in [0, 1] specifying opacity of
+			line.
+		color_attenuation (:obj:`float`): Value in [0, 1] (recommended
+			range: [0.7, 1]) specifying attenuation of colors paired
+			with this :class:`LineAesthetic`. ``1.0`` yields original
+			color; ``0.0`` yields black.
+	"""
 	color_utils = ConradColorUtility()
 
 	def __init__(self, aesthetic='dvh_curve'):
 		self.style = '-'
-		self.weight = 1
+		self.weight = 1.0
 		self.marker = None
-		self.markersize = 5
+		self.markersize = 5.0
 		self.fill = 'none'
 		self.num_markers = 20
 		self.alpha = 1.0
@@ -125,6 +184,19 @@ class LineAesthetic(object):
 			self.alpha = 0.6
 
 	def attenuate_color(self, color):
+		r"""
+		Return a weighted average of black and specified color.
+
+		Let :math:`\alpha` be the attenuation specified by
+		attr:`LineAesthetic.color_attenuation`, :math:`c` be the vector
+		representation of the input color ``color`` (e.g., in RGB),
+		where :math:`0` is black. Then, the returned color is
+		:math:`\alpha c`
+
+		Args:
+			color: Any :mod:`matplotlib`-compatible color description,
+				base color to attenuate.
+		"""
 		if self.color_attenuation < 1.0:
 			if isinstance(color, str):
 				color = self.color_utils.normalize_rgb(
@@ -133,6 +205,24 @@ class LineAesthetic(object):
 		return color
 
 	def plot_args(self, color, series_length=None):
+		"""
+		Generate dictionary of keyword arguments representing line
+		aesthetic for :mod:`matplotlib` methods.
+
+		Args:
+			color: Any :mod:`matplotlib`-compatible color description,
+				pairs with line aesthetic data to create style keywords.
+			series_length (:obj:`int`, optional): If provided, used to
+				calculate sampling frequency of markers, based on total
+				number of desired markers as specified by
+				attr:`LineAesthetic.num_markers`.
+
+		Returns:
+			Dictionary of keyword arguments compatible with
+			:meth:`matplotlib.figure.Figure.plot()`
+			or, equivalently, initializer of
+			:class:`matplotlib.lines.Line2D`.
+		"""
 		if isinstance(series_length, int):
 			sample_factor = 1 + series_length // self.num_markers
 		else:
@@ -211,8 +301,22 @@ else:
 			ax.grid(axis='y', color='0.9', linestyle='-', linewidth=1)
 
 
-		def plot_dvh(self, data, color, label='_nolegend_',
+		def plot_dvh(self, data, color, series_label='_nolegend_',
 					 aesthetic=None, **options):
+			"""
+			TODO: DESCRIPTION
+
+			Args:
+				data: DESCRIPTION
+				color: DESCRIPTION
+				series_label (:obj:`str`, optional): DESCRIPTION
+				aesthetic (:class:`LineAesthetic`, optional): DESCRIPTION
+				**options: Keyword arguments passed to initializer for
+				:class:`matplotlib.lines.Line2D`.
+
+			Returns:
+				None
+			"""
 			if aesthetic is None:
 				aesthetic = LineAesthetic()
 
@@ -229,10 +333,31 @@ else:
 			return dvh
 
 		def plot_rx(self, rx, color):
+			"""
+			TODO: DESCRIPTION
+
+			Args:
+				rx: DESCRIPTION
+				color: DESCRIPTION
+
+			Returns:
+				None
+			"""
 			self.subplot_axes.axvline(x=rx, linewidth=1.5, color=color,
 					   		linestyle='dotted', label='_nolegend_')
 
 		def plot_dose_constraints(self, data, color, large_markers=False):
+			"""
+			TODO: DESCRIPTION
+
+			Args:
+				data: DESCRIPTION
+				color: DESCRIPTION
+				large_markers (:obj:`bool`, optional): DESCRIPTION
+
+			Returns:
+				None
+			"""
 			style_spec = 'dvh_constraint_large' if large_markers else \
 						 'dvh_constraint_small'
 
@@ -286,8 +411,9 @@ else:
 		Attributes:
 			figure (:class:`matplotlib.Figure`): Canvas for rendering
 				dose volume histograms.
-			subplots (:obj:`list` of :class:`matplotlib.AxesSubplot`):
-				Subplots within canvas.
+			subplots (:obj:`dict` of :class:`DVHSubplot`): Dictionary of
+				handles to subplots within canvas, keyed by structure
+				label.
 			n_structures (:obj:`int`): Number of structures for which to
 				render DVH curves.
 		"""
@@ -307,7 +433,7 @@ else:
 				 names_by_structure: (:obj:`dict`): Dictionary of series
 				 	names keyed by series (structure) labels.
 				 layout: (:obj:`str`): Layout for subplots, used to set
-				 	property :prop:`DVHPlot.layout`.
+				 	property attr:`DVHPlot.layout`.
 			"""
 			self.figure = None
 			self.subplots = {}
@@ -330,6 +456,13 @@ else:
 			self.autoset_series_colors()
 
 		def clear(self):
+			"""
+			Closes the :mod:`matplotlib` figure at `DVHPlot.figure`,
+			clears the dictionary of subplot handles `DVHPlot.subplots`.
+
+			Returns:
+				None
+			"""
 			if self.figure is not None:
 				plt.close(self.figure)
 				self.figure = None
@@ -339,11 +472,22 @@ else:
 				self.__legend_series = []
 
 		def build(self):
+			"""
+			Build :attr:`DVHPlot.figure` with subplots laid out in a
+			:attr:`DVHPlot.rows` by :attr:`DVHPlot.cols` grid.
+
+			Handles to the subplots are stored as a dictionary (keyed by
+			structure label) in the field :attr:`DVHPlot.subplots`.
+
+			Returns:
+				None
+			"""
 			self.figure, subplots = plt.subplots(
 					self.rows, self.cols, sharex='col', sharey='row')
 			self.figure.set_size_inches(3.25 * self.cols, 3.25 * self.rows)
 
-			# build label->subplot dictionary and panel->subplot dicitonary
+			# build label->subplot and panel->subplot dicitonaries,
+			# given geometric arrangement and label->panel dictionary.
 			for label in self.series_panels:
 				panel = self.series_panels[label]
 				row = panel // self.cols
@@ -367,6 +511,12 @@ else:
 
 		@property
 		def upper_right_subplot(self):
+			"""
+			Return handle to upper-right-most subplot.
+
+			Returns:
+				:class:`DVHSubplot`
+			"""
 			return self.__panel_subplots[self.cols - 1]
 
 		@staticmethod
@@ -434,7 +584,12 @@ else:
 				self.calculate_panels()
 				self.build()
 
-		def calculate_panels(self, n_panels=None):
+		def calculate_panels(self):
+			"""
+			Calculate number of subplot rows and columns in DVHPlot,
+			given the series->panel assignements and layout
+			specification.
+			"""
 			n_panels = max(self.series_panels.values()) + 1
 			if self.layout == 'vertical':
 				self.__cols = 1
@@ -516,6 +671,18 @@ else:
 
 		@staticmethod
 		def get_max_dose(data, suppress_constraints=False):
+			"""
+			Get maximum dose associated with dataset (DVH curve and dose
+			constraints)
+
+			Args:
+				data (:obj:`dict`): Dictionary of plotting data
+					consistent with output of
+					:meth:`~conrad.medicine.Structure.plotting_data`.
+				suppress_constraints (:obj:`bool`, optional): If
+					``True``, ignore dose constraints when determining
+					maximum dose.
+			"""
 			xmax = 0
 			for series in data.values():
 				xmax = max(xmax, series['curve']['dose'][-1])
@@ -525,15 +692,50 @@ else:
 			return xmax
 
 		def entitle_panel(self, panel, title):
+			"""
+			Apply ``title`` to DVHPlot's subplot number ``panel``.
+
+			Args:
+				panel (:obj:`int`): Index of panel to entitle.
+				title (:obj:`str`): Title to be applied.
+
+			Returns:
+				None
+			"""
 			self.__panel_subplots[panel].entitle(title)
 
 		def enable_meta_legend(self, series, names, legend_alignment=None,
-							   legend_coordinates=None, **legend_options):
-			fancybox = bool(legend_options.pop('fancybox', False))
-			shadow = bool(legend_options.pop('shadow', True))
-			legend_border = bool(legend_options.pop('legend_border', True))
-			fontsize = int(legend_options.pop('fontsize', 12))
+							   legend_coordinates=None, legend_border=True,
+							   legend_shadow=True, legend_box_rounded=False,
+							   **legend_options):
+			"""
+			Draw figure (not subplot) legend comprising the specified
+			series, labeled with the specified names.
 
+			Args:
+				series(:obj:`list`): List of :mod:`matplotlib` series
+					(i.e., ``artist`` objects) to render in legend.
+				names (:obj:`list` of :obj:`str`): Names of series in
+					legend.
+				legend_alignment (:obj:`str`, optional): Legend location
+					relative to legend anchor position. Should conform
+					to specification for keyword argument ``loc`` of
+					:meth:``matplotlib.figure.Figure.legend``.
+				legend_coordinates (optional): Legend anchor position,
+					in (x,y)-coordinates, relative to lower left corner
+					of figure (upper right corner is ``(1,1)``).
+				legend_border (:obj:`bool`, optional): If ``True``, draw
+					legend box with border.
+				legend_shadow (:obj:`bool`, optional): If ``True``, draw
+					legend box with shadow effect.
+				legend_box_rounded (:obj:`bool`, optional): If ``True``,
+					draw legend box with rounded corners.
+				legend_options: Keyword arguments passed to
+					:meth:`~matplotlib.figures.Figure.legend`
+
+			Returns:
+				None
+			"""
 			legend_args = {
 				'ncol':1,
 				'loc':'upper right',
@@ -541,9 +743,9 @@ else:
 				'labelspacing':0.0,
 				'handletextpad':0.0,
 				'handlelength':2.0,
-				'fontsize':fontsize,
-				'fancybox':fancybox,
-				'shadow':shadow,
+				'fontsize': legend_fontsize,
+				'fancybox': legend_box_rounded,
+				'shadow': legend_shadow,
 			}
 			if legend_alignment is not None:
 				legend_args['loc'] = legend_alignment
@@ -560,6 +762,24 @@ else:
 								suppress_constraints=False, suppress_rx=False,
 								self_title=False, add_to_legend=True,
 								**options):
+			"""
+			TODO: DESCRIPTION
+
+			Args:
+				label: DESCRIPTION
+				data: DESCRIPTION
+				aethetic (:class:`LineAesthetic`, optional): DESCRIPTION
+				large_markers (:obj:`bool`, optional): DESCRIPTION
+				suppress_constraints (:obj:`bool`, optional): DESCRIPTION
+				suppress_rx (:obj:`bool`, optional): DESCRIPTION
+				self_title (:obj:`bool`, optional): DESCRIPTION
+				add_to_legend (:obj:`bool`, optional): DESCRIPTION
+				**options: Keyword arguments passed to
+					:meth:`matplotlib.figure.Figure.plot`.
+
+			Returns:
+				None
+			"""
 			add_to_legend = bool(add_to_legend) and not self_title
 
 			structure_name = data['name']
@@ -569,7 +789,7 @@ else:
 
 
 			dvh = subplot.plot_dvh(data['curve'], color, aesthetic=aesthetic,
-						  		   label=series_name, **options)
+						  		   series_label=series_name, **options)
 			if add_to_legend:
 				self.__legend_series.append(dvh)
 				self.__legend_names.append(series_name)
@@ -584,11 +804,28 @@ else:
 			if self_title:
 				subplot.entitle(structure_name)
 
-
-
 		def plot_virtual(self, series_names, series_aesthetics,
 						 legend_alignment=None, legend_coordinates=None,
 						 **legend_options):
+			"""
+			Add series to DVH Plot that only appear in legend.
+
+			Enable figure's overall legend (i.e., not a subplot legend).
+
+			Args:
+				series_names (): DESCRIPTION
+				series_aesthetics (): DESCRIPTION
+				legend_alignment (optional): Legend location relative to
+					legend anchor position.
+				legend_coordinates (optional): Legend anchor position,
+					in (x,y)-coordinates, relative to lower left corner
+					of figure (upper right corner is ``(1,1)``).
+				legend_options: Keyword arguments passed to
+					:meth:`~matplotlib.figures.Figure.legend`
+
+			Returns:
+				None
+			"""
 			#subplot or upper right panel
 			upper_right = self.upper_right_subplot
 			series = []
@@ -728,6 +965,10 @@ else:
 				self.show()
 
 		def show(self):
+			"""
+			If matplotlib is in communication with a display, render
+			plot onscreen. "
+			"""
 			SHOW()
 
 		def save(self, filepath, overwrite=True, verbose=False):
@@ -828,6 +1069,11 @@ else:
 					self.__labels[s.name] = s.label
 
 		def label_is_valid(self, label):
+			"""
+			``True`` if ``label`` is a structure name or label
+			associated with the case (or subset thereof) associated with
+			this :class:`CasePlotter`.
+			"""
 			return label in self.__labels
 
 		def set_display_groups(self, grouping='together', group_list=None):
@@ -946,7 +1192,11 @@ else:
 
 			# filter data to only plot DVH for structures with requested labels
 			if subset is None:
-				data = data_
+				data = {}
+
+				for label in data_:
+					if key in self.__labels:
+						data[label] = data_[label]
 			else:
 				if not isinstance(subset, (list, tuple)):
 					raise TypeError('argument "subset" must be of type {} or '
@@ -969,7 +1219,7 @@ else:
 			if plotfile is not None:
 				self.dvh_plot.save(plotfile)
 
-		def plot_multi(self, data, run_names, reference_data=None,
+		def plot_multi(self, data, names, reference_data=None,
 					   reference_name='reference', show=False, clear=True,
 				 	   subset=None, plotfile=None, layout='auto',
 				 	   vary_markers=True, vary_marker_sizes=False,
@@ -982,9 +1232,60 @@ else:
 
 			Args:
 				data (:obj:`list` of :class:`RunRecord` or :obj:`dict`):
-				reference_data (:class:`RunRecord` or :obj:`dict`, optinal):
-				varied_property (:obj:`str`, optional): Should be one of
-					``'linestyle'``, ``'symbol'``, ``'color'``
+					List of plans to be plotted.
+				names (:obj:`list` of :obj:`str`):
+					List of names to associate with each compared plan.
+				reference_data (:class:`RunRecord` or :obj:`dict`, optional):
+					Reference plan.
+				reference_name (:obj:`str`, optional): Name of reference
+					plan.
+				show (:obj:`bool`, optional): If ``True``, display
+					resulting plot in GUI.
+				clear (:obj:`bool`, optional): If ``True``, clear canvas
+					before drawing DVH curves for specified plans.
+				subset (:obj:`list`, optional): If provided, should be a
+					list of labels/names of structures in the case; DVH
+					curves will be plotted for only the requested subset.
+				plotfile (:obj:`str`, optional): If provided, result
+					will be saved to the specified path.
+				layout (:obj:`str`, optional): Set layout of DVH plot to
+					be one of ``'auto'``, ``'horizontal'``, or
+					``'vertical'`` to arrange subplots.
+				vary_markers (:obj:`bool`, optional): If ``True``,
+					marker styles for DVH curves of each non-reference
+					plan will be cycled among 6 styles.
+				vary_marker_sizes (:obj:`bool`, optional): If ``True``,
+					plot DVH curves with different marker sizes for each
+					non-reference plan.
+				marker_size_increasing (:obj:`bool`, optional): If
+					``True``, the DVH curves for non-reference plans
+					will be drawn with markers of increasing size. If
+					``False``, this is reversed. Increasing/decreasing
+					size is applied according to the plans' list order
+					in ``data``.
+				universal_marker (:obj:`str`, optional): If set to a
+					valid :mod:`matplotlib` marker string, each
+					non-reference plan will be plotted with that marker
+					(increasing marker size will be enabled to
+					differentiate plans).
+				vary_line_weights (:obj:`bool`, optional): If ``True``,
+					the DVH curves for non-reference plans will be drawn
+					with lines of increasing weight. Increasing weight
+					is applied according to the plans' list order in
+					``data``.
+				vary_line_colors (:obj:`bool`, optional): If ``True``,
+					attenuate color assigned to each structure's DVH
+					curve (use weighted average of specified color and
+					black) when plotting each non-reference data series.
+				vary_line_styles (:obj:`bool`, optional): If ``True``,
+					line styles for DVH curves of each non-reference
+					plan will be cycled among 4 styles.
+				darken_reference (:obj:`bool`, optional): If ``True``,
+					attenuate color assigned to each structure's DVH
+					curve (use weighted average of specified color and
+					black) when plotting reference series.
+				**options: Keyword arguments passed to
+					:meth:`CasePlotter.plot`
 			"""
 			n_compared = len(data) + int(reference_data is not None)
 			run_aesthetics = [LineAesthetic() for i in xrange(n_compared)]
@@ -1042,13 +1343,14 @@ else:
 				if darken_reference:
 					run_aesthetics[-1].color_attenuation = max_attenuation
 
+			# get single x-window appropriate across all compared series
+			options['xmax'] = options.pop(
+					'xmax', max([self.dvh_plot.get_max_dose(d) for d in data])
 
-			options['xmax'] = max([self.dvh_plot.get_max_dose(d) for d in data])
-
-			# plot each data series
 			if clear:
 				self.dvh_plot.clear()
 
+			# plot each data series
 			for i in xrange(n_compared):
 				if i == 0:
 					options['self_title_subplots'] = True
