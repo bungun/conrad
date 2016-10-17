@@ -1345,7 +1345,7 @@ else:
 
 			# get single x-window appropriate across all compared series
 			options['xmax'] = options.pop(
-					'xmax', max([self.dvh_plot.get_max_dose(d) for d in data]))
+					'xmax', max([self.dvh_plot.get_max_dose(d) for d in run_data]))
 
 			if clear:
 				self.dvh_plot.clear()
