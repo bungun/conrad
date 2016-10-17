@@ -1291,14 +1291,14 @@ else:
 			run_aesthetics = [LineAesthetic() for i in xrange(n_compared)]
 
 			line_styles = ['-', '-.', '--', ':']
-			if len(data) > 4 and vary_line_styles:
+			if len(run_data) > 4 and vary_line_styles:
 				vary_markers = True
 
 			vary_markers &= universal_marker is None
 			vary_marker_sizes |= universal_marker is not None
 			marker_styles = ['o', 's', '^']
 			fill_styles = ['none', 'full']
-			if len(data) > 6 and vary_markers:
+			if len(run_data) > 6 and vary_markers:
 				vary_line_styles = True
 
 			weight_step = 0.5
