@@ -1219,7 +1219,7 @@ else:
 			if plotfile is not None:
 				self.dvh_plot.save(plotfile)
 
-		def plot_multi(self, data, names, reference_data=None,
+		def plot_multi(self, run_data, run_names, reference_data=None,
 					   reference_name='reference', show=False, clear=True,
 				 	   subset=None, plotfile=None, layout='auto',
 				 	   vary_markers=True, vary_marker_sizes=False,
@@ -1231,9 +1231,9 @@ else:
 			Plot data from multiple runs.
 
 			Args:
-				data (:obj:`list` of :class:`RunRecord` or :obj:`dict`):
+				run_data (:obj:`list` of :class:`RunRecord` or :obj:`dict`):
 					List of plans to be plotted.
-				names (:obj:`list` of :obj:`str`):
+				run_names (:obj:`list` of :obj:`str`):
 					List of names to associate with each compared plan.
 				reference_data (:class:`RunRecord` or :obj:`dict`, optional):
 					Reference plan.
