@@ -1219,7 +1219,7 @@ else:
 			if plotfile is not None:
 				self.dvh_plot.save(plotfile)
 
-		def plot_multi(self, data, run_names, reference_data=None,
+		def plot_multi(self, run_data, run_names, reference_data=None,
 					   reference_name='reference', show=False, clear=True,
 				 	   subset=None, plotfile=None, layout='auto',
 				 	   vary_markers=True, vary_marker_sizes=False,
