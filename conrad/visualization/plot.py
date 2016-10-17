@@ -326,9 +326,9 @@ else:
 			dvh = self.subplot_axes.plot(
 					data['dose'], data['percentile'], **options)[0]
 
-			if label is None:
-				label = '_nolegend_'
-			dvh.set_label(label)
+			if series_label is None:
+				series_label = '_nolegend_'
+			dvh.set_label(series_label)
 
 			return dvh
 
@@ -1195,7 +1195,7 @@ else:
 				data = {}
 
 				for label in data_:
-					if key in self.__labels:
+					if label in self.__labels:
 						data[label] = data_[label]
 			else:
 				if not isinstance(subset, (list, tuple)):
