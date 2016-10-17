@@ -1287,7 +1287,7 @@ else:
 				**options: Keyword arguments passed to
 					:meth:`CasePlotter.plot`
 			"""
-			n_compared = len(data) + int(reference_data is not None)
+			n_compared = len(run_data) + int(reference_data is not None)
 			run_aesthetics = [LineAesthetic() for i in xrange(n_compared)]
 
 			line_styles = ['-', '-.', '--', ':']
@@ -1336,7 +1336,7 @@ else:
 
 			# set reference aesthetics
 			if reference_data is not None:
-				data.append(reference_data)
+				run_data.append(reference_data)
 				run_names.append(str(reference_name))
 
 				run_aesthetics[-1].weight = max_weight
@@ -1355,7 +1355,7 @@ else:
 				if i == 0:
 					options['self_title_subplots'] = True
 
-				self.plot(data[i], clear=False, subset=subset, legend=False,
+				self.plot(run_data[i], clear=False, subset=subset, legend=False,
 						  aesthetic=run_aesthetics[i], **options)
 
 			# plot legend
