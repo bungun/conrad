@@ -1219,7 +1219,7 @@ else:
 			if plotfile is not None:
 				self.dvh_plot.save(plotfile)
 
-		def plot_multi(self, run_data, run_names, reference_data=None,
+		def plot_multi(self, data, run_names, reference_data=None,
 					   reference_name='reference', show=False, clear=True,
 				 	   subset=None, plotfile=None, layout='auto',
 				 	   vary_markers=True, vary_marker_sizes=False,
@@ -1262,7 +1262,7 @@ else:
 					will be drawn with markers of increasing size. If
 					``False``, this is reversed. Increasing/decreasing
 					size is applied according to the plans' list order
-					in ``data``.
+					in ``run_data``.
 				universal_marker (:obj:`str`, optional): If set to a
 					valid :mod:`matplotlib` marker string, each
 					non-reference plan will be plotted with that marker
@@ -1272,7 +1272,7 @@ else:
 					the DVH curves for non-reference plans will be drawn
 					with lines of increasing weight. Increasing weight
 					is applied according to the plans' list order in
-					``data``.
+					``run_data``.
 				vary_line_colors (:obj:`bool`, optional): If ``True``,
 					attenuate color assigned to each structure's DVH
 					curve (use weighted average of specified color and
@@ -1316,7 +1316,7 @@ else:
 			self.dvh_plot.layout = layout
 
 			# set aesthetics for each data series
-			for i, run_data in enumerate(data):
+			for i, run in enumerate(run_data):
 				if vary_line_styles:
 					run_aesthetics[i].style = line_styles[i % 4]
 				if universal_marker is not None:
