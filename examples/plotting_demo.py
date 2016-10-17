@@ -40,7 +40,7 @@ def demo(basepath='.'):
 	graphics.set_display_groups('list', [(0,1), (2,3)])
 	graphics.plot(pd, legend=False)
 	# aesthetics of legend lines
-	aes = [cr.visualization.plot.LineAesthetic() for i in xrange(2)]
+	aes = [cr.visualization.plot.LineAesthetic() for i in range(2)]
 	aes[0].marker = 'o'
 	aes[0].fill = 'full'
 	aes[1].marker = 's'
@@ -58,48 +58,56 @@ def demo(basepath='.'):
 						plotfile=os.path.join(basepath,'test5.pdf'))
 	# plot series 'pd' vs. reference data, separate plots, horizontal layout
 	graphics.plot_multi([pd], ['first'], reference_data=pd_ref,
-						plotfile=plotfile=os.path.join(basepath,'test5a.pdf'),
+						plotfile=os.path.join(basepath,'test5a.pdf'),
 						layout='horizontal', minimal_axes=False)
 	# plot reference data only, separate plots, horizontal layout
 	graphics.plot_multi([], [], reference_data=pd_ref,
-						plotfile=os.path.join(basepath,plotfile='test5b.pdf'),
+						plotfile=os.path.join(basepath, 'test5b.pdf'),
 						layout='horizontal')
 
 
 	# plot multiple runs vs. reference, vary marker styles (default)
 	RUNS = 3
-	data = [case.plotting_data(x=np.random.rand(200)) for i in xrange(RUNS)]
-	names = ['run{}'.format(i) for i in xrange(RUNS)]
-	graphics.plot_multi(data, names, reference_data=pd_ref, plotfile='test5c.pdf',
+	data = [case.plotting_data(x=np.random.rand(200)) for i in range(RUNS)]
+	names = ['run{}'.format(i) for i in range(RUNS)]
+	graphics.plot_multi(data, names, reference_data=pd_ref,
+						plotfile=os.path.join(basepath, 'test5c.pdf'),
 						layout='horizontal', minimal_axes=False)
 
 	# plot even more runs vs. reference, go deeper into marker styles variation
 	RUNS = 6
-	data = [case.plotting_data(x=np.random.rand(200)) for i in xrange(RUNS)]
-	names = ['run{}'.format(i) for i in xrange(RUNS)]
-	graphics.plot_multi(data, names, reference_data=pd_ref, plotfile='test5d.pdf',
-						   layout='horizontal', minimal_axes=False)
+	data = [case.plotting_data(x=np.random.rand(200)) for i in range(RUNS)]
+	names = ['run{}'.format(i) for i in range(RUNS)]
+	graphics.plot_multi(data, names, reference_data=pd_ref,
+						plotfile=os.path.join(basepath, 'test5d.pdf'),
+						layout='horizontal', minimal_axes=False)
 
 	# plot multiple runs vs. reference, vary marker styles (default)
 	RUNS = 3
-	data = [case.plotting_data(x=np.random.rand(200)) for i in xrange(RUNS)]
-	names = ['run{}'.format(i) for i in xrange(RUNS)]
-	graphics.plot_multi(data, names, reference_data=pd_ref, plotfile='test5e.pdf',
-						layout='horizontal', minimal_axes=False, universal_marker='o')
+	data = [case.plotting_data(x=np.random.rand(200)) for i in range(RUNS)]
+	names = ['run{}'.format(i) for i in range(RUNS)]
+	graphics.plot_multi(data, names, reference_data=pd_ref,
+						plotfile=os.path.join(basepath, 'test5e.pdf'),
+						layout='horizontal', minimal_axes=False,
+						universal_marker='o')
 
 	# plot runs vs. reference, don't plot prescription as vertical line,
 	# don't vary markers. instead...
 	RUNS = 4
-	data = [case.plotting_data(x=np.random.rand(200)) for i in xrange(RUNS)]
-	names = ['run{}'.format(i) for i in xrange(RUNS)]
+	data = [case.plotting_data(x=np.random.rand(200)) for i in range(RUNS)]
+	names = ['run{}'.format(i) for i in range(RUNS)]
 	# ...vary line styles
-	graphics.plot_multi(data, names, reference_data=pd_ref, plotfile='test5f.pdf',
-						layout='horizontal', minimal_axes=False, suppress_rx=True,
-						vary_markers=False, vary_line_styles=True)
+	graphics.plot_multi(data, names, reference_data=pd_ref,
+						plotfile=os.path.join(basepath, 'test5f.pdf'),
+						layout='horizontal', minimal_axes=False,
+						suppress_rx=True, vary_markers=False,
+						vary_line_styles=True)
 	# ...vary line weights and colors
-	graphics.plot_multi(data, names, reference_data=pd_ref, plotfile='test5g.pdf',
-						layout='horizontal', minimal_axes=False, vary_markers=False,
-						vary_line_weights=True, vary_line_colors=True)
+	graphics.plot_multi(data, names, reference_data=pd_ref,
+						plotfile=os.path.join(basepath, 'test5g.pdf'),
+						layout='horizontal', minimal_axes=False,
+						vary_markers=False, vary_line_weights=True,
+						vary_line_colors=True)
 
 def clean(basepath='.'):
 	tags = ['1a', '1b', '2a', '2b', '3', '4', '5a', '5b', '5c', '5d',

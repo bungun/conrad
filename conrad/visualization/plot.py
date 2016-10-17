@@ -69,60 +69,23 @@ class ConradColorUtility(object):
 	####################################################################
 	# http://stackoverflow.com/questions/214359/
 	# converting-hex-color-to-rgb-and-vice-versa/214657#214657
-	@staticmethod
-	def hex_to_rgb(value):
+	def to_rgb(self, color):
 		"""
-		Convert hexadecimal color code ``value`` to RGB tuple.
-
-		Args:
-			value (:obj:`str`): Hexadecimal color code.
-
-		Returns:
-			:obj:`tuple`: RGB equivalent of input hex color code.
+		Convert any :mod:`matplotlib` color to RGB tuple.
 		"""
-		value = value.lstrip('#')
-		lv = len(value)
-		return tuple(
-			int(value[i:i + lv // 3], 16)
-			for i in range(0, lv, lv // 3))
+		return mpl.colors.colorConverter.to_rgb(color)
 
-	@staticmethod
-	def rgb_to_hex(rgb):
+	def to_hex(self, color):
 		"""
-		Convert tuple ``rgb`` to hexadecimal color code.
-
-		Args:
-			rgb (:obj:`tuple`): RGB or RGBA tuple. Alpha value is
-				ignored, if provided.
-
-		Returns:
-			:obj:`str`: Hex string equivalent of input RGB/A tuple.
-
-
+		Convert any :mod:`matplotlib` color to HTML hex string.
 		"""
-		return '#%02x%02x%02x' % rgb[:3]
+		return '#%02x%02x%02x' % self.to_rgb(color)
 	####################################################################
-	@staticmethod
-	def normalize_rgb(rgb):
-		"""
-		Scale all color entries of tuple ``rgb`` to lie in [0, 1]
-		instead of [0, 255].
 
-		Args:
-			rgb (:obj:`tuple`): RGB or RGBA tuple.
-
-		Returns:
-			:obj:`tuple`: Normalized version of input RGB or RGBA tuple.
+	def scale_rgb(self, color, factor=1.0):
 		"""
-		rgb_normalized = tuple(value / 255.0 for value in rgb[:3])
-		if len(rgb) == 4:
-			rgb_normalized += (rgb[-1],)
-		return rgb_normalized
-
-	@staticmethod
-	def scale_rgb(rgb, factor=1.0):
-		"""
-		Scale all color entries of tuple ``rgb`` by ``factor``.
+		Convert any :mod:`matplotlib` color to RGBA tuple and scale all
+		color entries of tuple ``rgb`` by ``factor``.
 
 		Args:
 			rgb (:obj:`tuple`): RGB or RGBA tuple.
@@ -131,11 +94,15 @@ class ConradColorUtility(object):
 		Returns:
 			:obj:`tuple`: Scaled version of input RGB or RGBA tuple.
 		"""
+		rgba = mpl.colors.colorConverter.to_rgba(color)
+
 		factor = max(min(float(factor), 1.0), 0.0)
-		rgb_scaled = tuple(val * factor for val in rgb[:3])
-		if len(rgb) == 4:
-			rgb_scaled += (rgb[-1],)
-		return rgb_scaled
+		if factor == 1.0:
+			return rgba
+
+		rgba_scaled = tuple(val * factor for val in rgba[:3])
+		rgba_scaled += (rgba[-1],)
+		return rgba_scaled
 
 
 class LineAesthetic(object):
@@ -197,12 +164,7 @@ class LineAesthetic(object):
 			color: Any :mod:`matplotlib`-compatible color description,
 				base color to attenuate.
 		"""
-		if self.color_attenuation < 1.0:
-			if isinstance(color, str):
-				color = self.color_utils.normalize_rgb(
-						self.color_utils.hex_to_rgb(color))
-			color = self.color_utils.scale_rgb(color, self.color_attenuation)
-		return color
+		return self.color_utils.scale_rgb(color, self.color_attenuation)
 
 	def plot_args(self, color, series_length=None):
 		"""
@@ -707,7 +669,7 @@ else:
 		def enable_meta_legend(self, series, names, legend_alignment=None,
 							   legend_coordinates=None, legend_border=True,
 							   legend_shadow=True, legend_box_rounded=False,
-							   **legend_options):
+							   legend_fontsize=10, **legend_options):
 			"""
 			Draw figure (not subplot) legend comprising the specified
 			series, labeled with the specified names.
@@ -730,6 +692,8 @@ else:
 					legend box with shadow effect.
 				legend_box_rounded (:obj:`bool`, optional): If ``True``,
 					draw legend box with rounded corners.
+				legend_fontsize (:obj:`int` or :obj:`float`, optional):
+					Fontsize, in points, to use in legend.
 				legend_options: Keyword arguments passed to
 					:meth:`~matplotlib.figures.Figure.legend`
 
