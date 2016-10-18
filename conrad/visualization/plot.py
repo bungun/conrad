@@ -248,13 +248,15 @@ else:
 				spine.set_position(('outward', 5))
 
 			if self.bottom:
-				ax.set_xlabel(str(xlabel), fontsize=16)
+				xlabel_size = 16 - 2 * (len(xlabel) > 10) - 2 * (len(xlabel) > 25)
+				ax.set_xlabel(str(xlabel), fontsize=xlabel_size)
 			else:
 				ax.tick_params(axis='x', bottom=False, labelbottom=False)
 				ax.spines['bottom'].set_visible(False)
 
 			if self.left:
-				ax.set_ylabel(str(ylabel), fontsize=16)
+				ylabel_size = 16 - 2 * (len(ylabel) > 10) - 2 * (len(ylabel) > 25)
+				ax.set_ylabel(str(ylabel), fontsize=ylabel_size)
 			else:
 				ax.tick_params(axis='y', left=not minimal_axes,
 									labelleft=not minimal_axes)
