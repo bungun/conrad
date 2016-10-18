@@ -771,7 +771,7 @@ else:
 			if self_title:
 				subplot.entitle(structure_name)
 
-		def sift_options(**options):
+		def sift_options(self, **options):
 			plot_options = {}
 			legend_options = {}
 			for o in options:
