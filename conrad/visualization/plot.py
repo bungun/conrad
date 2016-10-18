@@ -771,6 +771,16 @@ else:
 			if self_title:
 				subplot.entitle(structure_name)
 
+		def sift_options(**options):
+			plot_options = {}
+			legend_options = {}
+			for o in options:
+				if 'legend' in o:
+					legend_options[o] = options[o]
+				else:
+					plot_options[o] = options[o]
+			return plot_options, legend_options
+
 		def plot_virtual(self, series_names, series_aesthetics,
 						 legend_alignment=None, legend_coordinates=None,
 						 **legend_options):
@@ -877,6 +887,8 @@ else:
 			Returns:
 				None
 			"""
+			plot_options, legend_options = self.sift_options(**options)
+
 			if clear:
 				self.clear()
 
@@ -909,7 +921,7 @@ else:
 						label, data, aesthetic=aesthetic,
 						large_markers=large_markers, add_to_legend=legend,
 						suppress_constraints=suppress_constraints,
-						self_title=self_title_subplots, **options)
+						self_title=self_title_subplots, **plot_options)
 
 
 			# draw legends, per subplot or overall
@@ -926,7 +938,8 @@ else:
 				self.enable_meta_legend(
 						self.__legend_series, self.__legend_names,
 						legend_alignment=legend_alignment,
-						legend_coordinates=legend_coordinates, **options)
+						legend_coordinates=legend_coordinates,
+						**legend_options)
 
 			if show:
 				self.show()
