@@ -670,7 +670,7 @@ else:
 
 		def enable_meta_legend(self, series, names, legend_alignment=None,
 							   legend_coordinates=None, legend_border=True,
-							   legend_shadow=True, legend_box_rounded=False,
+							   legend_shadow=False, legend_box_rounded=True,
 							   legend_fontsize=10, **legend_options):
 			"""
 			Draw figure (not subplot) legend comprising the specified
@@ -703,15 +703,15 @@ else:
 				None
 			"""
 			legend_args = {
-				'ncol':1,
-				'loc':'upper right',
-				'columnspacing':1.0,
-				'labelspacing':0.0,
-				'handletextpad':0.0,
-				'handlelength':2.0,
-				'fontsize': legend_fontsize,
-				'fancybox': legend_box_rounded,
-				'shadow': legend_shadow,
+					'ncol':1,
+					'loc':'upper right',
+					'columnspacing':1.0,
+					'labelspacing':0.0,
+					'handletextpad':0.0,
+					'handlelength':2.0,
+					'fontsize': legend_fontsize,
+					'fancybox': legend_box_rounded,
+					'shadow': legend_shadow,
 			}
 			if legend_alignment is not None:
 				legend_args['loc'] = legend_alignment
