@@ -671,7 +671,8 @@ else:
 		def enable_meta_legend(self, series, names, legend_alignment=None,
 							   legend_coordinates=None, legend_border=True,
 							   legend_shadow=False, legend_box_rounded=True,
-							   legend_fontsize=10, **legend_options):
+							   legend_fontsize=10, legend_handle_textpad=0.0,
+							   legend_label_spacing=0.0, **legend_options):
 			"""
 			Draw figure (not subplot) legend comprising the specified
 			series, labeled with the specified names.
@@ -706,8 +707,8 @@ else:
 					'ncol':1,
 					'loc':'upper right',
 					'columnspacing':1.0,
-					'labelspacing': legend_options.pop('legend_labelspacing', 0.0),
-					'handletextpad': legend_options.pop('legend_handletextpad', 0.0),
+					'labelspacing': legend_label_spacing,
+					'handletextpad': legend_handle_textpad,
 					'handlelength':2.0,
 					'fontsize': legend_fontsize,
 					'fancybox': legend_box_rounded,
