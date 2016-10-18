@@ -1325,7 +1325,7 @@ else:
 						  aesthetic=run_aesthetics[i], **options)
 
 			# plot legend
-			self.dvh_plot.plot_virtual(run_names, run_aesthetics)
+			self.dvh_plot.plot_virtual(run_names, run_aesthetics, **options)
 
 			if show:
 				self.dvh_plot.show()
