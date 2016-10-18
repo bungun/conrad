@@ -986,7 +986,7 @@ else:
 				try:
 					if verbose:
 						print("SAVING TO ", filepath)
-					self.figure.savefig(filepath, bbox_inches='tight')
+					self.figure.savefig(filepath, dpi=600, bbox_inches='tight')
 				except:
 					raise RuntimeError(
 							'could not save plot to file: {}'.format(filepath))
