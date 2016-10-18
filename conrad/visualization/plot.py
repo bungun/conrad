@@ -250,6 +250,11 @@ else:
 			if self.bottom:
 				xlabel_size = 16 - 2 * (len(xlabel) > 10) - 2 * (len(xlabel) > 25)
 				ax.set_xlabel(str(xlabel), fontsize=xlabel_size)
+
+				# keep x axis ticks light
+				ticks = ax.get_xticks()
+				if len(ticks) > 7:
+					ax.set_xticks(ticks[::2])
 			else:
 				ax.tick_params(axis='x', bottom=False, labelbottom=False)
 				ax.spines['bottom'].set_visible(False)
@@ -668,11 +673,8 @@ else:
 			"""
 			self.__panel_subplots[panel].entitle(title)
 
-		def enable_meta_legend(self, series, names, legend_alignment=None,
-							   legend_coordinates=None, legend_border=True,
-							   legend_shadow=False, legend_box_rounded=True,
-							   legend_fontsize=10, legend_handle_textpad=0.0,
-							   legend_label_spacing=0.0, **legend_options):
+		def enable_meta_legend(self, series, names, alignment=None,
+							   coordinates=None, **options):
 			"""
 			Draw figure (not subplot) legend comprising the specified
 			series, labeled with the specified names.
@@ -682,22 +684,22 @@ else:
 					(i.e., ``artist`` objects) to render in legend.
 				names (:obj:`list` of :obj:`str`): Names of series in
 					legend.
-				legend_alignment (:obj:`str`, optional): Legend location
+				alignment (:obj:`str`, optional): Legend location
 					relative to legend anchor position. Should conform
 					to specification for keyword argument ``loc`` of
 					:meth:``matplotlib.figure.Figure.legend``.
-				legend_coordinates (optional): Legend anchor position,
+				coordinates (optional): Legend anchor position,
 					in (x,y)-coordinates, relative to lower left corner
 					of figure (upper right corner is ``(1,1)``).
-				legend_border (:obj:`bool`, optional): If ``True``, draw
+				border (:obj:`bool`, optional): If ``True``, draw
 					legend box with border.
-				legend_shadow (:obj:`bool`, optional): If ``True``, draw
+				shadow (:obj:`bool`, optional): If ``True``, draw
 					legend box with shadow effect.
-				legend_box_rounded (:obj:`bool`, optional): If ``True``,
+				box_rounded (:obj:`bool`, optional): If ``True``,
 					draw legend box with rounded corners.
-				legend_fontsize (:obj:`int` or :obj:`float`, optional):
+				fontsize (:obj:`int` or :obj:`float`, optional):
 					Fontsize, in points, to use in legend.
-				legend_options: Keyword arguments passed to
+				options: Keyword arguments passed to
 					:meth:`~matplotlib.figures.Figure.legend`
 
 			Returns:
@@ -707,19 +709,19 @@ else:
 					'ncol':1,
 					'loc':'upper right',
 					'columnspacing':1.0,
-					'labelspacing': legend_label_spacing,
-					'handletextpad': legend_handle_textpad,
+					'labelspacing': options.pop('label_spacing', 0.5),
+					'handletextpad': options.pop('handle_textpad', 0.5),
 					'handlelength':2.0,
-					'fontsize': legend_fontsize,
-					'fancybox': legend_box_rounded,
-					'shadow': legend_shadow,
+					'fontsize': options.pop('fontsize', 10),
+					'fancybox': options.pop('box_rounded', True),
+					'shadow': options.pop('shadow', False),
 			}
-			if legend_alignment is not None:
-				legend_args['loc'] = legend_alignment
-			if legend_coordinates is not None:
-				legend_args['bbox_to_anchor'] = legend_coordinates
+			if alignment is not None:
+				legend_args['loc'] = alignment
+			if coordinates is not None:
+				legend_args['bbox_to_anchor'] = coordinates
 			legend = self.figure.legend(series, names, **legend_args)
-			if not legend_border:
+			if not options.pop('border', True):
 				frame = legend.get_frame()
 				frame.set_edgecolor('1.0')
 				frame.set_facecolor('1.0')
@@ -775,8 +777,8 @@ else:
 			plot_options = {}
 			legend_options = {}
 			for o in options:
-				if 'legend' in o:
-					legend_options[o] = options[o]
+				if 'legend_' in o:
+					legend_options[o.replace('legend_','')] = options[o]
 				else:
 					plot_options[o] = options[o]
 			return plot_options, legend_options
@@ -813,8 +815,8 @@ else:
 				series.append(virtual_line)
 
 			self.enable_meta_legend(series, series_names,
-									legend_alignment=legend_alignment,
-									legend_coordinates=legend_coordinates,
+									alignment=legend_alignment,
+									coordinates=legend_coordinates,
 									**legend_options)
 
 		def plot(self, plot_data, show=False, clear=True, xmax=None,
