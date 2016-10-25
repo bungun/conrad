@@ -78,6 +78,9 @@ class AbstractNonnegativeUnit(object):
 		else:
 			self.__value = float(value)
 
+	def __float__(self):
+		return self.value
+
 class Percent(AbstractNonnegativeUnit):
 	""" Specialize :obj:`AbstractNonnegativeUnit` to percent units. """
 
