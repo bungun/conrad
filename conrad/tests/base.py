@@ -26,8 +26,6 @@ from numpy import nan
 from numpy.linalg import norm
 from numpy.random import rand
 
-from conrad.defs import vec
-
 class ConradTestCase(unittest.TestCase):
 	"""
 	Base test class for :mod:`conrad` unit testing, extends :class:`unittest.TestCase`.
@@ -37,8 +35,6 @@ class ConradTestCase(unittest.TestCase):
 		"""
 		Assert ``first`` and ``second`` equal, entrywise, within tolerance.
 		"""
-		first = vec(first)
-		second = vec(second)
 		atol *= len(first)**0.5
 		self.assertTrue( norm(first - second) <= atol + rtol * norm(second) )
 
