@@ -33,6 +33,7 @@ setup(
               'conrad.optimization',
               'conrad.case',
               'conrad.visualization',
+              'conrad.visualization.plot',
               'conrad.tests'],
     license='GPLv3',
     zip_safe=False,

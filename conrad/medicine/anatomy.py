@@ -323,4 +323,6 @@ class Anatomy(object):
 				each structure's DVH plotting data to have a maximum
 				series length of ``maxlength``.
 		"""
-		return {s.label: s.plotting_data(maxlength=maxlength) for s in self}
+		return {s.label: s.plotting_data(constraints_only=constraints_only,
+										 maxlength=maxlength) for s in self}
+

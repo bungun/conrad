@@ -21,6 +21,8 @@
 
 ## Version 0.0.1 (alpha)
 
+TEST: conrad.visualization.plot module
+DOCS: conrad.visualization.plot module
 DEBUG: plotting DVH constraints (python)
 DEBUG: 2-pass (python)
 TODO: allow plotting of 1st pass when 2-pass is enabled
