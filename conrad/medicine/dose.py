@@ -839,22 +839,6 @@ class ConstraintList(object):
 		""" Python3-compatible iterator implementation. """
 		return self.items.__iter__()
 
-	def __next__(self):
-		""" Python3-compatible iterator implementation. """
-		return self.items.__next__()
-
-	def next(self):
-		""" Python2-compatible iterator implementation. """
-		return self.items.next()
-
-	def iteritems(self):
-		""" Python2-compatible iterator implementation. """
-		return self.items.items()
-
-	def itervalues(self):
-		""" Python2-compatible iterator implementation. """
-		return self.items.values()
-
 	def __iadd__(self, other):
 		"""
 		Overload operator +=.
@@ -940,7 +924,6 @@ class ConstraintList(object):
 		"""
 		return self.items.values()
 
-
 	@property
 	def mean_only(self):
 		""" ``True`` if list exclusively contains mean constraints. """
@@ -948,7 +931,7 @@ class ConstraintList(object):
 		if self.size == 0:
 			return True
 		else:
-			return all(listmap(meantest, self.itervalues()))
+			return all(listmap(meantest, self.items.values()))
 
 	def contains(self, constr):
 		"""

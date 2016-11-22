@@ -139,7 +139,7 @@ class Structure(object):
 			- Dose matrix assigned, *or*
 			- Structure collapsable and mean dose matrix assigned.
 		"""
-		size_set = positive_real_valued(self.size)
+		size_determined = positive_real_valued(self.size)
 		full_mat_usable = sparse_or_dense(self.A_full)
 		if full_mat_usable:
 			full_mat_usable &= self.size == self.A_full.shape[0]
@@ -148,7 +148,7 @@ class Structure(object):
 				isinstance(self.A_mean, ndarray) and self.collapsable)
 
 		usable_matrix_loaded = full_mat_usable or collapsed_mat_usable
-		return size_set and usable_matrix_loaded
+		return size_determined and usable_matrix_loaded
 
 	@property
 	def size(self):
