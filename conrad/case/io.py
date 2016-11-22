@@ -31,7 +31,7 @@ from conrad.case.case import Case
 from conrad.medicine import Anatomy, Structure, Prescription
 from conrad.physics.physics import Physics
 
-class ConradIO(ABCMeta)
+class ConradIO(ABCMeta):
 	@abstractmethod
 	def read(self, file, key):
 		pass

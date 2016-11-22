@@ -49,7 +49,7 @@ class CaseTestCase(ConradTestCase):
 		target_snr = 4.
 		for i, label in enumerate(self.physics.voxel_labels):
 			if label == 0:
-				self.physics.dose_matrix[i, :] *= target_snr
+				self.physics.dose_matrix.data[i, :] *= target_snr
 
 		self.prescription = Prescription([
 			{

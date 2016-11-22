@@ -22,7 +22,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 from conrad.compat import *
 
 from scipy.sparse import rand as sprand, isspmatrix
-from numpy import ndarray, zeros
+import numpy as np
 
 from conrad.physics.units import cm, mm
 from conrad.physics.voxels import VoxelGrid
@@ -52,10 +52,14 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assertTrue( d.voxels == m )
 		self.assertTrue( d.beams == n )
 		# size mismatches
-		self.assert_exception( call=DoseFrame, args=[None, n + 1, A] )
-		self.assert_exception( call=DoseFrame, args=[m + 1, None, A] )
-		self.assert_exception( call=DoseFrame, args=[m, n + 1, A] )
-		self.assert_exception( call=DoseFrame, args=[m + 1, n, A] )
+		with self.assertRaises(ValueError):
+			DoseFrame(None, n + 1, A)
+		with self.assertRaises(ValueError):
+			DoseFrame(m + 1, None, A)
+		with self.assertRaises(ValueError):
+			DoseFrame(m, n + 1, A)
+		with self.assertRaises(ValueError):
+			DoseFrame(m + 1, n, A)
 
 		A = sprand(m, n, 0.2, 'csr')
 		self.assertTrue( d.voxels == m )
@@ -66,28 +70,34 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assertTrue( d.beams == n )
 
 		A = sprand(m, n, 0.2) # COO sparse storage, not supported
-		self.assert_exception( call=DoseFrame, args=[None, None, A] )
+		with self.assertRaises(TypeError):
+			DoseFrame(None, None, A)
 
 	def test_doseframe_properties(self):
 		m, n = 100, 50
 		d = DoseFrame(m, n, None)
 
 		# frame dimensions immutable once set
-		self.assert_exception( call=d.voxels, args=[m] )
-		self.assert_exception( call=d.beams, args=[m] )
+		with self.assertRaises(ValueError):
+			d.voxels = m
+		with self.assertRaises(ValueError):
+			d.beams = m
 
-		d.data = rand(m, n)
-		self.assertTrue( isinstance(d.data, ndarray) )
+		d.dose_matrix = rand(m, n)
+		self.assertTrue( isinstance(d.dose_matrix, DoseMatrix) )
 
 		# matrix with wrong size fails
-		self.assert_exception( call=d.data, args=[rand(m + 1, n)] )
+		with self.assertRaises(ValueError):
+			d.dose_matrix = rand(m + 1, n)
 
-		d.data = sprand(m, n, 0.2, 'csr')
-		self.assertTrue( isspmatrix(d.data) )
-		d.data = sprand(m, n, 0.2, 'csc')
+		d.dose_matrix = sprand(m, n, 0.2, 'csr')
+		self.assertTrue( isspmatrix(d.dose_matrix.data) )
+		d.dose_matrix = sprand(m, n, 0.2, 'csc')
+		self.assertTrue( isspmatrix(d.dose_matrix.data) )
 
 		# coo matrix fails
-		self.assert_exception( call=d.data, args=[sprand(m, n, 0.2)] )
+		with self.assertRaises(TypeError):
+			d.dose_matrix = sprand(m, n, 0.2)
 
 		# voxel labels
 		vl = (10 * rand(m)).astype(int)
@@ -95,7 +105,8 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assertTrue( sum(vl - d.voxel_labels) == 0 )
 
 		vl_missized = (10 * rand(m + 1)).astype(int)
-		self.assert_exception( call=d.voxel_labels, args=[vl_missized] )
+		with self.assertRaises(ValueError):
+			d.voxel_labels = vl_missized
 
 		# beam labels
 		bl = (4 * rand(n)).astype(int)
@@ -103,29 +114,34 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assertTrue( sum(bl - d.beam_labels) == 0 )
 
 		bl_missized = (10 * rand(n + 1)).astype(int)
-		self.assert_exception( call=d.beam_labels, args=[bl_missized] )
+		with self.assertRaises(ValueError):
+			d.beam_labels = bl_missized
 
 		# voxel weights
-		self.assertTrue( isinstance(d.voxel_weights, ndarray) )
+		self.assertTrue( isinstance(d.voxel_weights, WeightVector) )
+		self.assertTrue( isinstance(d.voxel_weights.data, np.ndarray) )
 		self.assertTrue( d.voxel_weights.size == m )
-		self.assertTrue( sum(d.voxel_weights != 1) == 0 )
+		self.assertTrue( sum(d.voxel_weights.data != 1) == 0 )
 		vw = (5 * rand(m)).astype(int).astype(float)
 		d.voxel_weights = vw
-		self.assert_vector_equal( vw, d.voxel_weights )
+		self.assert_vector_equal( vw, d.voxel_weights.data )
 
 		vw_missized = (5 * rand(m + 1)).astype(int).astype(float)
-		self.assert_exception( call=d.voxel_weights, args=[vw_missized] )
+		with self.assertRaises(ValueError):
+			d.voxel_weights = vw_missized
 
 		# beam weights
-		self.assertTrue( isinstance(d.beam_weights, ndarray) )
+		self.assertTrue( isinstance(d.beam_weights, WeightVector) )
+		self.assertTrue( isinstance(d.beam_weights.data, np.ndarray) )
 		self.assertTrue( d.beam_weights.size == n )
-		self.assertTrue( sum(d.beam_weights != 1) == 0 )
+		self.assertTrue( sum(d.beam_weights.data != 1) == 0 )
 		bw = (5 * rand(n)).astype(int).astype(float)
 		d.beam_weights = bw
-		self.assert_vector_equal( bw, d.beam_weights )
+		self.assert_vector_equal( bw, d.beam_weights.data )
 
 		bw_missized = (5 * rand(n + 1)).astype(int).astype(float)
-		self.assert_exception( call=d.beam_weights, args=[bw_missized] )
+		with self.assertRaises(ValueError):
+			d.beam_weights = bw_missized
 
 	def test_doseframe_init_options(self):
 		m, n = 100, 50
@@ -138,11 +154,11 @@ class DoseFrameTestCase(ConradTestCase):
 		d = DoseFrame(m, n, A, voxel_labels=vl, beam_labels=bl,
 					  voxel_weights=vw, beam_weights=bw)
 
-		self.assert_vector_equal( A, d.data )
+		self.assert_vector_equal( A, d.dose_matrix.data )
 		self.assert_vector_equal( vl, d.voxel_labels )
 		self.assert_vector_equal( bl, d.beam_labels )
-		self.assert_vector_equal( vw, d.voxel_weights )
-		self.assert_vector_equal( bw, d.beam_weights )
+		self.assert_vector_equal( vw, d.voxel_weights.data )
+		self.assert_vector_equal( bw, d.beam_weights.data )
 
 	def test_indices_by_label(self):
 		maxlabel = 10
@@ -162,10 +178,11 @@ class DoseFrameTestCase(ConradTestCase):
 		indices_calculated.sort()
 		self.assert_vector_equal( indices, indices_calculated )
 
-		self.assert_exception( d.indices_by_label, args=[None, label, 'test'] )
+		with self.assertRaises(ValueError):
+			d.indices_by_label(None, label, 'test')
 
-		self.assert_exception(
-					d.indices_by_label, args=[None, maxlabel + 2, 'test'] )
+		with self.assertRaises(KeyError):
+			d.indices_by_label(x, maxlabel + 2, 'test')
 
 	def test_lookup_by_label(self):
 		m, n = 100, 50
@@ -188,7 +205,7 @@ class DoseFrameTestCase(ConradTestCase):
 		v_idx = (vl == v_label).argsort()[-sum(vl == v_label):]
 		b_idx = (bl == b_label).argsort()[-sum(bl == b_label):]
 
-		d = DoseFrame(None, None, None, voxel_labels=vl, beam_labels=bl)
+		d = DoseFrame(voxel_labels=vl, beam_labels=bl)
 		v_idx_lookup = d.voxel_lookup_by_label(v_label)
 		b_idx_lookup = d.beam_lookup_by_label(b_label)
 
@@ -200,9 +217,38 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assert_vector_equal( v_idx, v_idx_lookup )
 		self.assert_vector_equal( b_idx, b_idx_lookup )
 
+	def test_submatrix(self):
+		m, n = 100, 50
+		A = np.random.rand(m, n)
+		vl = (10 * rand(m)).astype(int)
+		bl = (3 * rand(n)).astype(int)
+
+		for i in xrange(10):
+			if sum(vl == i) > 0:
+				v_label = i
+				break
+
+		for i in xrange(3):
+			if sum(bl == i) > 0:
+				b_label = i
+				break
+
+		d = DoseFrame(data=A, voxel_labels=vl, beam_labels=bl)
+		v_idx = d.indices_by_label(vl, v_label, 'voxel labels')
+		b_idx = d.indices_by_label(bl, b_label, 'beam labels')
+
+		A_sub_v = A[v_idx, :]
+		A_sub_b = A[:, b_idx]
+		A_sub_bv = A[v_idx, :][:, b_idx]
+		self.assert_vector_equal( d.submatrix(v_label), A_sub_v )
+		self.assert_vector_equal( d.submatrix(voxel_label=v_label), A_sub_v )
+		self.assert_vector_equal( d.submatrix(beam_label=b_label), A_sub_b )
+		self.assert_vector_equal( d.submatrix(v_label, b_label), A_sub_bv )
+
 class PhysicsTestCase(ConradTestCase):
 	def test_physics_init(self):
-		self.assert_exception( call=Physics, args=[None] )
+		# with self.assertRaises(TypeError):
+		Physics()
 
 		m, n = 100, 50
 		A = rand(m, n)
@@ -218,7 +264,7 @@ class PhysicsTestCase(ConradTestCase):
 		self.assertFalse( p.plannable )
 
 		p = Physics(dose_matrix=A)
-		self.assert_vector_equal( p.dose_matrix, A )
+		self.assert_vector_equal( p.dose_matrix.data, A )
 		self.assertTrue( p.dose_grid is None )
 		self.assertTrue( p.voxel_labels is None )
 		self.assertTrue( p._Physics__beams.count == n )
@@ -256,24 +302,24 @@ class PhysicsTestCase(ConradTestCase):
 		bl = (10 * rand(n)).astype(int)
 		p = Physics(m, n, dose_matrix=A, dose_grid=vg, voxel_labels=vl,
 					voxel_weights=vw, beam_weights=bw, beam_labels=bl)
-		self.assert_vector_equal( p.dose_matrix, A )
+		self.assert_vector_equal( p.dose_matrix.data, A )
 		self.assertFalse( p.dose_grid is None )
 		self.assert_vector_equal( p.voxel_labels, vl )
 		self.assertTrue( p._Physics__beams.count == n )
 		self.assert_vector_equal( p.frame.beam_labels, bl )
-		self.assert_vector_equal( p.frame.voxel_weights, vw )
-		self.assert_vector_equal( p.frame.beam_weights, bw )
+		self.assert_vector_equal( p.frame.voxel_weights.data, vw )
+		self.assert_vector_equal( p.frame.beam_weights.data, bw )
 		self.assertTrue( p.plannable )
 
 		# test copy constructor
 		p2 = Physics(p)
-		self.assert_vector_equal( p.dose_matrix, A )
+		self.assert_vector_equal( p.dose_matrix.data, A )
 		self.assertFalse( p.dose_grid is None )
 		self.assert_vector_equal( p.voxel_labels, vl )
 		self.assertTrue( p._Physics__beams.count == n )
 		self.assert_vector_equal( p.frame.beam_labels, bl )
-		self.assert_vector_equal( p.frame.voxel_weights, vw )
-		self.assert_vector_equal( p.frame.beam_weights, bw )
+		self.assert_vector_equal( p.frame.voxel_weights.data, vw )
+		self.assert_vector_equal( p.frame.beam_weights.data, bw )
 		self.assertTrue( p.plannable )
 
 	def test_physics_planning_requirements(self):
@@ -306,8 +352,8 @@ class PhysicsTestCase(ConradTestCase):
 		beam_weights = rand(n)
 
 		m0 = sum(voxel_labels == LABEL)
-		A0_rows = zeros((m0, n))
-		vw0 = zeros(m0)
+		A0_rows = np.zeros((m0, n))
+		vw0 = np.zeros(m0)
 		ptr = 0
 		for i, w in enumerate(voxel_labels):
 			if w == LABEL:
@@ -316,9 +362,9 @@ class PhysicsTestCase(ConradTestCase):
 				ptr += 1
 
 		n0 = sum(beam_labels == LABEL)
-		A0_cols = zeros((m, n0))
-		A0 = zeros((m0, n0))
-		bw0 = zeros(n0)
+		A0_cols = np.zeros((m, n0))
+		A0 = np.zeros((m0, n0))
+		bw0 = np.zeros(n0)
 		ptr = 0
 		for j, w in enumerate(beam_labels):
 			if w == LABEL:
@@ -335,7 +381,6 @@ class PhysicsTestCase(ConradTestCase):
 
 		bw_retrieved = p.beam_weights_by_label(LABEL)
 		self.assert_vector_equal( bw0, bw_retrieved )
-
 
 		A0_row_retrieved_default_arg = p.dose_matrix_by_label(LABEL)
 		self.assert_vector_equal( A0_rows, A0_row_retrieved_default_arg )

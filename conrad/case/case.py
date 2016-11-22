@@ -343,6 +343,27 @@ class Case(object):
 					label)
 		self.physics.mark_data_as_loaded()
 
+	def gather_physics_from_anatomy(self):
+		"""
+		Gather dose matrices from structures.
+
+		Arguments:
+			None
+
+		Returns:
+			None
+
+		Raises:
+			AttributeError: If :attr:`case.physics.dose_matrix` is
+				already set.
+		"""
+		if self.physics.dose_matrix is None:
+			data = {structure.label: structure.A for structure in self.anatomy}
+			self.physics.frame.data = data
+		else:
+			raise AttributeError(
+					'dose matrix for `Case.physics` is already set')
+
 	def calculate_doses(self, x):
 		"""
 		Calculate voxel doses for each structure in :attr:`Case.anatomy`.
@@ -367,13 +388,9 @@ class Case(object):
 			:obj:`bool`: ``True`` if anatomy has one or more target
 			structures and dose matrices from the case physics.
 		"""
-		plannable = True
-		if not self.physics.plannable:
-			plannable &= False
-		elif not self.anatomy.plannable:
+		if not self.anatomy.plannable and self.physics.plannable:
 			self.load_physics_to_anatomy()
-			plannable &= self.anatomy.plannable
-		return plannable
+		return self.anatomy.plannable
 
 	def plan(self, use_slack=True, use_2pass=False, **options):
 		"""
