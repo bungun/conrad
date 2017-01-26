@@ -30,9 +30,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-from sys import version_info
+import sys
 
-if version_info.major > 2:
+if sys.version_info.major > 2:
 	xrange = range
 	def listmap(f, *args):
 		return list(map(f, *args))

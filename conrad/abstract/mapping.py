@@ -21,22 +21,25 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import zeros, ndarray, diff
+import numpy as np
 
 from conrad.defs import vec, is_vector, sparse_or_dense
 
-class AbstractMapping(object):
+# TODO: Change module to maps?
+# TODO: Change this to DiscreteMap?
+
+class DiscreteMapping(object):
 	r"""
-	Generic description of relation between two discrete, finite sets.
+	Generic description of relations between two discrete, finite sets.
 
 	In particular, the expected use is for mapping components from
 	one vector space to the components of another, and vice-versa.
 
-	Each :class:`AbstractMapping` has a 'forward' sense, taken to be a
-	one-to-one or many-to-one relation, but one-to-many relations are
-	through the "reverse" sense application of the mapping.
+	Each :class:`DiscreteMapping` has a 'forward' sense, taken to be a
+	one-to-one or many-to-one relation, while one-to-many relations are
+	through the 'reverse' sense application of the mapping.
 
-	The (forward) mapping can also be viewed as a (specific) linear
+	The (forward) mapping can also be viewed as a linear
 	transformation from
 
 	:math: R^n --> R^m, \mbox{where},
@@ -45,8 +48,8 @@ class AbstractMapping(object):
 	The reverse mapping is the inverse of this transformation (or at
 	least related to it by a second diagonal transformation).
 	"""
-	def __init__(self, map_vector):
-		"""
+	def __init__(self, map_vector, target_dimension=None):
+		r"""
 		Initialize a one-to-one or many-to-one discrete relation.
 
 		The size of the first set/vector space is taken to be the
@@ -68,6 +71,9 @@ class AbstractMapping(object):
 	def vec(self):
 		""" Vector representation of forward mapping. """
 		return self.__forwardmap
+
+	def __getitem__(self, index):
+		return self.vec[index]
 
 	@property
 	def n_frame0(self):
@@ -93,9 +99,9 @@ class AbstractMapping(object):
 		vectors, mapping operates on entries.
 
 		Arguments:
-			in_: Input array with :attr:`AbstractMapping.n_frame0` rows
+			in_: Input array with :attr:`DiscreteMapping.n_frame0` rows
 				and ``k`` >= ``1`` columns.
-			out_: Output array with :attr:`AbstractMapping.n_frame1`
+			out_: Output array with :attr:`DiscreteMapping.n_frame1`
 				rows and ``k`` >= 1 columns. Modified in-place.
 			clear_output (:obj:`bool`, optional): If ``True``, set
 				output array to ``0`` before adding input values.
@@ -112,8 +118,7 @@ class AbstractMapping(object):
 		"""
 		vector_processing = is_vector(in_) and is_vector(out_)
 		matrix_processing = sparse_or_dense(in_) and sparse_or_dense(out_)
-
-		if not vector_processing or matrix_processing:
+		if not (vector_processing or matrix_processing):
 			raise TypeError('arguments "in_" and "out_" be numpy or '
 							'scipy vectors or matrices')
 
@@ -127,7 +132,7 @@ class AbstractMapping(object):
 			dim_out2 = out_.shape[1]
 
 		if bool(
-				dim_in_1 != self.n_frame0 or
+				dim_in1 != self.n_frame0 or
 				dim_out1 != self.n_frame1 or
 				dim_in2 != dim_out2):
 			raise ValueError('arguments "in_" and "out_" be vectors or '
@@ -142,10 +147,10 @@ class AbstractMapping(object):
 		if vector_processing:
 			for idx_0, idx_1 in enumerate(self.vec):
 				out_[idx_1] += in_[idx_0]
-
-		if matrix_processing:
+		else:
 			for idx_0, idx_1 in enumerate(self.vec):
 				out_[idx_1, :] += in_[idx_0, :]
+		# TODO: use efficient slicing when input is sparse. warn when output sparse??
 
 		return out_
 
@@ -159,28 +164,28 @@ class AbstractMapping(object):
 		A new empty vector or matrix
 
 		Arguments:
-			in_: Input array with :attr:`AbstractMapping.n_frame0` rows
+			in_: Input array with :attr:`DiscreteMapping.n_frame0` rows
 				and ``k`` >= ``1`` columns.
 
 		Returns:
 			:class:`numpy.ndarray`: Array with
-			:attr:`AbstractMapping.n_frame1` rows and ``k`` columns.
+			:attr:`DiscreteMapping.n_frame1` rows and ``k`` columns.
 			Input entries are mapped one-to-one or one-to-many *into*
 			output.
 		"""
 		if is_vector(in_):
-			out_ = zeros(self.__n_frame1)
+			out_ = np.zeros(self.__n_frame1)
 		elif sparse_or_dense(in_):
 			dim1 = self.__n_frame1
 			dim2 = in_.shape[1]
-			out_ = zeros((dim1, dim2))
+			out_ = np.zeros((dim1, dim2))
 
 		return self.frame0_to_1_inplace(in_, out_)
 
 
 	def frame1_to_0_inplace(self, in_, out_, clear_output=False):
 		"""
-		Allocating version of :meth`AbstractMapping.frame0_to_1`.
+		Allocating version of :meth`DiscreteMapping.frame0_to_1`.
 
 		Procedure::
 			# let reverse_map be the map: SET_1 --> SET_0.
@@ -192,9 +197,9 @@ class AbstractMapping(object):
 		vectors, mapping operates on entries.
 
 		Arguments:
-			in_: Input array with :attr:`AbstractMapping.n_frame1` rows
+			in_: Input array with :attr:`DiscreteMapping.n_frame1` rows
 				and ``k`` >= ``1`` columns.
-			out_: Output array with :attr:``AbstractMapping.n_frame0``
+			out_: Output array with :attr:``DiscreteMapping.n_frame0``
 				rows and ``k`` >= ``1`` columns. Modified in-place.
 			clear_output (:obj:`bool`, optional): If ``True``, set
 				output array to ``0`` before adding input values.
@@ -212,7 +217,7 @@ class AbstractMapping(object):
 		vector_processing = is_vector(in_) and is_vector(out_)
 		matrix_processing = sparse_or_dense(in_) and sparse_or_dense(out_)
 
-		if not vector_processing or matrix_processing:
+		if not (vector_processing or matrix_processing):
 			raise TypeError('arguments "in_" and "out_" be numpy or '
 							'scipy vectors or matrices')
 
@@ -226,7 +231,7 @@ class AbstractMapping(object):
 			dim_out2 = out_.shape[1]
 
 		if bool(
-				dim_in_1 != self.n_frame1 or
+				dim_in1 != self.n_frame1 or
 				dim_out1 != self.n_frame0 or
 				dim_in2 != dim_out2):
 			raise ValueError('arguments "in_" and "out_" be vectors or '
@@ -243,45 +248,45 @@ class AbstractMapping(object):
 				out_[idx_0] += in_[idx_1]
 
 		if matrix_processing:
-			for idx_in, idx_out in enumerate(self.vec):
+			for idx_0, idx_1 in enumerate(self.vec):
 				out_[idx_0, :] += in_[idx_1, :]
 
 		return out_
 
-	def frame0_to_1(self, in_):
+	def frame1_to_0(self, in_):
 		"""
-		Allocating version of :meth`AbstractMapping.frame1_to_0`.
+		Allocating version of :meth`DiscreteMapping.frame1_to_0`.
 
 		If input array is a matrix, mapping operates on rows. If array
 		is a vector, mapping operates on entries.
 
 		Arguments:
-			in_: Input array with :attr:`AbstractMapping.n_frame0` rows
+			in_: Input array with :attr:`DiscreteMapping.n_frame0` rows
 				and ``k`` >= ``1`` columns.
 
 		Returns:
 			:class:`numpy.ndarray`: Array with
-			:attr:`AbstractMapping.n_frame0` rows and same number of
+			:attr:`DiscreteMapping.n_frame0` rows and same number of
 			columns as input. Input entries are mapped one-to-one or
 			many-to-one *into* output.
 		"""
 		if is_vector(in_):
-			out_ = zeros(self.__n_frame0)
+			out_ = np.zeros(self.__n_frame0)
 		elif sparse_or_dense(in_):
 			dim1 = self.__n_frame0
 			dim2 = in_.shape[1]
-			out_ = zeros((dim1, dim2))
+			out_ = np.zeros((dim1, dim2))
 
 		return self.frame1_to_0_inplace(in_, out_)
 
-class ClusterMapping(AbstractMapping):
-	""" Map ``M`` elements to ``K`` clusters, with ``K`` < ``M``. """
+class ClusterMapping(DiscreteMapping):
+	""" Map ``M`` elements to ``K`` clusters, with ``K`` <= ``M``. """
 
 	def __init__(self, clustering_vector):
 		"""
-		Initialize as :class`AbstractMapping` instance.
+		Initialize as :class`DiscreteMapping` instance.
 
-		Determine cluster cardinalities by counting instances in which
+		Determine cluster sizes by counting instances in which
 		``cluster_vector`` names each cluster ``k`` as a target.
 
 		Arguments:
@@ -290,10 +295,11 @@ class ClusterMapping(AbstractMapping):
 				vector. Then the relation maps the i'th member of the
 				first set to the v[i]'th cluster in the second set.
 		"""
-		AbstractMapping.__init__(self, clustering_vector)
-		self.__cluster_weights = zeros(self.n_clusters)
+		DiscreteMapping.__init__(self, clustering_vector)
+		self.__cluster_weights = np.zeros(self.n_clusters)
 		for cluster_index in self.vec:
 			self.__cluster_weights[cluster_index] += 1.
+		self.__empty_clusters = np.sum(self.__cluster_weights == 0) > 0
 
 	@property
 	def n_clusters(self):
@@ -342,7 +348,7 @@ class ClusterMapping(AbstractMapping):
 				else:
 					data[idx_point, :] *= 1. / w
 
-	def __rescale_len_cluster(self, data):
+	def __rescale_len_clusters(self, data):
 		"""
 		Scale input array's entries by corresponding cluster's weight.
 
@@ -406,7 +412,7 @@ class ClusterMapping(AbstractMapping):
 		"""
 		out_ = self.frame0_to_1_inplace(in_, out_, clear_output=clear_output)
 		if rescale_output:
-			self.__rescale_len_cluster(out_)
+			self.__rescale_len_clusters(out_)
 		return out_
 
 	def downsample(self, in_, rescale_output=True):
@@ -427,12 +433,12 @@ class ClusterMapping(AbstractMapping):
 			A new array of size ``k`` x ``n`` containing downsampled
 			data.
 		"""
-		out_ = self.frame0_to_1(in_, clear_output=clear_output)
+		out_ = self.frame0_to_1(in_)
 		if rescale_output:
-			self.__rescale_len_cluster(out_)
+			self.__rescale_len_clusters(out_)
 		return out_
 
-	def upsample_inplace(self, in_, out_, rescale_output=True,
+	def upsample_inplace(self, in_, out_, rescale_output=False,
 						 clear_output=False):
 		"""
 		Upsample entries of ``in_``, add to entries of ``out_``.
@@ -467,7 +473,7 @@ class ClusterMapping(AbstractMapping):
 			self.__rescale_len_points(out_)
 		return out_
 
-	def upsample(self, in_, rescale_output=True):
+	def upsample(self, in_, rescale_output=False):
 		"""
 		Allocating version of :meth:`ClusterMapping.upsample_inplace`.
 
@@ -484,12 +490,13 @@ class ClusterMapping(AbstractMapping):
 		Returns:
 			A new array of size ``m`` x ``n`` containing upsampled data.
 		"""
-		out_ = self.frame1_to_0(in_, clear_output=clear_output)
+		out_ = self.frame1_to_0(in_)
 		if rescale_output:
 			self.__rescale_len_points(out_)
 		return out_
 
-	def to_contiguous(self):
+	@property
+	def contiguous(self):
 		"""
 		Rebase mapping to omit empty cluster indices.
 
@@ -502,28 +509,31 @@ class ClusterMapping(AbstractMapping):
 				ranging from ``k`` = ``0``, ..., ``K - 1``, and each
 				cluster index corresponding to a non-empty cluster.
 		"""
-		vec = zeros(self.vec.size, dtype=int)
+		if not self.__empty_clusters:
+			return self
+
+		vec = np.zeros(self.vec.size, dtype=int)
 		vec += self.vec
 		idx_order = vec.argsort()
 
-		unit_incr = 0
-		curr = 0
+		cluster_new = 0
+		cluster_old = vec[idx_order[0]]
 
 		for idx in idx_order:
-			if vec[idx] != curr:
-				unit_incr += 1
-				curr = vec[idx]
+			if vec[idx] != cluster_old:
+				cluster_new += 1
+				cluster_old = vec[idx]
 
-			vec[idx] = unit_incr
+			vec[idx] = cluster_new
 
 		return ClusterMapping(vec)
 
-class PermutationMapping(AbstractMapping):
+class PermutationMapping(DiscreteMapping):
 	""" Map ``N`` elements to each other, one-to-one. """
 
 	def __init__(self, permutation_vector):
 		"""
-		Initialize as :class:`AbstractMapping` instance.
+		Initialize as :class:`DiscreteMapping` instance.
 
 		Arguments:
 			permutation_vector: Vector of integer indices of length
@@ -532,16 +542,47 @@ class PermutationMapping(AbstractMapping):
 
 		Raises:
 			ValueError: If contents of ``permutation_vector`` imply
-				input and output sets to have different sizes, or if
+				input and output sets to have np.different sizes, or if
 				each element in the input set is not represented exactly
 				once in the output set.
 		"""
-		AbstractMapping.__init__(self, permutation_vector)
+		DiscreteMapping.__init__(self, permutation_vector)
 		if self.n_frame0 != self.n_frame1:
 			raise ValueError('{} requires input and output spaces to be '
 							 'of same dimension'.format(PermutationMapping))
-		if sum(diff(self.vec.argsort()) != 1) > 0:
+		if sum(np.diff(self.vec[self.vec.argsort()]) != 1) > 0:
 			raise ValueError('{} requires 1-to-1 mapping between input '
 							 'output spaces; some output indices were '
 							 'skipped'.format(PermutationMapping))
+
+def map_type_to_string(mapping):
+	if isinstance(mapping, PermutationMapping):
+		return 'permutation'
+	elif isinstance(mapping, ClusterMapping):
+		return 'cluster'
+	elif isinstance(mapping, DiscreteMapping):
+		return 'discrete'
+	else:
+		raise TypeError('not a valid mapping')
+
+def string_to_map_constructor(string):
+	string = str(string)
+	if len(string) > 0:
+		if string in ('permutation, Permutation'):
+			return PermutationMapping
+		elif string in ('cluster', 'clustering', 'Cluster', 'Clustering'):
+			return ClusterMapping
+	return DiscreteMapping
+
+# class HierarchicalMapping
+# class DictionaryMapping
+#	- dictionary of labels->discrete mappings
+#	- should probably also have a dictionary of labels->indices in source space
+# 	- i guess something similar could be achieved by chaining selection mapping
+# 	and another arbitrary mapping
+# class SelectionMapping
+
+
+
+
 

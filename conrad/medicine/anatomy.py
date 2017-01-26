@@ -76,6 +76,12 @@ class Anatomy(object):
 		elif structures:
 			self.structures = structures
 
+	def __contains__(self, comparator):
+		for s in self:
+			if comparator in (s.name, s.label):
+				return True
+		return False
+
 	def __getitem__(self, key):
 		for s in self:
 			if key in (s.name, s.label):
@@ -220,6 +226,21 @@ class Anatomy(object):
 		for s in self:
 			s.calculate_dose(beam_intensities)
 
+	def propagate_doses(self, voxel_doses):
+		"""
+		Assign pre-calculated voxel doses to each structure in
+		:class:`Anatomy`
+
+		Arguments:
+			voxel_doses (:obj:`dict`): Dictionary mapping structure
+				labels to voxel dose subvectors.
+
+		Returns:
+			None
+		"""
+		for s in self:
+			s.assign_dose(voxel_doses[s.label])
+
 	def dose_summary_data(self, percentiles=[2, 98]):
 		"""
 		Collimate dose summaries from each structure in :class:`Anatomy`.
@@ -325,4 +346,3 @@ class Anatomy(object):
 		"""
 		return {s.label: s.plotting_data(constraints_only=constraints_only,
 										 maxlength=maxlength) for s in self}
-

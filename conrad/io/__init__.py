@@ -1,4 +1,7 @@
 """
+TOOO: DOCSTRING
+"""
+"""
 Copyright 2016 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
@@ -16,10 +19,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-__version__ = "0.0.1a"
-
-from conrad.medicine import *
-from conrad.physics import *
-from conrad.optimization import *
-from conrad.case import Case
-from conrad.visualization.plot import CasePlotter
+from conrad.io.io import CaseIO

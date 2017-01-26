@@ -1,6 +1,5 @@
 """
-Export frequently used methods and classes to :mod:`conrad.case`
-namespace.
+TOOO: DOCSTRING
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu
@@ -20,4 +19,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-from conrad.case.case import Case
+from conrad.io.accessors.case_accessor import CaseAccessor

@@ -1,0 +1,210 @@
+# """
+# TOOO: DOCSTRING
+# """
+# """
+# Copyright 2016 Baris Ungun, Anqi Fu
+
+# This file is part of CONRAD.
+
+# CONRAD is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# CONRAD is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
+# """
+
+# Reference document for database schemas used for storing/retrieving ConRad
+# case data
+---
+data_schemas:
+- type : dictionary
+  entries : <dictionary>
+
+- type : vector 
+  data :
+    file : <file_or_archive_path> 
+    key : <key_for_archive>
+
+- type : dense matrix
+  layout :
+    row_major : Yes
+  data :
+    file : <file_or_archive_path> 
+    key : <key_for_archive>
+
+- type : sparse matrix
+  layout :
+    CSR : No
+    fortran_indexing : No
+  shape : <tuple>
+  data :
+    pointers :
+      file : <file_or_archive_path> 
+      key : <key_for_archive>
+    indices :
+      file : <file_or_archive_path> 
+      key : <key_for_archive>
+    values :
+      file : <file_or_archive_path> 
+      key : <key_for_archive>
+
+---
+data_fragment.<INT> : <sparse_matrix_schema_placeholder>
+data_fragment.<INT> : <dense_matrix_schema_placeholder>
+data_fragment.<INT> : <vector_schema_placeholder>
+data_fragment.<INT> : <dictionary_schema_placeholder>
+
+---
+# case chema
+case :
+  name : <CASE_NAME>
+
+  prescription : <prescription_placeholder>
+
+  anatomy : 
+    - <structure_placeholder>
+    - ...
+
+  physics :
+    voxel_grid :
+      x : 100
+      y : 80
+      z : 70
+    voxel_bitmask : data_fragment.<INT>
+
+    beam_set :
+      type : apertures
+      control_points :
+        number : 360
+        groups : 4
+        group_sizes : [90, 90, 90, 90]
+      max : 4.0
+      max_active : No
+      adjacency_matrix: data_fragment.<INT>
+
+    frames :
+      - frame.<INT>
+      - frame.<INT>
+      - frame.<INT>
+      - ...
+    
+    frame_mappings :
+      - frame_mapping.<INT>
+      - frame_mapping.<INT>
+      - ...
+  
+  history :
+    - solution.<INT>
+    - ...
+
+  solver_caches :
+    - solver_cache.<INT>
+    - ...
+
+---
+# frame schema
+frame.<INT> :
+  name : geometric
+  n_voxels : <int>
+  n_beams : <int>
+  dose_matrix : data_fragment.<INT> # matrix data
+  voxel_labels : data_fragment.<INT> #vector data
+  voxel_weights : null
+  beam_labels : null
+  beam_weights : null
+
+frame.<INT> :
+  name: full # dose matrix with rows in arbitrary order, all-zero rows pruned if dense
+  m : <int>
+  n : <int>
+  dose_matrix : data_fragment.<INT> # matrix data
+  voxel_labels : data_fragment.<INT> # vector data
+  voxel_weights : null
+  beam_labels : null
+  beam_weights : null
+  parent_case: case.<INT>
+
+frame.<INT> :
+  name : collapsed 
+  m : <int>
+  n : <int>
+  dose_matrix : 
+  voxel_labels :
+  voxel_weights : 
+  beam_labels :
+  beam_weights :
+  parent_case: case.<INT>
+
+---
+# frame_mapping schema
+frame_mapping.<INT> :
+  source_frame : full
+  target_frame : geometric
+  voxel_map : data_fragment.<INT>
+  voxel_map_type: <str | abstract/cluster/permutation>
+  beam_map : null
+  beam_map_type: null
+---
+# solver_cache schema
+solve_cache.<INT> :
+  frame : collapsed
+  solver : POGS 
+  left_preconditioner : data_fragment.<INT> # vector data    
+  matrix : data_fragment.<INT> # matrix data      
+  right_preconditioner : data_fragment.<INT> # vector data
+  projector :
+    type : cholesky(identity + gramian)
+    matrix : data_fragment.<INT> # matrix data 
+
+---
+# history schema:
+history.<INT> :
+  - solution.<INT>
+  - ...
+
+---
+# solution schema:
+solution.<INT> :
+  name : reference
+  frame : full
+  x : data_fragment.<INT> # vector data
+  y : null
+  x_dual : null
+  y_dual : null
+   
+--- 
+# anatomy schema:
+anatomy.<INT>:
+  - name : <structure name>
+    label : <int, structure label>
+    target : <bool>
+    rx : <target dose, <float> [centi]Gray>
+    size : <int>
+    constraints: <constraint list>
+    objective:
+        type: <objective name>
+        weight: <float>
+        parameters: null
+  - ...
+
+# ---
+# # prescription_schema:
+# prescription:
+#   - name : Target name
+#     label : <target label, integer> # e.g., 3
+#     target : Yes
+#     rx : <target dose, <float> [centi]Gray> # e.g., 35 Gy 
+#     constraints : <constraint list> # e.g., D80 > 32 Gy
+
+#   - name : Non-target name
+#     label : <non-target label, integer>
+#     target : No
+#     rx : null
+#     constraints : <constraint list>

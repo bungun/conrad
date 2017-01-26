@@ -101,7 +101,10 @@ class Case(object):
 
 	@physics.setter
 	def physics(self, physics):
-		self.__physics = Physics(physics)
+		if isinstance(physics, dict):
+			self.__physics = Physics(**physics)
+		else:
+			self.__physics = Physics(physics)
 
 	@property
 	def anatomy(self):
@@ -144,9 +147,9 @@ class Case(object):
 		"""
 		Dose matrix from current planning frame of :attr:`Case.physics`.
 		"""
-		if self.physics is None:
+		if self.physics is None or self.physics.dose_matrix is None:
 			return None
-		return self.physics.dose_matrix
+		return self.physics.dose_matrix.data
 
 	@property
 	def n_structures(self):
@@ -376,6 +379,18 @@ class Case(object):
 		"""
 		self.anatomy.calculate_doses(x)
 
+	def propagate_doses(self, y):
+		"""
+		Split voxel dose vector ``y`` into doses for each structure in
+		:attr:`Case.anatomy`.
+
+		Arguments:
+			y: Vector-like array of voxel doses, or dictionary mapping
+				structure labels to voxel dose subvectors,
+		"""
+		self.anatomy.propagate_doses(
+				self.physics.split_dose_by_label(y, self.anatomy.labels))
+
 	@property
 	def plannable(self):
 		"""
@@ -388,8 +403,9 @@ class Case(object):
 			:obj:`bool`: ``True`` if anatomy has one or more target
 			structures and dose matrices from the case physics.
 		"""
-		if not self.anatomy.plannable and self.physics.plannable:
-			self.load_physics_to_anatomy()
+		if not self.anatomy.plannable:
+			if self.physics.plannable:
+				self.load_physics_to_anatomy()
 		return self.anatomy.plannable
 
 	def plan(self, use_slack=True, use_2pass=False, **options):
@@ -408,7 +424,8 @@ class Case(object):
 				method to enforce exact versions, rather than convex
 				restrictions of any percentile-type dose constraints
 				included in the plan.
-			**options: Arbitrary keyword arguments.
+			**options: Arbitrary keyword arguments. Passed through to
+				:meth:`Case.problem.solve`.
 
 		Returns:
 			:obj:`tuple`: Tuple with :obj:`bool` indicator of planning
@@ -447,7 +464,6 @@ class Case(object):
 		feas = self.problem.solve(self.anatomy.list, run.output,
 								 slack=use_slack, exact_constraints=use_2pass,
 								 **options)
-
 
 		# update doses
 		if run.feasible:

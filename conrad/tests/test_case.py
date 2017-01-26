@@ -25,7 +25,7 @@ from os import path
 
 from conrad.physics import Gy
 from conrad.medicine import D, Structure
-from conrad.case.case import *
+from conrad.case import *
 from conrad.tests.base import *
 
 class CaseTestCase(ConradTestCase):

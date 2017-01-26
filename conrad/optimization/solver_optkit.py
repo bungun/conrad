@@ -313,7 +313,30 @@ if module_installed('optkit'):
 			self.__assert_solver_exists('solveiters')
 			return int(self.pogs_solver.info.iters)
 
-		def build(self, structures, **options):
+		def __preprocess_solver_cache(self, solver_cache):
+			cache_options = {
+					'bypass_intialization': False,
+					'A_equil': None,
+					'd': None,
+					'e': None,
+					'LLT': None,
+			}
+			if isinstance(solver_cache, dict):
+				cache_options['A_equil'] = solver_cache.pop(
+						'A_equil', solver_cache.pop('matrix', None))
+				cache_options['d'] = solver_cache.pop(
+						'd', solver_cache.pop('left_preconditioner', None))
+				cache_options['e'] = solver_cache.pop(
+						'e', solver_cache.pop('right_preconditioner', None))
+				cache_options['LLT'] = solver_cache.pop(
+						'LLT', solver_cache.pop('projector_matrix', None))
+			cache_options['bypass_initialization'] = bool(
+					cache_options['A_equil'] is not None and
+					cache_options['d'] is not None and
+					cache_options['e'] is not None)
+			return cache_options
+
+		def build(self, structures, solver_cache=None, **options):
 			"""
 			Build POGS optimization problem from structure data.
 
@@ -329,6 +352,10 @@ if module_installed('optkit'):
 			Arguments:
 				structures: Iterable collection of :class:`Structure`
 					objects.
+				solver_cache (:obj:`dict`, optional): If provided,
+					solver will try to skip equilibration and
+					factorization based on provided data.
+				**options: Keyword arguments.
 
 			Returns:
 				:obj:`str`: String documenting how data in
@@ -372,8 +399,8 @@ if module_installed('optkit'):
 				self.objective_beams = ok.PogsObjective(n_beams, h='IndGe0')
 
 			if self.pogs_solver is None or matrix_updated:
-				self.clear()
-				self.pogs_solver = ok.PogsSolver(A)
+				cache_options = self.__preprocess_solver_cache(solver_cache)
+				self.pogs_solver = ok.PogsSolver(A, **cache_options)
 
 			return self._Solver__construction_report(structures)
 
@@ -409,5 +436,26 @@ if module_installed('optkit'):
 								   **options)
 			return self.pogs_solver.info.converged
 
+		@property
+		def cache(self):
+			if self.pogs_solver is None:
+				return None
+
+			cache = self.pogs_solver.cache
+			if cache.pop('direct'):
+				projector_type = PROJECTOR_POGS_DENSE_DIRECT
+			else:
+				projector_type = 'indirect'
+
+			return {
+					'matrix': cache.pop('A_equil'),
+					'left_preconditioner': cache.pop('d'),
+					'right_preconditioner': cache.pop('e'),
+					'projector': {
+							'type': projector_type,
+							'matrix': cache.pop('LLT'),
+					},
+					'state_variables': cache,
+			}
 else:
 	SolverOptkit = lambda: None

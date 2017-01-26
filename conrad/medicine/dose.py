@@ -922,7 +922,7 @@ class ConstraintList(object):
 		"""
 		:obj:`list` of :class:`Constraint` objects in :class:`ConstraintList`.
 		"""
-		return self.items.values()
+		return list(self.items.values())
 
 	@property
 	def mean_only(self):

@@ -57,6 +57,9 @@ PRIORITY_1 = 9
 PRIORITY_2 = 4
 PRIORITY_3 = 1
 
+PROJECTOR_POGS_DENSE_DIRECT = 'cholesky(identity + gramian)'
+PROJECTOR_INDIRECT = 'indirect'
+
 class Solver(object):
 	"""
 	Base class for translating :mod:`conrad` planning requests to convex
@@ -313,7 +316,7 @@ class Solver(object):
 							  structure.label, matrix_info, reason)))
 		return report
 
-	def build(self, structures, exact=False):
+	def build(self, structures, exact=False, **options):
 		""" Prototype for problem construction. """
 		raise RuntimeError('solver method "build" not implemented')
 

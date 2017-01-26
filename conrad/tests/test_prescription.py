@@ -52,7 +52,7 @@ class PrescriptionTestCase(ConradTestCase):
 		self.c31 = D(50) < 0.3 * Gy
 		self.c32 = D(2) < 0.6 * Gy
 
-	def test_string2constraint(self):
+	def test_eval_constraint(self):
 		# PARSABLE:
 		# - "min > x Gy"
 		# - "mean < x Gy"
@@ -70,7 +70,7 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D('min') > 10 * Gy
 		for s in s_variants:
-			self.assertTrue( string2constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == c )
 
 		# - "max < x Gy"
 		s_variants = [
@@ -80,7 +80,7 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D('max') < 10 * Gy
 		for s in s_variants:
-			self.assertTrue( string2constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == c )
 
 		# - "mean > x Gy"
 		s_variants = [
@@ -90,7 +90,7 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D('mean') > 10 * Gy
 		for s in s_variants:
-			self.assertTrue( string2constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == c )
 
 		# - "mean < x Gy"
 		s_variants = [
@@ -100,7 +100,7 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D('mean') < 10 * Gy
 		for s in s_variants:
-			self.assertTrue( string2constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == c )
 
 		# - "D__% < x Gy"
 		s_variants = [
@@ -110,7 +110,7 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(20) < 10 * Gy
 		for s in s_variants:
-			self.assertTrue( string2constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == c )
 
 		# - "D__% > x Gy"
 		s_variants = [
@@ -120,7 +120,7 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(80) > 10 * Gy
 		for s in s_variants:
-			self.assertTrue( string2constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == c )
 
 		# - "V__ Gy < p %" ( == "x Gy to < p %")
 		s_variants = [
@@ -129,7 +129,7 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(80.) < 10 * Gy
 		for s in s_variants:
-			self.assertTrue( string2constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == c )
 
 		# - "V__ Gy > p %" ( == "x Gy to > p %")
 		s_variants = [
@@ -139,7 +139,7 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(20.) > 10 * Gy
 		for s in s_variants:
-			self.assertTrue( string2constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == c )
 
 		# PARSABLE WITH RX_DOSE PROVIDED:
 		rx_dose = 10 * Gy
@@ -153,15 +153,15 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(20) < 1.05 * rx_dose
 		for s in s_variants:
-			self.assertTrue( string2constraint(s, rx_dose=rx_dose) == c )
+			self.assertTrue( eval_constraint(s, rx_dose=rx_dose) == c )
 			try:
-				c1 = string2constraint(s)
+				c1 = eval_constraint(s)
 				self.assertTrue( False )
 			except:
 				self.assertTrue( True )
 
 			try:
-				c1 = string2constraint(s, rx_dose=rx_dose_fail)
+				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
 				self.assertTrue( False )
 			except:
 				self.assertTrue( True )
@@ -173,15 +173,15 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(80) > 0.95 * rx_dose
 		for s in s_variants:
-			self.assertTrue( string2constraint(s, rx_dose=rx_dose) == c )
+			self.assertTrue( eval_constraint(s, rx_dose=rx_dose) == c )
 			try:
-				c1 = string2constraint(s)
+				c1 = eval_constraint(s)
 				self.assertTrue( False )
 			except:
 				self.assertTrue( True )
 
 			try:
-				c1 = string2constraint(s, rx_dose=rx_dose_fail)
+				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
 				self.assertTrue( False )
 			except:
 				self.assertTrue( True )
@@ -193,15 +193,15 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(20) < 0.1 * rx_dose
 		for s in s_variants:
-			self.assertTrue( string2constraint(s, rx_dose=rx_dose) == c )
+			self.assertTrue( eval_constraint(s, rx_dose=rx_dose) == c )
 			try:
-				c1 = string2constraint(s)
+				c1 = eval_constraint(s)
 				self.assertTrue( False )
 			except:
 				self.assertTrue( True )
 
 			try:
-				c1 = string2constraint(s, rx_dose=rx_dose_fail)
+				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
 				self.assertTrue( False )
 			except:
 				self.assertTrue( True )
@@ -213,15 +213,15 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(80) > 0.9 * rx_dose
 		for s in s_variants:
-			self.assertTrue( string2constraint(s, rx_dose=rx_dose) == c )
+			self.assertTrue( eval_constraint(s, rx_dose=rx_dose) == c )
 			try:
-				c1 = string2constraint(s)
+				c1 = eval_constraint(s)
 				self.assertTrue( False )
 			except:
 				self.assertTrue( True )
 
 			try:
-				c1 = string2constraint(s, rx_dose=rx_dose_fail)
+				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
 				self.assertTrue( False )
 			except:
 				self.assertTrue( True )
@@ -239,7 +239,7 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		for s in s_variants:
 			try:
-				c = string2constraint(s)
+				c = eval_constraint(s)
 				self.assertTrue( False )
 			except:
 				self.assertTrue( True )

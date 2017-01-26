@@ -272,7 +272,9 @@ class PlanningProblem(object):
 				using convex restrictions of the percentile constraints
 				on the firstpass,  and exact versions of the constraints
 				on the second pass.
-			**options: Abitrary keyword arguments.
+			**options: Abitrary keyword arguments, passed through to
+				:meth:`PlanningProblem.solver.init_problem` and
+				:meth:`PlanningProblem.solver.build`.
 
 		Returns:
 			:obj:`int`: Number of feasible solver runs performed: ``0``
@@ -306,7 +308,7 @@ class PlanningProblem(object):
 								 use_2pass=use_2pass, **options)
 
 		# build problem
-		construction_report = self.solver.build(structures)
+		construction_report = self.solver.build(structures, **options)
 
 		if PRINT_PROBLEM_CONSTRUCTION:
 			print('\nPROBLEM CONSTRUCTION:')

@@ -443,7 +443,7 @@ if module_installed('cvxpy'):
 			""" Number of solver iterations performed. """
 			return 'n/a'
 
-		def build(self, structures, exact=False):
+		def build(self, structures, exact=False, **options):
 			"""
 			Update :mod:`cvxpy` optimization based on structure data.
 

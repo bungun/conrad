@@ -91,7 +91,7 @@ def d_strip(input_string):
 	"""
 	return input_string.replace('D', '').replace('d', '')
 
-def string2constraint(string_constraint, rx_dose=None):
+def eval_constraint(string_constraint, rx_dose=None):
 	"""
 	Parse input string to form a new :class:`Constraint` instance.
 
@@ -460,7 +460,7 @@ class Prescription(object):
 				if 'constraints' in item:
 					if item['constraints'] is not None:
 						for string in item['constraints']:
-							self.constraint_dict[label] += string2constraint(
+							self.constraint_dict[label] += eval_constraint(
 									string, rx_dose=rx_dose)
 			self.rx_list = rx_list
 

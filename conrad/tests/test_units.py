@@ -77,7 +77,6 @@ class TestUnits(ConradTestCase):
 		self.assertTrue( 3 * MM2() == 3e-2 * CM2() )
 		self.assertTrue( 3 * MM3() == 3e-3 * CM3() )
 
-
 	def test_dose_units(self):
 		d = 10 * Gy
 		self.assertTrue( isinstance(d, DeliveredDose) )

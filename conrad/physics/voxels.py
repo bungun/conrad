@@ -47,8 +47,12 @@ class VoxelGrid(Grid3D):
 		"""
 		if isinstance(grid, Grid3D):
 			Grid3D.__init__(self, *grid.shape)
-		else:
-			Grid3D.__init__(self, x=x_voxels, y=y_voxels, z=z_voxels)
+			return
+		elif isinstance(grid, dict):
+			x_voxels = grid.pop('x', grid.pop('x_voxels', None))
+			y_voxels = grid.pop('y', grid.pop('y_voxels', None))
+			z_voxels = grid.pop('z', grid.pop('z_voxels', None))
+		Grid3D.__init__(self, x=x_voxels, y=y_voxels, z=z_voxels)
 
 	@property
 	def voxels(self):

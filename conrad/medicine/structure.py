@@ -503,6 +503,31 @@ class Structure(object):
 		""" Alias for :meth:`Structure.calc_y`. """
 		self.calc_y(beam_intensities)
 
+
+	def assign_dose(self, y):
+		"""
+		Assign dose vector to structure.
+
+		Arguments:
+			y: Vector-like input of voxel doses.
+
+		Returns:
+			None
+
+		Raises:
+			ValueError: if structure size is known and incompatible with
+				length of ``y``.
+		"""
+		y = vec(y)
+		if self.size is None:
+			self.size = y.size
+		elif self.size != y.size:
+			raise ValueError(
+					'size of dose vector incompatible with size of '
+					'structure')
+		self.__y = y
+		self.dvh.data = self.__y
+
 	def calc_y(self, x):
 		"""
 		Calculate voxel doses as :attr:`Structure.y` = :attr:`Structure.A` * ``x``.
