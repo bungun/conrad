@@ -328,11 +328,11 @@ class LocalPythonDatabase(ConradDatabaseBase):
 		final = False
 
 		while not final:
-			keys = dictionary.keys()
+			keys = list(dictionary.keys())
 			for k in keys:
 				if k in table:
 					continue
-				elif k in self.__log >= logged_entries_only:
+				elif bool(k in self.__log) >= logged_entries_only:
 					entry = dictionary[k]
 					if flatten:
 						entry.flatten(self)

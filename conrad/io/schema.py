@@ -648,8 +648,10 @@ class DoseFrameEntry(ConradDatabaseEntry):
 
 	def ingest_dictionary(self, **dose_frame_dictionary):
 		self.name = dose_frame_dictionary.pop('name', None)
-		self.n_voxels = dose_frame_dictionary.pop('n_voxels', None)
-		self.n_beams = dose_frame_dictionary.pop('n_beams', None)
+		self.n_voxels = cdb_util.try_keys(
+				dose_frame_dictionary, 'voxels', 'n_voxels')
+		self.n_beams = cdb_util.try_keys(
+				dose_frame_dictionary, 'beams', 'n_beams')
 		self.dose_matrix = dose_frame_dictionary.pop('dose_matrix', None)
 		self.voxel_labels = dose_frame_dictionary.pop('voxel_labels', None)
 		self.voxel_weights = dose_frame_dictionary.pop('voxel_weights', None)

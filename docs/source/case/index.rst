@@ -11,5 +11,5 @@ Case
    physics/index
    optimization/index
 
-.. automodule:: case/case
+.. automodule:: case
    :members:

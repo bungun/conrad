@@ -4,6 +4,7 @@ physics:
     - name: frame0
       voxels: 30
       beams: 20
+      dose_matrix: data_fragment.1000
 anatomy:
   - name: 'ptv'
     label: 0 

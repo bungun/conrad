@@ -28,6 +28,7 @@ TODO: __str__ method for RunRecord (why?)
 TODO: RunRecord compatibility for CaseIO.save_solution()
 TODO: DictionaryMapping class for structure-wise clustering 
 TODO: Objective class
+TODO: Update docs for v0.0.1
 
 ## Version 0.0.1 
 

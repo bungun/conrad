@@ -377,12 +377,14 @@ class PhysicsTestCase(ConradTestCase):
 		self.assertTrue( len(p.unique_frames) == 2 )
 		self.assertTrue(
 				all([isinstance(f, DoseFrame) for f in p.unique_frames]))
-		self.assertTrue( p.unique_frames[1].name == 'another frame' )
+		self.assertTrue(
+				p.unique_frames[1].name == 'another frame' or
+				p.unique_frames[0].name == 'another frame')
 
 		# change
-		self.assertTrue( p.frame is p.unique_frames[0] )
+		self.assertTrue( p.frame in p.unique_frames )
 		p.change_dose_frame('another frame')
-		self.assertTrue( p.frame is p.unique_frames[1] )
+		self.assertTrue( p.frame in p.unique_frames )
 
 		with self.assertRaises(KeyError):
 			p.change_dose_frame('bad key')

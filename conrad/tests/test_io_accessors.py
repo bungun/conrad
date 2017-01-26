@@ -40,6 +40,8 @@ from conrad.io.accessors.case_accessor import *
 from conrad.tests.base import *
 from conrad.tests.test_io_filesystem import FilesystemTestCaching
 
+SKIP_POGS_CACHING_TESTS = os.getenv('CONRAD_SKIP_POGS_CACHING_TESTS', False)
+
 class ConradDBAccessorTestCase(ConradTestCase):
 	def test_cdba_init(self):
 		cdba = ConradDBAccessor()
@@ -399,6 +401,9 @@ class SolverCacheAccessorTestCase(ConradTestCase):
 		]
 
 	def test_solver_cache_accessor_save_load_pogs(self):
+		if SKIP_POGS_CACHING_TESTS:
+			return
+
 		sca = SolverCacheAccessor(filesystem=FilesystemTestCaching())
 
 		solver = SolverOptkit()
@@ -421,6 +426,9 @@ class SolverCacheAccessorTestCase(ConradTestCase):
 			self.assertTrue( projector_matrix.shape == (20, 20) )
 
 	def test_solver_cache_accessor_save_load(self):
+		if SKIP_POGS_CACHING_TESTS:
+			return
+
 		sca = SolverCacheAccessor(filesystem=FilesystemTestCaching())
 
 		solver = SolverOptkit()
@@ -484,7 +492,6 @@ class CaseAccessorTestCase(ConradTestCase):
 
 	@classmethod
 	def tearDownClass(self):
-		print "TEAR DOWN", self.__files
 		for f in self.__files:
 			if os.path.exists(f):
 				os.remove(f)
@@ -550,7 +557,7 @@ class CaseAccessorTestCase(ConradTestCase):
 		# save solver cache
 		case.physics.voxel_labels = np.zeros(case.physics.frame.voxels)
 		_, run = case.plan(verbose=0)
-		if case.problem.solver_pogs is not None:
+		if not (case.problem.solver_pogs is None or SKIP_POGS_CACHING_TESTS):
 			ptr = ca.save_solver_cache(
 					case_entry, case.problem.solver, 'cache0', 'frame0', 'dir')
 			self.assertTrue( ca.DB.has_key(ptr) )
@@ -562,7 +569,7 @@ class CaseAccessorTestCase(ConradTestCase):
 						'dir')
 
 		# load solver cache
-		if case.problem.solver_pogs is not None:
+		if not (case.problem.solver_pogs is None or SKIP_POGS_CACHING_TESTS):
 			cache = ca.load_solver_cache(case_entry, 'cache0', 'frame0')
 			self.assertTrue( isinstance(cache, dict) )
 		else:
@@ -603,6 +610,9 @@ class CaseAccessorTestCase(ConradTestCase):
 		case2 = ca.load_case_yaml(y2)
 		self.assertTrue( isinstance(case2, Case) )
 
+		# dose matrix dims in `case_example.yml` = (30, 20)
+		# database pointer is `data_fragment.1000`
+		ca.DB.set(1000, ca.FS.write_data('dir', 'A', np.random.rand(30, 20)))
 		case3 = ca.load_case_yaml(os.path.join(
 				os.path.dirname(__file__), 'case_example.yml'))
 		self.assertTrue( isinstance(case3, Case) )

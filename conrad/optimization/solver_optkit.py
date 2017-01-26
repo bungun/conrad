@@ -315,25 +315,27 @@ if module_installed('optkit'):
 
 		def __preprocess_solver_cache(self, solver_cache):
 			cache_options = {
-					'bypass_intialization': False,
-					'A_equil': None,
-					'd': None,
-					'e': None,
-					'LLT': None,
+					'bypass_initialization': False,
+					'solver_cache': {
+							'A_equil': None,
+							'd': None,
+							'e': None,
+							'LLT': None,
+					}
 			}
 			if isinstance(solver_cache, dict):
-				cache_options['A_equil'] = solver_cache.pop(
+				cache_options['solver_cache']['A_equil'] = solver_cache.pop(
 						'A_equil', solver_cache.pop('matrix', None))
-				cache_options['d'] = solver_cache.pop(
+				cache_options['solver_cache']['d'] = solver_cache.pop(
 						'd', solver_cache.pop('left_preconditioner', None))
-				cache_options['e'] = solver_cache.pop(
+				cache_options['solver_cache']['e'] = solver_cache.pop(
 						'e', solver_cache.pop('right_preconditioner', None))
-				cache_options['LLT'] = solver_cache.pop(
+				cache_options['solver_cache']['LLT'] = solver_cache.pop(
 						'LLT', solver_cache.pop('projector_matrix', None))
 			cache_options['bypass_initialization'] = bool(
-					cache_options['A_equil'] is not None and
-					cache_options['d'] is not None and
-					cache_options['e'] is not None)
+					cache_options['solver_cache']['A_equil'] is not None and
+					cache_options['solver_cache']['d'] is not None and
+					cache_options['solver_cache']['e'] is not None)
 			return cache_options
 
 		def build(self, structures, solver_cache=None, **options):

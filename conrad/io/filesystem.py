@@ -198,14 +198,6 @@ class ConradFilesystemBase(object):
 
 	def write_data_dictionary(self, directory, name, dictionary,
 							  overwrite=False):
-		# for k in dictionary:
-		# 	print "k=", k
-		# 	print 'v=', dictionary[k]
-		# 	if isinstance(dictionary[k], dict):
-		# 		dictionary[k] = self.write_data(
-		# 				directory, name + '_' + str(k), dictionary[k],
-		# 				overwrite)
-
 		saveable_type = lambda o: isinstance(o, CONRAD_MATRIX_TYPES)
 		if any(map(saveable_type, dictionary.values())):
 			dd = DataDictionaryEntry()
