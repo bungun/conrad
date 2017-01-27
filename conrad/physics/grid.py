@@ -21,12 +21,14 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import nan
-from operator import mul
+import abc
+import numpy as np
+import operator as op
 
 from conrad.physics.units import mm, mm2, cm3, Length
 
 class AbstractGrid(object):
+	__metaclass__ = abc.ABCMeta
 	""" Base class for regular grids. """
 
 	def __init__(self):
@@ -34,17 +36,17 @@ class AbstractGrid(object):
 		Initialize :class:`AbstractGrid`.
 
 		By default, up to 3 dimensions allowed, all dimensions assigned
-		size zero, all unit cell lengths set to nan (with length units
-		of millimeters).
+		size zero, all unit cell lengths set to ``nan`` (with length
+		units of millimeters).
 
 		The grid traversal order is indefinite upon initialization.
 		"""
 		self.__x = 0
 		self.__y = 0
 		self.__z = 0
-		self.__x_unit_length = nan * mm
-		self.__y_unit_length = nan * mm
-		self.__z_unit_length = nan * mm
+		self.__x_unit_length = np.nan * mm
+		self.__y_unit_length = np.nan * mm
+		self.__z_unit_length = np.nan * mm
 		self.__order = ''
 		self.__dims = []
 		self.__strides = {}
@@ -128,8 +130,6 @@ class AbstractGrid(object):
 		Returns:
 			None
 		"""
-		if self.shape is NotImplemented:
-			raise ValueError('dimensions not set')
 		if self.order == '':
 			raise ValueError('dimension order not set')
 
@@ -158,7 +158,7 @@ class AbstractGrid(object):
 		""" Dictionary of strides by dimension label. """
 		return self.__strides
 
-	@property
+	@abc.abstractproperty
 	def shape(self):
 		""" Grid shape, or tuple of dimension lengths. """
 		raise NotImplementedError
@@ -207,7 +207,7 @@ class Grid2D(AbstractGrid):
 		AbstractGrid.__init__(self)
 		self._AbstractGrid__order = 'xy'
 		self._AbstractGrid__dims = ('x', 'y')
-		self.__unit_area = nan * mm2
+		self.__unit_area = np.nan * mm2
 		self.__pos = self._AbstractGrid__pos
 		self.set_shape(x, y)
 
@@ -311,7 +311,7 @@ class Grid2D(AbstractGrid):
 		index = int(index)
 		self.validate_nonnegative_int(index, 'index')
 
-		gridsize = reduce(mul, self.shape)
+		gridsize = reduce(op.mul, self.shape)
 		if index >= gridsize:
 			raise ValueError('index {} outside of geometry with {} '
 							 'elements'.format(index, gridsize))
@@ -371,7 +371,7 @@ class Grid3D(AbstractGrid):
 			z (:obj:`int`, optional): Size of grid's z-dimension.
 		"""
 		AbstractGrid.__init__(self)
-		self.__unit_volume = nan * cm3
+		self.__unit_volume = np.nan * cm3
 		self._AbstractGrid__order = 'xyz'
 		self._AbstractGrid__dims = ('x', 'y', 'z')
 		self.__pos = self._AbstractGrid__pos
@@ -502,7 +502,7 @@ class Grid3D(AbstractGrid):
 		index = int(index)
 		self.validate_nonnegative_int(index, 'index')
 
-		gridsize = reduce(mul, self.shape)
+		gridsize = reduce(op.mul, self.shape)
 		if index >= gridsize:
 			raise ValueError('index {} outside of geometry with {} '
 							 'elements'.format(index, gridsize))

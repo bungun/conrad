@@ -68,5 +68,3 @@ target/
 #macOS
 *.DS_Store
 
-*io.py
-*objectives.py

@@ -24,9 +24,14 @@ from conrad.compat import *
 from conrad.physics.grid import *
 from conrad.tests.base import *
 
+class TestGrid(AbstractGrid):
+	@property
+	def shape(self):
+		raise NotImplementedError
+
 class AbstractGridTestCase(ConradTestCase):
 	def test_grid_init(self):
-		grid = AbstractGrid()
+		grid = TestGrid()
 		self.assertTrue( grid._AbstractGrid__x == 0 )
 		self.assertTrue( grid._AbstractGrid__y == 0 )
 		self.assertTrue( grid._AbstractGrid__z == 0 )
@@ -43,7 +48,7 @@ class AbstractGridTestCase(ConradTestCase):
 		self.assertTrue( len(grid._AbstractGrid__pos) == 0 )
 
 	def test_grid_helpers(self):
-		grid = AbstractGrid()
+		grid = TestGrid()
 		x = 1
 		grid.validate_nonnegative_int(x, 'x')
 		grid.validate_positive_int(x, 'x')
@@ -69,7 +74,7 @@ class AbstractGridTestCase(ConradTestCase):
 		with self.assertRaises(TypeError):
 			grid.validate_length(1, 'l')
 
-		grid = AbstractGrid()
+		grid = TestGrid()
 		with self.assertRaises(ValueError):
 			grid.calculate_strides()
 
