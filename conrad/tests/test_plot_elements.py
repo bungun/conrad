@@ -303,7 +303,8 @@ else:
 				self.assertTrue( g.axes is ax )
 				self.assertTrue( g in ax.lines )
 
-			self.assertTrue( dpe.draw(ax) is NotImplemented )
+			with self.assertRaises(NotImplementedError):
+				dpe.draw(ax)
 
 			dpe.undraw()
 			for g in dpe.graph:

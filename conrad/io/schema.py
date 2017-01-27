@@ -122,19 +122,19 @@ class ConradDatabaseEntry(object):
 
 	@abc.abstractmethod
 	def flatten(self, conrad_db):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def arborize(self, conrad_db):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractproperty
 	def nested_dictionary(self):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractproperty
 	def flat_dictionary(self):
-		return NotImplemented
+		raise NotImplementedError
 
 class CaseEntry(ConradDatabaseEntry):
 	__metaclass__ = abc.ABCMeta
@@ -927,7 +927,7 @@ class DataFragmentEntry(ConradDatabaseEntry):
 		}
 
 	def ingest_dictionary(self, **data_fragment_dictionary):
-		return NotImplemented
+		raise NotImplementedError
 
 class UnsafeFileEntry(DataFragmentEntry):
 	def __init__(self, **unsafe_dictionary):

@@ -385,7 +385,7 @@ else:
 				g.set_visible(False)
 
 		def draw(self, axes):
-			return NotImplemented
+			raise NotImplementedError
 
 		def undraw(self):
 			if self.axes is not None:

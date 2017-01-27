@@ -31,23 +31,23 @@ class DatabaseTest(ConradDatabaseBase):
 	def logged_entries(self):
 		pass
 	def next_available_key(self, data_type):
-		return NotImplemented
+		raise NotImplementedError
 	def get(self, key):
-		return NotImplemented
+		raise NotImplementedError
 	def get_keys(self, entry_type=None):
-		return NotImplemented
+		raise NotImplementedError
 	def set(self, key, value, overwrite=False):
-		return NotImplemented
+		raise NotImplementedError
 	def set_next(self, value):
-		return NotImplemented
+		raise NotImplementedError
 	def has_key(self, key):
-		return NotImplemented
+		raise NotImplementedError
 	def ingest_dictionary(self, dictionary):
-		return NotImplemented
+		raise NotImplementedError
 	def dump_to_dictionary(self, logged_entries_only=False):
-		return NotImplemented
+		raise NotImplementedError
 	def clear_log(self, filename):
-		return NotImplemented
+		raise NotImplementedError
 
 class ConradDatabaseBaseTestCase(ConradTestCase):
 	@classmethod

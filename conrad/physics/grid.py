@@ -161,7 +161,7 @@ class AbstractGrid(object):
 	@property
 	def shape(self):
 		""" Grid shape, or tuple of dimension lengths. """
-		return NotImplemented
+		raise NotImplementedError
 
 	@property
 	def x_unit_length(self):

@@ -92,39 +92,39 @@ class ConradDatabaseBase(ConradDatabaseSuper):
 
 	@abc.abstractproperty
 	def logged_entries(self):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def next_available_key(self, data_type):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def get(self, key):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def get_keys(self, entry_type=None):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def has_key(self, key):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def set(self, key, value, overwrite=False):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def set_next(self, value):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def ingest_dictionary(self, dictionary):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def dump_to_dictionary(self, logged_entries_only=False):
-		return NotImplemented
+		raise NotImplementedError
 
 	def ingest_yaml(self, yaml_file):
 		if not os.path.exists(yaml_file):
@@ -167,7 +167,7 @@ class ConradDatabaseBase(ConradDatabaseSuper):
 		return yaml_file
 
 	def clear_log(self):
-		return NotImplemented
+		raise NotImplementedError
 
 class LocalPythonDatabase(ConradDatabaseBase):
 	def __init__(self, dictionary=None, yaml_file=None):

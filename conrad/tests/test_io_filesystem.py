@@ -30,15 +30,15 @@ from conrad.tests.base import *
 
 class FilesystemTestBase(ConradFilesystemBase):
 	def check_dir(self, directory):
-		return NotImplemented
+		raise NotImplementedError
 	def join_mkdir(self, directory, *subdir):
-		return NotImplemented
+		raise NotImplementedError
 	def read(self, file, key):
-		return NotImplemented
+		raise NotImplementedError
 	def read_all(self, file):
-		return NotImplemented
+		raise NotImplementedError
 	def write(self, file, data, overwrite=False):
-		return NotImplemented
+		raise NotImplementedError
 
 class FilesystemTestNaming(ConradFilesystemBase):
 	def check_dir(self, directory):
@@ -51,7 +51,7 @@ class FilesystemTestNaming(ConradFilesystemBase):
 	def read(self, file, key):
 		return 'reading at file `{}` with key `{}`'.format(file, key)
 	def read_all(self, file):
-		return NotImplemented
+		raise NotImplementedError
 	def write(self, file, data, overwrite=False):
 		return {'file': 'writing at file `{}`'.format(file), 'key': None}
 
@@ -84,7 +84,7 @@ class FilesystemTestCaching(ConradFilesystemBase):
 			return None
 
 	def read_all(self, file):
-		return NotImplemented
+		raise NotImplementedError
 
 	def write(self, file, data, overwrite=False):
 		file = str(file)
@@ -111,11 +111,14 @@ class FilesystemBaseTestCase(ConradTestCase):
 
 	def test_fsbase_abstract(self):
 		fs = FilesystemTestBase()
-		self.assertTrue( fs.check_dir('directory') is NotImplemented )
-		self.assertTrue(
-				fs.join_mkdir('directory', 'subdir') is NotImplemented )
-		self.assertTrue( fs.read('file', 'key') is NotImplemented )
-		self.assertTrue( fs.write('file', 'data') is NotImplemented )
+		with self.assertRaises(NotImplementedError):
+			fs.check_dir('directory')
+		with self.assertRaises(NotImplementedError):
+			fs.join_mkdir('directory', 'subdir')
+		with self.assertRaises(NotImplementedError):
+			fs.read('file', 'key')
+		with self.assertRaises(NotImplementedError):
+			fs.write('file', 'data')
 
 	def test_fsbase_write_vector(self):
 		fs = FilesystemTestNaming()

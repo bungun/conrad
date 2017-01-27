@@ -62,23 +62,23 @@ class ConradFilesystemBase(object):
 
 	@abc.abstractmethod
 	def check_dir(self, directory):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def join_mkdir(self, directory, *subdir):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def read(self, file, key):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def read_all(self, file):
-		return NotImplemented
+		raise NotImplementedError
 
 	@abc.abstractmethod
 	def write(self, file, data, overwrite=False):
-		return NotImplemented
+		raise NotImplementedError
 
 	def read_data(self, data_fragment_entry):
 		data_fragment_entry = cdb_util.route_data_fragment(data_fragment_entry)

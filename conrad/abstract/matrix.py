@@ -263,7 +263,7 @@ class SliceCachingMatrix(object):
 			return self.__row_slices[label]
 
 	def row_assemble(self, labels):
-		return NotImplemented
+		raise NotImplementedError
 
 	@staticmethod
 	def __column_slice_generic(data, indices):
@@ -294,7 +294,7 @@ class SliceCachingMatrix(object):
 			return self.__column_slices[label]
 
 	def column_assemble(self, labels):
-		return NotImplemented
+		raise NotImplementedError
 
 	def slice(self, row_label=None, column_label=None,
 			  row_indices=None, column_indices=None):

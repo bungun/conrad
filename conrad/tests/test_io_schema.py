@@ -28,8 +28,10 @@ class ConradDatabaseEntryTestCase(ConradTestCase):
 	def test_cdbe_init(self):
 		cdbe = ConradDatabaseEntry()
 		self.assertFalse( cdbe.complete )
-		self.assertTrue( cdbe.nested_dictionary is NotImplemented )
-		self.assertTrue( cdbe.flat_dictionary is NotImplemented )
+		with self.assertRaises(NotImplementedError):
+			cdbe.nested_dictionary
+		with self.assertRaises(NotImplementedError):
+			cdbe.flat_dictionary
 
 class ConradDBSchemaUtilitesTestCase(ConradTestCase):
 	def test_cdb_util_methods(self):
@@ -58,8 +60,8 @@ class ConradDBSchemaUtilitesTestCase(ConradTestCase):
 
 		self.assertTrue( cdb_util.expand_if_db_entry(test_dict['a']) == 1 )
 		self.assertTrue( cdb_util.expand_if_db_entry(test_dict['b']) == 2 )
-		self.assertTrue(
-				cdb_util.expand_if_db_entry(test_dict['c']) is NotImplemented )
+		with self.assertRaises(NotImplementedError):
+				cdb_util.expand_if_db_entry(test_dict['c'])
 
 		test_dict['d'] = TestEntry()
 		self.assertTrue(
@@ -70,7 +72,8 @@ class ConradDBSchemaUtilitesTestCase(ConradTestCase):
 		expanded_list = cdb_util.expand_list_if_db_entries(
 				entry_list, field='somefield')
 		self.assertTrue(expanded_list[0] == entry_list[0])
-		self.assertTrue(expanded_list[1] is NotImplemented)
+		with self.assertRaises(NotImplementedError):
+			expanded_list[1]
 		self.assertTrue(expanded_list[2] == 3)
 
 		self.assertTrue( cdb_util.check_flat(['first', 'second', 'third']) )
@@ -90,10 +93,13 @@ class DataFragmentEntryTestCase(ConradTestCase):
 				'test.npz', None) )
 
 		self.assertTrue( dfe.type is None )
-		self.assertTrue( dfe.nested_dictionary is NotImplemented )
-		self.assertTrue( dfe.flat_dictionary is NotImplemented )
+		with self.assertRaises(NotImplementedError):
+			dfe.nested_dictionary
+		with self.assertRaises(NotImplementedError):
+			dfe.flat_dictionary
 		self.assertTrue( isinstance(dfe.fragment_flat_dictionary, dict) )
-		self.assertTrue( dfe.ingest_dictionary(**{}) is NotImplemented )
+		with self.assertRaises(NotImplementedError):
+			dfe.ingest_dictionary(**{})
 
 class DataDictionaryEntryTestCase(ConradTestCase):
 	def test_data_dictionary_entry(self):
