@@ -67,14 +67,10 @@ class ConradDBSchemaUtilitesTestCase(ConradTestCase):
 		self.assertTrue(
 				cdb_util.expand_if_db_entry(test_dict['d'], 'somefield') == 3 )
 
-
 		entry_list = [1, ConradDatabaseEntry(), TestEntry()]
-		expanded_list = cdb_util.expand_list_if_db_entries(
-				entry_list, field='somefield')
-		self.assertTrue(expanded_list[0] == entry_list[0])
 		with self.assertRaises(NotImplementedError):
-			expanded_list[1]
-		self.assertTrue(expanded_list[2] == 3)
+			expanded_list = cdb_util.expand_list_if_db_entries(
+					entry_list, field='somefield')
 
 		self.assertTrue( cdb_util.check_flat(['first', 'second', 'third']) )
 		self.assertFalse(
