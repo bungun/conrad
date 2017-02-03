@@ -71,25 +71,25 @@ class CaseTestCase(ConradTestCase):
 
 		# bare initialization
 		c0 = Case()
-		self.assertTrue( isinstance(c0._Case__physics, Physics) )
-		self.assertTrue( isinstance(c0.physics, Physics) )
-		self.assertTrue( isinstance(c0._Case__anatomy, Anatomy) )
-		self.assertTrue( isinstance(c0.anatomy, Anatomy) )
-		self.assertTrue( isinstance(c0._Case__prescription, Prescription) )
-		self.assertTrue( isinstance(c0.prescription, Prescription) )
-		self.assertTrue( isinstance(c0._Case__problem, PlanningProblem) )
-		self.assertTrue( isinstance(c0.problem, PlanningProblem) )
-		self.assertTrue( isinstance(c0.structures, dict) )
-		self.assertTrue( len(c0.structures) == 0 )
-		self.assertTrue( c0.A is None )
-		self.assertTrue( c0.n_structures == 0 )
-		self.assertTrue( c0.n_voxels is None )
-		self.assertTrue( c0.n_beams is None )
+		self.assertIsInstance(c0._Case__physics, Physics )
+		self.assertIsInstance(c0.physics, Physics )
+		self.assertIsInstance(c0._Case__anatomy, Anatomy )
+		self.assertIsInstance(c0.anatomy, Anatomy )
+		self.assertIsInstance(c0._Case__prescription, Prescription )
+		self.assertIsInstance(c0.prescription, Prescription )
+		self.assertIsInstance(c0._Case__problem, PlanningProblem )
+		self.assertIsInstance(c0.problem, PlanningProblem )
+		self.assertIsInstance(c0.structures, dict )
+		self.assertEqual( len(c0.structures), 0 )
+		self.assertIsNone( c0.A )
+		self.assertEqual( c0.n_structures, 0 )
+		self.assertIsNone( c0.n_voxels )
+		self.assertIsNone( c0.n_beams )
 		self.assertFalse( c0.physics.plannable )
 		self.assertFalse( c0.anatomy.plannable )
 		self.assertFalse( c0.plannable )
-		self.assertTrue( isinstance(c0.plotting_data(), dict) )
-		self.assertTrue( len(c0.plotting_data()) == 0 )
+		self.assertIsInstance(c0.plotting_data(), dict )
+		self.assertEqual( len(c0.plotting_data()), 0 )
 
 		# anatomy & physics-based intialization
 		a = Anatomy()
@@ -97,24 +97,24 @@ class CaseTestCase(ConradTestCase):
 		p = Physics(voxels, beams)
 
 		c1 = Case(anatomy=a, physics=p)
-		self.assertTrue( c1.n_structures == 1 )
-		self.assertTrue( c1.n_voxels == voxels )
-		self.assertTrue( c1.n_beams == beams )
+		self.assertEqual( c1.n_structures, 1 )
+		self.assertEqual( c1.n_voxels, voxels )
+		self.assertEqual( c1.n_beams, beams )
 		self.assertFalse( c1.physics.plannable )
 		self.assertFalse( c1.anatomy.plannable )
 		self.assertFalse( c1.plannable )
 
 		# at least one target makes anatomy plannable (but needs dose matrix)
 		c1.anatomy += Structure(1, 'target', True)
-		self.assertTrue( c1.n_structures == 2 )
+		self.assertEqual( c1.n_structures, 2 )
 		self.assertFalse( c1.physics.plannable )
 		self.assertFalse( c1.anatomy.plannable )
 		self.assertFalse( c1.plannable )
 
 		# dose matrix...
 		p.dose_matrix = rand(voxels, beams)
-		self.assertTrue( c1.A is not None )
-		self.assertTrue( c1.A.shape == (voxels, beams) )
+		self.assertIsNotNone( c1.A )
+		self.assertEqual( c1.A.shape, (voxels, beams) )
 		self.assertFalse( c1.physics.plannable )
 		self.assertFalse( c1.anatomy.plannable )
 		self.assertFalse( c1.plannable )
@@ -139,11 +139,11 @@ class CaseTestCase(ConradTestCase):
 						voxel_labels=(2 * rand(voxels)).astype(int)
 				))
 
-		self.assertTrue( c2.n_structures == 2 )
-		self.assertTrue( c2.n_voxels == voxels )
-		self.assertTrue( c2.n_beams == beams )
-		self.assertTrue( c2.A is not None )
-		self.assertTrue( c2.A.shape == (voxels, beams) )
+		self.assertEqual( c2.n_structures, 2 )
+		self.assertEqual( c2.n_voxels, voxels )
+		self.assertEqual( c2.n_beams, beams )
+		self.assertIsNotNone( c2.A )
+		self.assertEqual( c2.A.shape, (voxels, beams) )
 		self.assertTrue( c2.physics.plannable )
 		self.assertFalse( c2.anatomy.plannable )
 		self.assertTrue( c2.plannable )
@@ -151,7 +151,7 @@ class CaseTestCase(ConradTestCase):
 
 	def test_rx_to_anatomy(self):
 		c = Case()
-		self.assertTrue( c.n_structures == 0 )
+		self.assertEqual( c.n_structures, 0 )
 		c.prescription = [{
 			'name' : 'PTV',
 			'label' : 1,
@@ -165,18 +165,18 @@ class CaseTestCase(ConradTestCase):
 			'dose' : None,
 			'constraints' : ['D50 < 0.6 Gy', 'D2 < 0.8 Gy']
 		}]
-		self.assertTrue( c.n_structures == 2 )
-		self.assertTrue( c.anatomy['PTV'] == c.anatomy[1] )
-		self.assertTrue( c.anatomy['OAR_RESILIENT'] == c.anatomy[4] )
-		self.assertTrue( c.anatomy[1].constraints.size == 0 )
-		self.assertTrue( c.anatomy[4].constraints.size == 0 )
+		self.assertEqual( c.n_structures, 2 )
+		self.assertEqual( c.anatomy['PTV'], c.anatomy[1] )
+		self.assertEqual( c.anatomy['OAR_RESILIENT'], c.anatomy[4] )
+		self.assertEqual( c.anatomy[1].constraints.size, 0 )
+		self.assertEqual( c.anatomy[4].constraints.size, 0 )
 		c.transfer_rx_constraints_to_anatomy()
-		self.assertTrue( c.anatomy[1].constraints.size == 2 )
-		self.assertTrue( c.anatomy[1].constraints.contains(D(85) > 0.8 * Gy) )
-		self.assertTrue( c.anatomy[1].constraints.contains(D(1) < 1.2 * Gy) )
-		self.assertTrue( c.anatomy[4].constraints.size == 2 )
-		self.assertTrue( c.anatomy[4].constraints.contains(D(50) < 0.6 * Gy) )
-		self.assertTrue( c.anatomy[4].constraints.contains(D(2) < 0.8 * Gy) )
+		self.assertEqual( c.anatomy[1].constraints.size, 2 )
+		self.assertIn( D(85) > 0.8 * Gy, c.anatomy[1].constraints )
+		self.assertIn( D(1) < 1.2 * Gy, c.anatomy[1].constraints )
+		self.assertEqual( c.anatomy[4].constraints.size, 2 )
+		self.assertIn( D(50) < 0.6 * Gy, c.anatomy[4].constraints )
+		self.assertIn( D(2) < 0.8 * Gy, c.anatomy[4].constraints )
 
 	def test_case_init_prescription(self):
 		# prescription-based initialization (python object)
@@ -198,12 +198,12 @@ class CaseTestCase(ConradTestCase):
 		self.assertFalse( c.physics.plannable )
 		self.assertFalse( c.anatomy.plannable )
 		self.assertFalse( c.plannable )
-		self.assertTrue( c.anatomy[1].constraints.size == 2 )
-		self.assertTrue( c.anatomy[1].constraints.contains(D(85) > 0.8 * Gy) )
-		self.assertTrue( c.anatomy[1].constraints.contains(D(1) < 1.2 * Gy) )
-		self.assertTrue( c.anatomy[4].constraints.size == 2 )
-		self.assertTrue( c.anatomy[4].constraints.contains(D(50) < 0.6 * Gy) )
-		self.assertTrue( c.anatomy[4].constraints.contains(D(2) < 0.8 * Gy) )
+		self.assertEqual( c.anatomy[1].constraints.size, 2 )
+		self.assertIn( D(85) > 0.8 * Gy, c.anatomy[1].constraints.list )
+		self.assertIn( D(1) < 1.2 * Gy, c.anatomy[1].constraints.list )
+		self.assertEqual( c.anatomy[4].constraints.size, 2 )
+		self.assertIn( D(50) < 0.6 * Gy, c.anatomy[4].constraints.list )
+		self.assertIn( D(2) < 0.8 * Gy, c.anatomy[4].constraints.list )
 
 		# intialize from prescription as above, but suppress constraints
 		# from being passed to anatomy
@@ -211,20 +211,20 @@ class CaseTestCase(ConradTestCase):
 		self.assertFalse( c.physics.plannable )
 		self.assertFalse( c.anatomy.plannable )
 		self.assertFalse( c.plannable )
-		self.assertTrue( c.anatomy[1].constraints.size == 0 )
-		self.assertTrue( c.anatomy[4].constraints.size == 0 )
+		self.assertEqual( c.anatomy[1].constraints.size, 0 )
+		self.assertEqual( c.anatomy[4].constraints.size, 0 )
 
 		# prescription-based initialization (python list)
 		c = Case(prescription=rx)
 		self.assertFalse( c.physics.plannable )
 		self.assertFalse( c.anatomy.plannable )
 		self.assertFalse( c.plannable )
-		self.assertTrue( c.anatomy[1].constraints.size == 2 )
-		self.assertTrue( c.anatomy[1].constraints.contains(D(85) > 0.8 * Gy) )
-		self.assertTrue( c.anatomy[1].constraints.contains(D(1) < 1.2 * Gy) )
-		self.assertTrue( c.anatomy[4].constraints.size == 2 )
-		self.assertTrue( c.anatomy[4].constraints.contains(D(50) < 0.6 * Gy) )
-		self.assertTrue( c.anatomy[4].constraints.contains(D(2) < 0.8 * Gy) )
+		self.assertEqual( c.anatomy[1].constraints.size, 2 )
+		self.assertIn( D(85) > 0.8 * Gy, c.anatomy[1].constraints.list )
+		self.assertIn( D(1) < 1.2 * Gy, c.anatomy[1].constraints.list )
+		self.assertEqual( c.anatomy[4].constraints.size, 2 )
+		self.assertIn( D(50) < 0.6 * Gy, c.anatomy[4].constraints.list )
+		self.assertIn( D(2) < 0.8 * Gy, c.anatomy[4].constraints.list )
 
 		# prescription-based initialization (yaml/json file)
 		curr_dir = path.abspath(path.dirname(__file__))
@@ -243,33 +243,30 @@ class CaseTestCase(ConradTestCase):
 
 		# test add and remove
 		cid = case.add_constraint('PTV', D('mean') > 30 * Gy)
-		self.assertTrue(
-				(D('mean') > 30 * Gy) in case.anatomy['PTV'].constraints.list )
+		self.assertIn(
+				D('mean') > 30 * Gy, case.anatomy['PTV'].constraints.list )
 		case.drop_constraint(cid)
-		self.assertFalse(
-				(D('mean') > 30 * Gy) in case.anatomy['PTV'].constraints.list )
+		self.assertNotIn(
+				D('mean') > 30 * Gy, case.anatomy['PTV'].constraints.list )
 
 		# test change relop
 		cid = case.add_constraint('PTV', D('mean') > 30 * Gy)
 		case.change_constraint(cid, 'mean', '<', 30 * Gy)
-		self.assertFalse(
-				(D('mean') > 30 * Gy) in case.anatomy['PTV'].constraints.list )
-		self.assertTrue(
-				(D('mean') < 30 * Gy) in case.anatomy['PTV'].constraints.list )
+		self.assertNotIn(
+				D('mean') > 30 * Gy, case.anatomy['PTV'].constraints.list )
+		self.assertIn(
+				D('mean') < 30 * Gy, case.anatomy['PTV'].constraints.list )
 
 		# test change dose
 		case.change_constraint(cid, 'mean', '<', 50 * Gy)
-		self.assertFalse(
-				(D('mean') < 30 * Gy) in case.anatomy['PTV'].constraints.list )
-		self.assertTrue(
-				(D('mean') < 50 * Gy) in case.anatomy['PTV'].constraints.list )
+		self.assertNotIn(
+				D('mean') < 30 * Gy, case.anatomy['PTV'].constraints )
+		self.assertIn( D('mean') < 50 * Gy, case.anatomy['PTV'].constraints )
 
 		# test change threshold
 		case.change_constraint(cid, 'max', '<', 50 * Gy)
-		self.assertTrue(
-				(D('mean') < 50 * Gy) in case.anatomy['PTV'].constraints.list )
-		self.assertFalse(
-				(D('max') < 50 * Gy) in case.anatomy['PTV'].constraints.list )
+		self.assertIn( D('mean') < 50 * Gy, case.anatomy['PTV'].constraints )
+		self.assertNotIn( D('max') < 50 * Gy, case.anatomy['PTV'].constraints )
 
 		# test clear
 		case.clear_constraints()
@@ -280,49 +277,42 @@ class CaseTestCase(ConradTestCase):
 
 		# manipulate target objective
 		w_new = 2.
-		w_old_raw = case.anatomy['PTV'].w_over_raw
-		w_old_problem = case.anatomy['PTV'].w_over
+		w_old_raw = case.anatomy['PTV'].objective.w_over_raw
+		w_old_problem = case.anatomy['PTV'].objective.w_over
 		case.change_objective('PTV', w_over=w_new)
-		w_new_problem = case.anatomy['PTV'].w_over
+		w_new_problem = case.anatomy['PTV'].objective.w_over
 
 		self.assert_scalar_equal(
 				w_new / w_old_raw, w_new_problem / w_old_problem )
 
 		w_new = 2.
-		w_old_raw = case.anatomy['PTV'].w_under_raw
-		w_old_problem = case.anatomy['PTV'].w_under
+		w_old_raw = case.anatomy['PTV'].objective.w_under_raw
+		w_old_problem = case.anatomy['PTV'].objective.w_under
 		case.change_objective('PTV', w_under=w_new)
-		w_new_problem = case.anatomy['PTV'].w_under
+		w_new_problem = case.anatomy['PTV'].objective.w_under
 
 		self.assert_scalar_equal(
 				w_new / w_old_raw, w_new_problem / w_old_problem )
 
 		dose_new = 10. * Gy
 		case.change_objective('PTV', dose=dose_new)
-		self.assertTrue( case.anatomy['PTV'].dose == dose_new )
+		self.assertEqual( case.anatomy['PTV'].dose, dose_new )
 
 		# manipulate non-target objective
 		w_new = 2.
-		w_old_raw = case.anatomy['OAR1'].w_over_raw
-		w_old_problem = case.anatomy['OAR1'].w_over
+		w_old_raw = case.anatomy['OAR1'].objective.w_over_raw
+		w_old_problem = case.anatomy['OAR1'].objective.w_over
 		case.change_objective('OAR1', w_over=w_new)
-		w_new_problem = case.anatomy['OAR1'].w_over
+		w_new_problem = case.anatomy['OAR1'].objective.w_over
 
 		self.assert_scalar_equal(
 				w_new / w_old_raw, w_new_problem / w_old_problem )
 
-		# weight_underdose does not change for non-target
-		w_new = 2.
-		self.assertTrue( case.anatomy['OAR1'].w_under_raw == 0 )
-		self.assertTrue( case.anatomy['OAR1'].w_under == 0 )
-		case.change_objective('OAR1', w_under=w_new)
-		self.assertTrue( case.anatomy['OAR1'].w_under == 0 )
-
 		# dose does not change for non-target
 		dose_new = 10. * Gy
-		self.assertTrue( case.anatomy['OAR1'].dose.value == 0 )
+		self.assertEqual( case.anatomy['OAR1'].dose.value, 0 )
 		case.change_objective('OAR1', dose=dose_new)
-		self.assertTrue( case.anatomy['OAR1'].dose.value == 0 )
+		self.assertEqual( case.anatomy['OAR1'].dose.value, 0 )
 
 
 	def test_physics_to_anatomy(self):
@@ -338,7 +328,8 @@ class CaseTestCase(ConradTestCase):
 			self.assert_vector_equal( structure.A, A )
 			self.assert_vector_equal( structure.voxel_weights, vw )
 
-		self.assert_exception( call=case.load_physics_to_anatomy, args=[] )
+		with self.assertRaises(ValueError):
+			case.load_physics_to_anatomy()
 
 	def test_calculate_doses(self):
 		case = Case(self.anatomy, self.physics)
@@ -352,21 +343,22 @@ class CaseTestCase(ConradTestCase):
 	def test_plotting_data(self):
 		c = Case(self.anatomy, self.physics)
 		plot_data = c.plotting_data()
-		self.assertTrue( isinstance(plot_data, dict)  )
-		self.assertTrue( len(plot_data) == c.n_structures )
+		self.assertIsInstance(plot_data, dict  )
+		self.assertEqual( len(plot_data), c.n_structures )
 		self.assertTrue( all(s.label in plot_data for s in c.anatomy) )
 
 	def test_plan(self):
 		# Exception if case unplannable
 		case = Case()
-		self.assert_exception( call=case.plan, args=[] )
+		with self.assertRaises(ValueError):
+			case.plan()
 
 		# Construct and solve unconstrained case
 		case = Case(self.anatomy, self.physics)
 
 		success, run0 = case.plan(verbose=0)
 		self.assertTrue( success )
-		self.assertTrue( isinstance(run0, RunRecord) )
+		self.assertIsInstance(run0, RunRecord )
 
 		# Add DVH constraints and solve
 		case.prescription = self.prescription
@@ -377,8 +369,8 @@ class CaseTestCase(ConradTestCase):
 				success, run = case.plan(
 						use_slack=slack, use_2pass=exact, verbose=0)
 				self.assertTrue( success )
-				self.assertTrue( isinstance(run, RunRecord) )
-				self.assertTrue( isinstance(run.plotting_data, dict) )
-				self.assertTrue( 0 in run.plotting_data )
+				self.assertIsInstance(run, RunRecord )
+				self.assertIsInstance(run.plotting_data, dict )
+				self.assertIn( 0, run.plotting_data )
 				if exact:
-					self.assertTrue( 'exact' in run.plotting_data )
+					self.assertIn( 'exact', run.plotting_data )

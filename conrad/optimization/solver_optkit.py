@@ -33,9 +33,11 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import nan
+import numpy as np
 
 from conrad.defs import module_installed
+from conrad.medicine.anatomy import Anatomy
+from conrad.optimization.preprocessing import ObjectiveMethods
 from conrad.optimization.solver_base import *
 
 if module_installed('optkit'):
@@ -211,9 +213,9 @@ if module_installed('optkit'):
 				constr_id (:obj:`str`): ID tag for queried constraint.
 
 			Returns:
-				float: NaN, as :attr:`numpy.nan`.
+				float: NaN, as :attr:`numpy.np.nan`.
 			"""
-			return nan
+			return np.nan
 
 		def get_dual_value(self, constr_id):
 			"""
@@ -223,9 +225,9 @@ if module_installed('optkit'):
 				constr_id (:obj:`str`): ID tag for queried constraint.
 
 			Returns:
-				float: NaN, as :attr:`numpy.nan`.
+				float: NaN, as :attr:`numpy.np.nan`.
 			"""
-			return nan
+			return np.nan
 
 		def get_dvh_slope(self, constr_id):
 			"""
@@ -235,9 +237,9 @@ if module_installed('optkit'):
 				constr_id (:obj:`str`): ID tag for queried constraint.
 
 			Returns:
-				float: NaN, as :attr:`numpy.nan`.
+				float: NaN, as :attr:`numpy.np.nan`.
 			"""
-			return nan
+			return np.nan
 
 		def __assert_solver_exists(self, property_name):
 			"""
@@ -254,11 +256,11 @@ if module_installed('optkit'):
 				None
 
 			Raises:
-				AttributeError: If :attr:`SolverOptkit.pogs_solver` is
+				ValueError: If :attr:`SolverOptkit.pogs_solver` is
 					``None``.
 			"""
 			if self.pogs_solver is None:
-				raise AttributeError('no POGS solver built; cannot '
+				raise ValueError('no POGS solver built; cannot '
 									 'retrieve property SolverOptkit.{}'
 									 '.\n Call SolverOptkit.build() at '
 									 'least once to build a solver in '
@@ -269,8 +271,6 @@ if module_installed('optkit'):
 			r"""
 			Vector variable of beam intensities, :math:`x`.
 			"""
-			if self.pogs_solver is None:
-				raise ValueError()
 			self.__assert_solver_exists('x')
 			return self.pogs_solver.output.x
 
@@ -338,6 +338,65 @@ if module_installed('optkit'):
 					cache_options['solver_cache']['e'] is not None)
 			return cache_options
 
+		def __build_matrix(self, structures):
+			r"""Gather dose matrix from ``structures``.
+
+			Procedure ::
+				# Set A = [] empty matrix with 0 rows and N columns.
+				#
+				# for each structure in structures do
+				#	if structure is collapsable (mean/no dose constraints):
+				#		append structure's 1 x N mean dose vector to A.
+				#	else:
+				#		append structure's M_structure x N dose matrix to A.
+				# end for
+
+			Arguments:
+				structures: Iterable collection of
+					:class:`~conrad.medicine.Structure` objects.
+
+			Returns:
+				:class:`np.ndarray`: Dose matrix
+			"""
+			cols = self._Solver__check_dimensions(structures)
+			rows = sum([s.size if not s.collapsable else 1 for s in structures])
+			A = np.zeros((rows, cols))
+
+			ptr = 0
+			for s in structures:
+				if s.collapsable:
+					A[ptr, :] = s.A_mean[:]
+					ptr += 1
+				else:
+					A[ptr : ptr + s.size, :] += s.A_full
+					ptr += s.size
+
+			return A
+
+		def __build_voxel_objective(self, structures):
+			rows = sum([s.size if not s.collapsable else 1 for s in structures])
+			self.objective_voxels = ok.PogsObjective(rows)
+			self.__update_voxel_objective(structures)
+
+		def __update_voxel_objective(self, structures):
+			ptr = 0
+
+			for s in structures:
+				obj_sub = ObjectiveMethods.primal_expr_pogs(s)
+				step = 1 if s.collapsable else s.size
+				self.objective_voxels.set(
+						start=ptr, end=ptr + step, h=obj_sub.h, a=obj_sub.a,
+						b=obj_sub.b, c=obj_sub.c, d=obj_sub.d, e=obj_sub.e)
+				ptr += step
+
+		def __build_beam_objective(self, structures):
+			cols = self._Solver__check_dimensions(structures)
+			self.objective_beams = ok.PogsObjective(cols, h='IndGe0')
+			self.__update_beam_objective(structures)
+
+		def __update_beam_objective(self, structures):
+			pass
+
 		def build(self, structures, solver_cache=None, **options):
 			"""
 			Build POGS optimization problem from structure data.
@@ -368,17 +427,20 @@ if module_installed('optkit'):
 				ValueError: If :meth:`SolverOptkit.can_solve` returns
 					``False`` for ``structures``.
 			"""
-			if not self.can_solve:
+			if not self.can_solve(structures):
 				raise ValueError(
 						'SolverOptkit does not support dose constraints')
 
-			A, dose, weight_abs, weight_lin = \
-					self._Solver__gather_matrix_and_coefficients(structures)
+			if isinstance(structures, Anatomy):
+				structures = structures.list
 
-			if self.__A_current is not None:
-				matrix_updated = (self.__A_current != A).sum() > 0
-			else:
+			A = self.__build_matrix(structures)
+
+
+			if self.__A_current is None:
 				matrix_updated = True
+			else:
+				matrix_updated = (self.__A_current != A).sum() > 0
 
 			self.__A_current = A
 
@@ -389,15 +451,17 @@ if module_installed('optkit'):
 			rebuild_g = bool(self.objective_beams is None or
 						   self.objective_beams.size != n_beams)
 
-			# f(y) = weight_abs|y - dose\ + weight_lin(y - dose)
 			if rebuild_f:
-				self.objective_voxels = ok.PogsObjective(
-						n_voxels, h='Abs', b=dose, c=weight_abs, d=weight_lin)
+				self.__build_voxel_objective(structures)
 			else:
-				self.objective_voxels.set(b=dose, c=weight_abs, d=weight_lin)
+				self.__update_voxel_objective(structures)
 
-			# g(x) = Ind { x >= 0 }
+
 			if rebuild_g:
+				self.__build_beam_objective(structures)
+			else:
+				self.__update_beam_objective(structures)
+
 				self.objective_beams = ok.PogsObjective(n_beams, h='IndGe0')
 
 			if self.pogs_solver is None or matrix_updated:
@@ -423,11 +487,11 @@ if module_installed('optkit'):
 				:obj:`bool`: ``True`` if POGS solver converged.
 
 			Raises:
-				AttributeError: If :attr:`SolverOptkit.pogs_solver` has
+				ValueError: If :attr:`SolverOptkit.pogs_solver` has
 					not been built.
 			"""
 			if self.pogs_solver is None:
-				raise AttributeError('no POGS solver built; cannot '
+				raise ValueError('no POGS solver built; cannot '
 									 'perform treatment plan '
 									 'optimization.\n Call '
 									 'SolverOptkit.build() at least '

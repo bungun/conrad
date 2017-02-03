@@ -43,20 +43,20 @@ else:
 			scg = StructureConstraintsGraph(pd)
 
 			# test constraints, color, maxdose
-			self.assertTrue( len(scg.constraints) == 2 )
+			self.assertEqual( len(scg.constraints), 2 )
 
-			self.assertTrue( scg.color == LineAesthetic().scale_rgb('black') )
-			self.assertTrue( scg.maxdose == 50.0 )
+			self.assertEqual( scg.color, LineAesthetic().scale_rgb('black') )
+			self.assertEqual( scg.maxdose, 50.0 )
 
 			# alternate initialization
 			scg = StructureConstraintsGraph(self.PTV)
-			self.assertTrue( len(scg.constraints) == 2 )
+			self.assertEqual( len(scg.constraints), 2 )
 
 		def test_structure_constraints_graph_iterator(self):
 			scg = StructureConstraintsGraph(self.PTV)
 			for constraint_graph in scg:
-				self.assertTrue( isinstance(
-						constraint_graph, PercentileConstraintGraph) )
+				self.assertIsInstance(
+						constraint_graph, PercentileConstraintGraph )
 
 		def test_structure_constraints_graph_draw_undraw(self):
 			scg = StructureConstraintsGraph(self.PTV)
@@ -65,7 +65,7 @@ else:
 			# test draw
 			scg.draw(ax, markersize=12)
 			for constr in scg:
-				self.assertTrue( constr.axes is ax )
+				self.assertIs( constr.axes, ax )
 				self.assertTrue( all(map(
 						lambda g: g in ax.lines, constr.graph)) )
 
@@ -105,32 +105,30 @@ else:
 			sdvh = StructureDVHGraph(pd, 'blue')
 
 			# test name, curve, constraints and rx properties
-			self.assertTrue( sdvh.name == 'PTV' )
-			self.assertTrue( isinstance(sdvh.curve, DoseVolumeGraph) )
+			self.assertEqual( sdvh.name, 'PTV' )
+			self.assertIsInstance(sdvh.curve, DoseVolumeGraph )
 			for c in sdvh.constraints:
-				self.assertTrue( isinstance(c, PercentileConstraintGraph) )
-			self.assertTrue( isinstance(sdvh.rx, PrescriptionGraph) )
+				self.assertIsInstance(c, PercentileConstraintGraph )
+			self.assertIsInstance(sdvh.rx, PrescriptionGraph )
 
 			# rx should be none for non-target
 			pd2 = self.anatomy['OAR1'].plotting_data()
 			sdvh2 = StructureDVHGraph(pd2, 'red')
-			self.assertTrue( sdvh2.rx is None )
+			self.assertIsNone( sdvh2.rx )
 
 			# test color, aesthetic, maxdose properties
-			self.assertTrue( sdvh.color ==
-							 sdvh.aesthetic.scale_rgb('blue') )
+			self.assertEqual( sdvh.color, sdvh.aesthetic.scale_rgb('blue') )
 			color = sdvh.aesthetic.scale_rgb('red')
 			sdvh.color = color
-			self.assertTrue( sdvh.curve.color == color )
-			self.assertTrue( sdvh.rx.color == color )
-			self.assertTrue( sdvh.curve.color == color )
+			self.assertEqual( sdvh.curve.color, color )
+			self.assertEqual( sdvh.rx.color, color )
+			self.assertEqual( sdvh.curve.color, color )
 			for constr in sdvh.constraints:
-				self.assertTrue( constr.color == color )
+				self.assertEqual( constr.color, color )
 
 			# test alternate initialization syntax
 			sdvh_alternate_init = StructureDVHGraph(self.anatomy['PTV'])
-			self.assertTrue( isinstance(sdvh_alternate_init,
-										StructureDVHGraph) )
+			self.assertIsInstance( sdvh_alternate_init, StructureDVHGraph )
 
 		@staticmethod
 		def gather_graphs(structure_dvh, curve=True, noncurve=True):
@@ -150,23 +148,23 @@ else:
 
 			# test draw
 			sdvh.draw(ax)
-			self.assertTrue( sdvh.curve.axes is ax )
-			self.assertTrue( sdvh.curve.graph[0] in ax.lines )
-			self.assertTrue( sdvh.rx.axes is ax )
-			self.assertTrue( sdvh.rx.graph[0] in ax.lines )
+			self.assertIs( sdvh.curve.axes, ax )
+			self.assertIn( sdvh.curve.graph[0], ax.lines )
+			self.assertIs( sdvh.rx.axes, ax )
+			self.assertIn( sdvh.rx.graph[0], ax.lines )
 			for constr in sdvh.constraints:
-				self.assertTrue( constr.axes is ax )
+				self.assertIs( constr.axes, ax )
 				self.assertTrue(
 						all(map(lambda g: g in ax.lines, constr.graph)) )
 
 			# test undraw
 			sdvh.undraw()
-			self.assertTrue( sdvh.curve.axes is None )
-			self.assertTrue( sdvh.curve not in ax.lines )
-			self.assertTrue( sdvh.rx.axes is None )
-			self.assertTrue( sdvh.rx not in ax.lines )
+			self.assertIsNone( sdvh.curve.axes )
+			self.assertNotIn( sdvh.curve, ax.lines )
+			self.assertIsNone( sdvh.rx.axes )
+			self.assertNotIn( sdvh.rx, ax.lines )
 			for constr in sdvh.constraints:
-				self.assertTrue( constr.axes is None )
+				self.assertIsNone( constr.axes )
 				self.assertTrue(
 						all(map(lambda g: g not in ax.lines, constr.graph)) )
 
@@ -174,37 +172,37 @@ else:
 			la = LineAesthetic(style=':', alpha=0.7)
 			sdvh.draw(ax, curve=True, rx=False, constraints=False,
 					  aesthetic=la)
-			self.assertTrue( sdvh.curve.axes is ax )
-			self.assertTrue( sdvh.curve.graph[0] in ax.lines )
-			self.assertTrue( sdvh.rx.axes is None )
-			self.assertTrue( sdvh.rx.graph[0] not in ax.lines )
+			self.assertIs( sdvh.curve.axes, ax )
+			self.assertIn( sdvh.curve.graph[0], ax.lines )
+			self.assertIsNone( sdvh.rx.axes )
+			self.assertNotIn( sdvh.rx.graph[0], ax.lines )
 			for constr in sdvh.constraints:
-				self.assertTrue( constr.axes is None )
+				self.assertIsNone( constr.axes )
 				self.assertTrue(
 						all(map(lambda g: g not in ax.lines, constr.graph)) )
-			self.assertTrue( sdvh.curve.aesthetic == la )
+			self.assertEqual( sdvh.curve.aesthetic, la )
 
 			sdvh.draw(ax, curve=False, rx=True, constraints=False)
-			self.assertTrue( sdvh.curve.axes is None )
-			self.assertTrue( sdvh.curve.graph[0] not in ax.lines )
-			self.assertTrue( sdvh.rx.axes is ax )
-			self.assertTrue( sdvh.rx.graph[0] in ax.lines )
+			self.assertIsNone( sdvh.curve.axes, None )
+			self.assertNotIn( sdvh.curve.graph[0], ax.lines )
+			self.assertIs( sdvh.rx.axes, ax )
+			self.assertIn( sdvh.rx.graph[0], ax.lines )
 			for constr in sdvh.constraints:
-				self.assertTrue( constr.axes is None )
+				self.assertIsNone( constr.axes )
 				self.assertTrue(
 						all(map(lambda g: g not in ax.lines, constr.graph)) )
 
 			sdvh.draw(ax, curve=False, rx=False, constraints=True,
 					  constraint_markersize=12)
-			self.assertTrue( sdvh.curve.axes is None )
-			self.assertTrue( sdvh.curve.graph[0] not in ax.lines )
-			self.assertTrue( sdvh.rx.axes is None )
-			self.assertTrue( sdvh.rx.graph[0] not in ax.lines )
+			self.assertIsNone( sdvh.curve.axes )
+			self.assertNotIn( sdvh.curve.graph[0], ax.lines )
+			self.assertIsNone( sdvh.rx.axes )
+			self.assertNotIn( sdvh.rx.graph[0], ax.lines )
 			for constr in sdvh.constraints:
-				self.assertTrue( constr.axes is ax )
+				self.assertIs( constr.axes, ax )
 				self.assertTrue(
 						all(map(lambda g: g in ax.lines, constr.graph)) )
-				self.assertTrue( constr.aesthetic.markersize == 12 )
+				self.assertEqual( constr.aesthetic.markersize, 12 )
 
 			# test hide/show
 			sdvh.hide()
@@ -232,17 +230,17 @@ else:
 			# initialize with data dictionary
 			pgb = PlanGraphBase(self.test_data)
 			for label in self.test_data:
-				self.assertTrue( label in pgb.structure_labels )
-				self.assertTrue( label in pgb.structure_colors )
-				self.assertTrue( pgb.structure_colors[label] is None )
+				self.assertIn( label, pgb.structure_labels )
+				self.assertIn( label, pgb.structure_colors )
+				self.assertIs( pgb.structure_colors[label], None )
 
 			# initialize with data and color dictionaries
 			pgb = PlanGraphBase(self.test_data, self.test_colors)
 			for label in self.test_data:
-				self.assertTrue( label in pgb.structure_labels )
-				self.assertTrue( label in pgb.structure_colors )
-				self.assertTrue( pgb.structure_colors[label] ==
-								 self.test_colors[label] )
+				self.assertIn( label, pgb.structure_labels )
+				self.assertIn( label, pgb.structure_colors )
+				self.assertEqual(
+						pgb.structure_colors[label], self.test_colors[label] )
 
 		def test_plan_graph_base_accessor_iterator(self):
 			pgb = PlanGraphBase(self.test_data)
@@ -251,15 +249,15 @@ else:
 
 			# test operator []
 			for key in self.test_data:
-				self.assertTrue( pgb[key] == self.test_data[key] )
+				self.assertEqual( pgb[key], self.test_data[key] )
 
 			# test iterator
 			counter = 0
 			test_type = type(self.test_data['KEY1'])
 			for _, structure_datum in pgb:
-				self.assertTrue( isinstance(structure_datum, test_type) )
+				self.assertIsInstance(structure_datum, test_type )
 				counter += 1
-			self.assertTrue( counter == len(self.test_data) )
+			self.assertEqual( counter, len(self.test_data) )
 
 		def test_plan_graph_base_colors(self):
 			pgb = PlanGraphBase(self.test_data)
@@ -283,8 +281,9 @@ else:
 			# maxdose
 			for key, datum in self.test_data.items():
 				pgb._PlanGraphBase__structure_graphs[key] = datum
-			self.assertTrue( 3 == pgb._PlanGraphBase__maxdose(
-					lambda s: int(s.lstrip('DATA'))) )
+			self.assertEqual(
+					3, pgb._PlanGraphBase__maxdose(
+							lambda s: int(s.lstrip('DATA'))) )
 
 	class PlanDVHGraphTestCase(ConradTestCase):
 		@classmethod
@@ -302,23 +301,22 @@ else:
 			# explicit initialization
 			pd = self.anatomy.plotting_data()
 			pdg = PlanDVHGraph(pd)
-			self.assertTrue( isinstance(pdg.structure_DVHs, dict) )
+			self.assertIsInstance(pdg.structure_DVHs, dict )
 			for structure in self.anatomy:
-				self.assertTrue( structure.label in pdg.structure_DVHs )
-				self.assertTrue( structure.label in pdg.structure_labels )
-				self.assertTrue( structure.label in pdg.structure_colors )
-				self.assertTrue(
-						isinstance(pdg[structure.label], StructureDVHGraph) )
+				self.assertIn( structure.label, pdg.structure_DVHs )
+				self.assertIn( structure.label, pdg.structure_labels )
+				self.assertIn( structure.label, pdg.structure_colors )
+				self.assertIsInstance(
+						pdg[structure.label], StructureDVHGraph )
 			for _, s_dvh in pdg:
-				self.assertTrue( isinstance(s_dvh, StructureDVHGraph) )
+				self.assertIsInstance(s_dvh, StructureDVHGraph )
 
 			# implicit initialization
 			pdg = PlanDVHGraph(self.anatomy)
 			for structure in self.anatomy:
-				self.assertTrue(
-						isinstance(pdg[structure.label], StructureDVHGraph) )
+				self.assertIsInstance( pdg[structure.label], StructureDVHGraph )
 			for _, s_dvh in pdg:
-				self.assertTrue( isinstance(s_dvh, StructureDVHGraph) )
+				self.assertIsInstance(s_dvh, StructureDVHGraph )
 
 		def test_plandvh_graph_maxdose(self):
 			self.anatomy.calculate_doses(rand(self.beams))
@@ -332,8 +330,8 @@ else:
 					dmaxdc = max(dmaxdc, max(constr['dose']))
 
 			pdg = PlanDVHGraph(pd)
-			self.assertTrue( dmaxdc == pdg.maxdose() )
-			self.assertTrue( dmax == pdg.maxdose(exclude_constraints=True) )
+			self.assertEqual( dmaxdc, pdg.maxdose() )
+			self.assertEqual( dmax, pdg.maxdose(exclude_constraints=True) )
 
 	class PlanConstraintsGraphTestCase(ConradTestCase):
 		@classmethod
@@ -351,25 +349,25 @@ else:
 			# # explicit initialization
 			pd = self.anatomy.plotting_data(constraints_only=True)
 			pcg = PlanConstraintsGraph(pd)
-			self.assertTrue( isinstance(pcg.structure_constraints, dict) )
+			self.assertIsInstance(pcg.structure_constraints, dict )
 			for structure in self.anatomy:
-				self.assertTrue( structure.label in pcg.structure_constraints )
-				self.assertTrue( structure.label in pcg.structure_labels )
-				self.assertTrue( structure.label in pcg.structure_colors )
-				self.assertTrue( isinstance(pcg[structure.label],
-								  	 		StructureConstraintsGraph) )
+				self.assertIn( structure.label, pcg.structure_constraints )
+				self.assertIn( structure.label, pcg.structure_labels )
+				self.assertIn( structure.label, pcg.structure_colors )
+				self.assertIsInstance(pcg[structure.label],
+								  	 		StructureConstraintsGraph )
 			for _, s_constr in pcg:
-				self.assertTrue( isinstance(s_constr,
-											StructureConstraintsGraph) )
+				self.assertIsInstance(s_constr,
+											StructureConstraintsGraph )
 
 			# implicit initialization
 			pcg = PlanConstraintsGraph(self.anatomy)
 			for structure in self.anatomy:
-				self.assertTrue( isinstance(pcg[structure.label],
-								  	 		StructureConstraintsGraph) )
+				self.assertIsInstance(pcg[structure.label],
+								  	 		StructureConstraintsGraph )
 			for _, s_constr in pcg:
-				self.assertTrue( isinstance(s_constr,
-											StructureConstraintsGraph) )
+				self.assertIsInstance(s_constr,
+											StructureConstraintsGraph )
 
 		def test_plan_constraints_graph_maxdose(self):
 			self.anatomy.calculate_doses(rand(self.beams))
@@ -380,4 +378,4 @@ else:
 					dmax = max(dmax, max(constr['dose']))
 
 			pcg = PlanConstraintsGraph(pd)
-			self.assertTrue( dmax == pcg.maxdose )
+			self.assertEqual( dmax, pcg.maxdose )

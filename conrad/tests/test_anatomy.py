@@ -40,11 +40,11 @@ class AnatomyTestCase(ConradTestCase):
 
 	def test_anatomy_init(self):
 		a = Anatomy()
-		self.assertTrue( isinstance(a.structures, dict) )
-		self.assertTrue( len(a.structures) == 0 )
+		self.assertIsInstance( a.structures, dict )
+		self.assertEqual( len(a.structures), 0 )
 		self.assertTrue( a.is_empty )
-		self.assertTrue( a.n_structures == 0 )
-		self.assertTrue( a.size == 0 )
+		self.assertEqual( a.n_structures, 0 )
+		self.assertEqual( a.size, 0 )
 		self.assertFalse( a.plannable )
 
 	def test_structure_add_remove(self):
@@ -53,35 +53,35 @@ class AnatomyTestCase(ConradTestCase):
 		# add OAR
 		a += Structure('label1', 'oar', False)
 		self.assertFalse( a.is_empty )
-		self.assertTrue( a.n_structures == 1 )
+		self.assertEqual( a.n_structures, 1 )
 		self.assertFalse( a.plannable )
 
-		self.assertTrue( a.size is nan )
+		self.assert_nan( a.size )
 		a['label1'].A_full = rand(500, 100)
-		self.assertTrue( a.size == 500 )
+		self.assertEqual( a.size, 500 )
 		self.assertFalse( a.plannable )
 
 		a += Structure('label2', 'ptv', True)
 		self.assertFalse( a.plannable )
 		a['label2'].A_full = rand(500, 100)
-		self.assertTrue( a.n_structures == 2 )
-		self.assertTrue( a.size == 1000 )
+		self.assertEqual( a.n_structures, 2 )
+		self.assertEqual( a.size, 1000 )
 		self.assertTrue( a.plannable )
 
-		self.assertTrue( 'label1' in a.labels )
-		self.assertTrue( 'label2' in a.labels )
+		self.assertIn( 'label1', a.labels )
+		self.assertIn( 'label2', a.labels )
 
 		a -= 'label1'
-		self.assertTrue( a.n_structures == 1 )
-		self.assertTrue( a.size == 500 )
-		self.assertFalse( 'label1' in a.labels )
+		self.assertEqual( a.n_structures, 1 )
+		self.assertEqual( a.size, 500 )
+		self.assertNotIn( 'label1', a.labels )
 		self.assertTrue( a.plannable )
 
 		a -= 'ptv'
 		self.assertTrue( a.is_empty )
-		self.assertTrue( a.n_structures == 0 )
-		self.assertTrue( a.size == 0 )
-		self.assertFalse( 'label2' in a.labels )
+		self.assertEqual( a.n_structures, 0 )
+		self.assertEqual( a.size, 0 )
+		self.assertNotIn( 'label2', a.labels )
 		self.assertFalse( a.plannable )
 
 		structure_list = [
@@ -90,19 +90,19 @@ class AnatomyTestCase(ConradTestCase):
 		]
 
 		a.structures = self.structures
-		self.assertTrue( a.n_structures == 2 )
-		self.assertTrue( 0 in a.labels )
-		self.assertTrue( 1 in a.labels )
+		self.assertEqual( a.n_structures, 2 )
+		self.assertIn( 0, a.labels )
+		self.assertIn( 1, a.labels )
 
 		a2 = Anatomy(self.structures)
-		self.assertTrue( a2.n_structures == 2 )
-		self.assertTrue( 0 in a2.labels )
-		self.assertTrue( 1 in a2.labels )
+		self.assertEqual( a2.n_structures, 2 )
+		self.assertIn( 0, a2.labels )
+		self.assertIn( 1, a2.labels )
 
 		a3 = Anatomy(a)
-		self.assertTrue( a3.n_structures == 2 )
-		self.assertTrue( 0 in a3.labels )
-		self.assertTrue( 1 in a3.labels )
+		self.assertEqual( a3.n_structures, 2 )
+		self.assertIn( 0, a3.labels )
+		self.assertIn( 1, a3.labels )
 
 	def test_dose_calc_and_summary(self):
 		a = Anatomy(self.structures)
@@ -115,37 +115,37 @@ class AnatomyTestCase(ConradTestCase):
 
 		ds = a.dose_summary_data()
 		for s in self.structures:
-			self.assertTrue( s.label in ds )
-			self.assertTrue( 'min' in ds[s.label] )
-			self.assertTrue( 'mean' in ds[s.label] )
-			self.assertTrue( 'max' in ds[s.label] )
-			self.assertTrue( 'D2' in ds[s.label] )
-			self.assertTrue( 'D98' in ds[s.label] )
+			self.assertIn( s.label, ds )
+			self.assertIn( 'min', ds[s.label] )
+			self.assertIn( 'mean', ds[s.label] )
+			self.assertIn( 'max', ds[s.label] )
+			self.assertIn( 'D2', ds[s.label] )
+			self.assertIn( 'D98', ds[s.label] )
 
 		ds = a.dose_summary_data(percentiles=[1])
 		for s in self.structures:
-			self.assertTrue( s.label in ds )
-			self.assertTrue( 'min' in ds[s.label] )
-			self.assertTrue( 'mean' in ds[s.label] )
-			self.assertTrue( 'max' in ds[s.label] )
-			self.assertTrue( 'D1' in ds[s.label] )
-			self.assertFalse( 'D2' in ds[s.label] )
-			self.assertFalse( 'D98' in ds[s.label] )
+			self.assertIn( s.label, ds )
+			self.assertIn( 'min', ds[s.label] )
+			self.assertIn( 'mean', ds[s.label] )
+			self.assertIn( 'max', ds[s.label] )
+			self.assertIn( 'D1', ds[s.label] )
+			self.assertNotIn( 'D2', ds[s.label] )
+			self.assertNotIn( 'D98', ds[s.label] )
 
 		ds = a.dose_summary_data(percentiles=[10, 22, 83])
 		for s in self.structures:
-			self.assertTrue( s.label in ds )
-			self.assertTrue( 'D10' in ds[s.label] )
-			self.assertTrue( 'D22' in ds[s.label] )
-			self.assertTrue( 'D83' in ds[s.label] )
+			self.assertIn( s.label, ds )
+			self.assertIn( 'D10', ds[s.label] )
+			self.assertIn( 'D22', ds[s.label] )
+			self.assertIn( 'D83', ds[s.label] )
 
 
 		ds = a.dose_summary_data(percentiles=xrange(10, 100, 10))
 		for s in self.structures:
-			self.assertTrue( s.label in ds )
+			self.assertIn( s.label, ds )
 			for p in xrange(10, 100, 10):
-				self.assertTrue( 'D{}'.format(p) in ds[s.label] )
+				self.assertIn( 'D{}'.format(p), ds[s.label] )
 
 		ds = a.dose_summary_string
 		for s in self.structures:
-			self.assertTrue( s.summary_string in ds )
+			self.assertIn( s.summary_string, ds )

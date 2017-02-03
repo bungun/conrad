@@ -1,5 +1,5 @@
 """
-TOOO: DOCSTRING
+Define :class:`SolverCacheAccessor`
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu

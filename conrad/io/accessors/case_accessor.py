@@ -1,5 +1,5 @@
 """
-TOOO: DOCSTRING
+Define :class:`CaseAccessor`
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu
@@ -32,12 +32,10 @@ from conrad.io.accessors.physics_accessor import PhysicsAccessor
 from conrad.io.accessors.solver_accessor import SolverCacheAccessor
 from conrad.io.accessors.history_accessor import HistoryAccessor
 
-def check_db_entry(var, var_name, db_type):
-	if not isinstance(var, db_type):
+def validate_case_entry(entry):
+	if not isinstance(entry, CaseEntry):
 		raise ValueError(
-				'argument `{}` must be of type {}, or a dictionary '
-				'representation of/ConRad database pointer to that type'
-				''.format(var_name, db_type))
+				'argument `case_entry` must be of type {}'.format(CaseEntry))
 
 class CaseAccessor(ConradDBAccessor):
 	def __init__(self, database=None, filesystem=None):
@@ -114,7 +112,7 @@ class CaseAccessor(ConradDBAccessor):
 
 	def load_case(self, case_entry, frame='default'):
 		case_entry = self.DB.get(case_entry)
-		check_db_entry(case_entry, 'case_entry', CaseEntry)
+		validate_case_entry(case_entry)
 		if not case_entry.complete:
 			raise ValueError('case incomplete')
 
@@ -127,7 +125,7 @@ class CaseAccessor(ConradDBAccessor):
 
 	def load_frame(self, case_entry, frame_name):
 		case_entry = self.DB.get(case_entry)
-		check_db_entry(case_entry, 'case_entry', CaseEntry)
+		validate_case_entry(case_entry)
 		physics_entry = self.DB.get(case_entry.physics)
 		frame = self.physics_accessor.frame_accessor.select_frame_entry(
 				physics_entry.frames, frame_name)
@@ -135,7 +133,7 @@ class CaseAccessor(ConradDBAccessor):
 
 	def load_frame_mapping(self, case_entry, source_frame, target_frame):
 		case_entry = self.DB.get(case_entry)
-		check_db_entry(case_entry, 'case_entry', CaseEntry)
+		validate_case_entry(case_entry)
 		physics_entry = self.DB.get(case_entry.physics)
 
 		fma = self.physics_accessor.frame_mapping_accessor
@@ -145,7 +143,7 @@ class CaseAccessor(ConradDBAccessor):
 	def save_solver_cache(self, case_entry, solver, cache_name, frame_name,
 						  directory):
 		case_entry = self.DB.get(case_entry)
-		check_db_entry(case_entry, 'case_entry', CaseEntry)
+		validate_case_entry(case_entry)
 		cache_ID = self.solver_cache_accessor.save_solver_cache(
 				solver, cache_name, frame_name, directory)
 		case_entry.add_solver_caches(cache_ID)
@@ -153,7 +151,7 @@ class CaseAccessor(ConradDBAccessor):
 
 	def load_solver_cache(self, case_entry, cache_name, frame_name):
 		case_entry = self.DB.get(case_entry)
-		check_db_entry(case_entry, 'case_entry', CaseEntry)
+		validate_case_entry(case_entry)
 		cache = self.solver_cache_accessor.select_solver_cache_entry(
 				case_entry.solver_caches, cache_name, frame_name)
 		return self.solver_cache_accessor.load_solver_cache(cache)
@@ -174,7 +172,7 @@ class CaseAccessor(ConradDBAccessor):
 	def save_solution(self, case_entry, frame_name, solution_name, directory,
 					  **solution_data):
 		case_entry = self.DB.get(case_entry)
-		check_db_entry(case_entry, 'case_entry', CaseEntry)
+		validate_case_entry(case_entry)
 		self.__load_history(case_entry)
 
 		solution_ID = self.history_accessor.solution_accessor.save_solution(

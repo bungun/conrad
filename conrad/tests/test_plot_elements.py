@@ -30,95 +30,95 @@ else:
 		def test_aesthetic_init_properties(self):
 			la = LineAesthetic()
 			vline = la._LineAesthetic__verification_line
-			self.assertTrue( isinstance(vline, mpl.lines.Line2D) )
+			self.assertIsInstance( vline, mpl.lines.Line2D )
 
 			# default assignments
-			self.assertTrue( la.style == '-' )
-			self.assertTrue( la.weight == 1.0 )
-			self.assertTrue( la.marker == None )
-			self.assertTrue( la.markersize == 5.0 )
-			self.assertTrue( la.fill == 'none' )
-			self.assertTrue( la.num_markers == 20 )
-			self.assertTrue( la.alpha == 1.0 )
-			self.assertTrue( la.color_attenuation == 1.0 )
+			self.assertEqual( la.style, '-' )
+			self.assertEqual( la.weight, 1.0 )
+			self.assertEqual( la.marker, None )
+			self.assertEqual( la.markersize, 5.0 )
+			self.assertEqual( la.fill, 'none' )
+			self.assertEqual( la.num_markers, 20 )
+			self.assertEqual( la.alpha, 1.0 )
+			self.assertEqual( la.color_attenuation, 1.0 )
 
 			for style in ['--', ':', '-.', 'solid', 'dashed', 'dotted',
 						  'dashdot']:
 				la.style = style
-				self.assertTrue( la.style == style)
+				self.assertEqual( la.style, style)
 			with self.assertRaises(ValueError):
 				la.style = 'not a style'
 
 			for weight in [1, 2.3, '2']:
 				la.weight = weight
-				self.assertTrue( la.weight == weight)
+				self.assertEqual( la.weight, weight)
 			with self.assertRaises(ValueError):
 				la.weight = 'not a weight'
 
 			for marker in vline.filled_markers:
 				la.marker = marker
-				self.assertTrue( la.marker == marker )
+				self.assertEqual( la.marker, marker )
 			with self.assertRaises(ValueError):
 				la.marker = 'not a marker'
 
 			for markersize in [1, 2.3, '5']:
 				la.markersize = markersize
-				self.assertTrue( la.markersize == markersize )
+				self.assertEqual( la.markersize, markersize )
 			with self.assertRaises(ValueError):
 				la.markersize = 'not a markersize'
 
 			for fill in vline.fillStyles:
 				la.fill = fill
-				self.assertTrue( la.fill == fill )
+				self.assertEqual( la.fill, fill )
 			with self.assertRaises(ValueError):
 				la.fill = 'not a fill'
 
 			for number in [1, 5, 100, 2.3, '2']:
 				la.num_markers = number
-				self.assertTrue( la.num_markers == int(number) )
+				self.assertEqual( la.num_markers, int(number) )
 			with self.assertRaises(ValueError):
 				la.fill = 'not a number'
 
 			for alpha in [1, 0, 0.5, '0.76']:
 				la.alpha = alpha
-				self.assertTrue( la.alpha == float(alpha) )
+				self.assertEqual( la.alpha, float(alpha) )
 			for alpha_fail  in [-0.2, 1.4, 'not an alpha']:
 				with self.assertRaises(ValueError):
 					la.alpha = alpha_fail
 
 			for attenuation in [1, 0, 0.5, '0.76']:
 				la.color_attenuation = attenuation
-				self.assertTrue(
-						la.color_attenuation == float(attenuation) )
+				self.assertEqual(
+						la.color_attenuation, float(attenuation) )
 			for attenuation_fail  in [-0.2, 1.4, 'not an attenuation']:
 				with self.assertRaises(ValueError):
 					la.color_attenuation = attenuation_fail
 
 			# initialization with names aesthetics
 			la = LineAesthetic('dvh_constraint')
-			self.assertTrue( la.style == '' )
-			self.assertTrue( la.markersize == 16 )
+			self.assertEqual( la.style, '' )
+			self.assertEqual( la.markersize, 16 )
 
 			la = LineAesthetic('slack')
-			self.assertTrue( la.alpha == 0.6 )
+			self.assertEqual( la.alpha, 0.6 )
 
 			la = LineAesthetic('rx')
-			self.assertTrue( la.style == ':' )
-			self.assertTrue( la.weight == 1.5 )
+			self.assertEqual( la.style, ':' )
+			self.assertEqual( la.weight, 1.5 )
 
 			# initialization with keywords
 			la = LineAesthetic(
 					style='--', weight=1.5, marker='o', markersize=12,
 					fill='left', num_markers=10, alpha=0.8,
 					color_attenuation=0.8)
-			self.assertTrue( la.style == '--' )
-			self.assertTrue( la.weight == 1.5 )
-			self.assertTrue( la.marker == 'o' )
-			self.assertTrue( la.markersize == 12 )
-			self.assertTrue( la.fill == 'left' )
-			self.assertTrue( la.num_markers == 10 )
-			self.assertTrue( la.alpha == 0.8 )
-			self.assertTrue( la.color_attenuation == 0.8 )
+			self.assertEqual( la.style, '--' )
+			self.assertEqual( la.weight, 1.5 )
+			self.assertEqual( la.marker, 'o' )
+			self.assertEqual( la.markersize, 12 )
+			self.assertEqual( la.fill, 'left' )
+			self.assertEqual( la.num_markers, 10 )
+			self.assertEqual( la.alpha, 0.8 )
+			self.assertEqual( la.color_attenuation, 0.8 )
 
 		def test_aesthetic_copy(self):
 			la_0 = LineAesthetic()
@@ -132,25 +132,25 @@ else:
 			la_1.alpha = 0.4
 			la_1.color_attenuation = 0.3
 			la_0.copy(la_1)
-			self.assertTrue( la_0.style == la_1.style )
-			self.assertTrue( la_0.weight == la_1.weight )
-			self.assertTrue( la_0.marker == la_1.marker )
-			self.assertTrue( la_0.markersize == la_1.markersize )
-			self.assertTrue( la_0.fill == la_1.fill )
-			self.assertTrue( la_0.num_markers == la_1.num_markers )
-			self.assertTrue( la_0.alpha == la_1.alpha )
-			self.assertTrue( la_0.color_attenuation ==
+			self.assertEqual( la_0.style, la_1.style )
+			self.assertEqual( la_0.weight, la_1.weight )
+			self.assertEqual( la_0.marker, la_1.marker )
+			self.assertEqual( la_0.markersize, la_1.markersize )
+			self.assertEqual( la_0.fill, la_1.fill )
+			self.assertEqual( la_0.num_markers, la_1.num_markers )
+			self.assertEqual( la_0.alpha, la_1.alpha )
+			self.assertEqual( la_0.color_attenuation,
 							 la_1.color_attenuation )
 
 			# test operator ==
-			self.assertTrue( la_0 == la_1 )
+			self.assertEqual( la_0, la_1 )
 
 		def test_aesthetic_scale_rgb(self):
 			la = LineAesthetic()
 
 			color = mpl.colors.colorConverter.to_rgba('cornflowerblue')
 			color2 = la.scale_rgb(color)
-			self.assertTrue( color == color2 )
+			self.assertEqual( color, color2 )
 
 			la.color_attenuation = 0.7
 			color3 = list(color)
@@ -158,7 +158,7 @@ else:
 				color3[i] *= la.color_attenuation
 			color3 = tuple(color3)
 			color4 = la.scale_rgb(color)
-			self.assertTrue( color3 == color4 )
+			self.assertEqual( color3, color4 )
 
 		def test_aesthetic_sample_factor(self):
 			la = LineAesthetic()
@@ -166,7 +166,7 @@ else:
 			for series_length in [1, 10, 100, 1000]:
 				quotient = la.num_markers
 				sampling = max(1, series_length // quotient)
-				self.assertTrue( la.get_sample_factor(series_length) ==
+				self.assertEqual( la.get_sample_factor(series_length),
 								 sampling )
 
 		def test_aesthetic_apply(self):
@@ -185,19 +185,19 @@ else:
 			line = mpl.lines.Line2D([], [])
 			la.apply(line, 'blue')
 
-			self.assertTrue(
-					line.get_linestyle() == vline.get_linestyle() )
-			self.assertTrue( line.get_linewidth() == la.weight )
-			self.assertTrue( line.get_marker() == la.marker )
-			self.assertTrue( line.get_markersize() == la.markersize )
-			self.assertTrue( line.get_fillstyle() == la.fill )
-			self.assertTrue(
-					line.get_markevery() == (1, la.get_sample_factor(0)) )
-			self.assertTrue( line.get_alpha() == la.alpha )
-			self.assertTrue( line.get_color() == la.scale_rgb('blue') )
+			self.assertEqual(
+					line.get_linestyle(), vline.get_linestyle() )
+			self.assertEqual( line.get_linewidth(), la.weight )
+			self.assertEqual( line.get_marker(), la.marker )
+			self.assertEqual( line.get_markersize(), la.markersize )
+			self.assertEqual( line.get_fillstyle(), la.fill )
+			self.assertEqual(
+					line.get_markevery(), (1, la.get_sample_factor(0)) )
+			self.assertEqual( line.get_alpha(), la.alpha )
+			self.assertEqual( line.get_color(), la.scale_rgb('blue') )
 
 			la.apply_color(line, 'red')
-			self.assertTrue( line.get_color() == la.scale_rgb('red') )
+			self.assertEqual( line.get_color(), la.scale_rgb('red') )
 
 		def test_aesthetic_plot_args(self):
 			la = LineAesthetic()
@@ -205,43 +205,43 @@ else:
 			color = la.scale_rgb('blue')
 			markevery = la.get_sample_factor(100)
 
-			self.assertTrue( 'linestyle' in args )
-			self.assertTrue( args['linestyle'] == la.style )
+			self.assertIn( 'linestyle', args )
+			self.assertEqual( args['linestyle'], la.style )
 
-			self.assertTrue( 'linewidth' in args )
-			self.assertTrue( args['linewidth'] == la.weight )
+			self.assertIn( 'linewidth', args )
+			self.assertEqual( args['linewidth'], la.weight )
 
-			self.assertTrue( 'marker' in args )
-			self.assertTrue( args['marker'] == la.marker )
+			self.assertIn( 'marker', args )
+			self.assertEqual( args['marker'], la.marker )
 
-			self.assertTrue( 'markersize' in args )
-			self.assertTrue( args['markersize'] == la.markersize )
+			self.assertIn( 'markersize', args )
+			self.assertEqual( args['markersize'], la.markersize )
 
-			self.assertTrue( 'markevery' in args )
-			self.assertTrue( args['markevery'] == (1, markevery) )
+			self.assertIn( 'markevery', args )
+			self.assertEqual( args['markevery'], (1, markevery) )
 
-			self.assertTrue( 'fillstyle' in args )
-			self.assertTrue( args['fillstyle'] == la.fill )
+			self.assertIn( 'fillstyle', args )
+			self.assertEqual( args['fillstyle'], la.fill )
 
-			self.assertTrue( 'color' in args )
-			self.assertTrue( args['color'] == color )
+			self.assertIn( 'color', args )
+			self.assertEqual( args['color'], color )
 
-			self.assertTrue( 'alpha' in args )
-			self.assertTrue( args['alpha'] == la.alpha )
+			self.assertIn( 'alpha', args )
+			self.assertEqual( args['alpha'], la.alpha )
 
 	class DVHPlotElementTestCase(ConradTestCase):
 		def test_dvhplot_element_init_properties(self):
 			dpe = DVHPlotElement()
-			self.assertTrue( dpe.axes is None )
-			self.assertTrue( isinstance(dpe.graph, list) )
-			self.assertTrue( len(dpe.graph) == 0 )
-			self.assertTrue( dpe.color == 'black' )
-			self.assertTrue( isinstance(dpe.aesthetic, LineAesthetic) )
-			self.assertTrue( dpe.label == '_nolabel_' )
+			self.assertIsNone( dpe.axes )
+			self.assertIsInstance( dpe.graph, list )
+			self.assertEqual( len(dpe.graph), 0 )
+			self.assertEqual( dpe.color, 'black' )
+			self.assertIsInstance( dpe.aesthetic, LineAesthetic )
+			self.assertEqual( dpe.label, '_nolabel_' )
 
 			dpe.color = 'blue'
-			self.assertTrue( dpe.color ==
-							 mpl.colors.colorConverter.to_rgba('blue') )
+			self.assertEqual(
+					dpe.color, mpl.colors.colorConverter.to_rgba('blue') )
 			with self.assertRaises(ValueError):
 				dpe.color = 'not a color'
 
@@ -251,34 +251,34 @@ else:
 			aes.weight = 3.5
 			aes.markersize = 9
 			aes.alpha = 0.5
-			self.assertFalse( dpe.aesthetic == aes )
+			self.assertNotEqual( dpe.aesthetic, aes )
 			dpe.aesthetic = aes
-			self.assertTrue( dpe.aesthetic == aes )
+			self.assertEqual( dpe.aesthetic, aes )
 
 			label = 'label string'
 			dpe.label = label
-			self.assertTrue( dpe.label == label )
+			self.assertEqual( dpe.label, label )
 			for label in ['', ' ', None]:
 				dpe.label = label
-				self.assertTrue( dpe.label == '_nolabel_' )
+				self.assertEqual( dpe.label, '_nolabel_' )
 
 			ax = mpl.figure.Figure().add_subplot(1, 1, 1)
 			dpe.axes = ax
-			self.assertTrue( dpe.axes == ax )
+			self.assertEqual( dpe.axes, ax )
 			with self.assertRaises(TypeError):
 				dpe.axes = '2'
 
 		def test_dvhplot_element_iadd(self):
 			dpe = DVHPlotElement()
-			self.assertTrue( len(dpe.graph) == 0 )
+			self.assertEqual( len(dpe.graph), 0 )
 
 			# add single line
 			dpe += mpl.lines.Line2D([], [])
-			self.assertTrue( len(dpe.graph) == 1 )
+			self.assertEqual( len(dpe.graph), 1 )
 
 			# add list of lines
 			dpe += [mpl.lines.Line2D([], []) for i in xrange(4)]
-			self.assertTrue( len(dpe.graph) == 5 )
+			self.assertEqual( len(dpe.graph), 5 )
 
 		def test_dvhplot_element_show_hide(self):
 			dpe = DVHPlotElement()
@@ -300,16 +300,16 @@ else:
 			ax = mpl.figure.Figure().add_subplot(1, 1, 1)
 			dpe.axes = ax
 			for g in dpe.graph:
-				self.assertTrue( g.axes is ax )
-				self.assertTrue( g in ax.lines )
+				self.assertIs( g.axes, ax )
+				self.assertIn( g, ax.lines )
 
 			with self.assertRaises(NotImplementedError):
 				dpe.draw(ax)
 
 			dpe.undraw()
 			for g in dpe.graph:
-				self.assertTrue( g.axes is None )
-				self.assertTrue( g not in ax.lines )
+				self.assertIsNone( g.axes )
+				self.assertNotIn( g, ax.lines )
 
 	class DoseVolumeGraphTestCase(ConradTestCase):
 		@classmethod
@@ -321,18 +321,18 @@ else:
 
 		def test_dosevolume_graph_init_draw(self):
 			dvg = DoseVolumeGraph(self.doses, self.percentiles, self.color)
-			self.assertTrue( len(dvg.graph) == 1 )
+			self.assertEqual( len(dvg.graph), 1 )
 
 			dvg.draw(self.ax)
-			self.assertTrue( dvg.graph[0].axes is self.ax )
-			self.assertTrue( dvg.graph[0] in self.ax.lines )
+			self.assertIs( dvg.graph[0].axes, self.ax )
+			self.assertIn( dvg.graph[0], self.ax.lines )
 
 			dvg.draw(self.ax, LineAesthetic(style=':'))
-			self.assertTrue( dvg.aesthetic.style == ':' )
+			self.assertEqual( dvg.aesthetic.style, ':' )
 
 		def test_dosevolume_graph_maxdose(self):
 			dvg = DoseVolumeGraph(self.doses, self.percentiles, self.color)
-			self.assertTrue( dvg.maxdose == self.doses[-1] )
+			self.assertEqual( dvg.maxdose, self.doses[-1] )
 
 	class PercentileConstraintGraphTestCase(ConradTestCase):
 		@classmethod
@@ -346,9 +346,9 @@ else:
 		def test_percentileconstraint_graph_init(self):
 			pcg = PercentileConstraintGraph(self.doses, self.percentiles,
 											self.symbol, self.color)
-			self.assertTrue( len(pcg.graph) == 1 )
-			self.assertTrue(
-					pcg._PercentileConstraintGraph__slack_amount == 3. )
+			self.assertEqual( len(pcg.graph), 1 )
+			self.assertEqual(
+					pcg._PercentileConstraintGraph__slack_amount, 3. )
 
 
 		def test_percentileconstraint_graph_draw(self):
@@ -360,30 +360,30 @@ else:
 
 			# draw requested & achieved constraints and slack
 			pcg.draw(self.ax)
-			self.assertTrue( pcg.aesthetic.markersize == 16 )
-			self.assertTrue( len(pcg.graph) == 3 )
-			self.assertTrue( slack.axes is self.ax )
-			self.assertTrue( slack in self.ax.lines )
-			self.assertTrue( requested.axes is self.ax )
-			self.assertTrue( requested in self.ax.lines )
-			self.assertTrue( achieved.axes is self.ax )
-			self.assertTrue( achieved in self.ax.lines )
+			self.assertEqual( pcg.aesthetic.markersize, 16 )
+			self.assertEqual( len(pcg.graph), 3 )
+			self.assertIs( slack.axes, self.ax )
+			self.assertIn( slack, self.ax.lines )
+			self.assertIs( requested.axes, self.ax )
+			self.assertIn( requested, self.ax.lines )
+			self.assertIs( achieved.axes, self.ax )
+			self.assertIn( achieved, self.ax.lines )
 
 			# draw only achieved constraint
 			pcg.draw(self.ax, size=12, slack_threshold=5)
-			self.assertTrue( pcg.aesthetic.markersize == 12 )
-			self.assertTrue( len(pcg.graph) == 1 )
-			self.assertTrue( slack.axes is None )
-			self.assertTrue( slack not in self.ax.lines )
-			self.assertTrue( requested.axes is None )
-			self.assertTrue( requested not in self.ax.lines )
-			self.assertTrue( achieved.axes is self.ax )
-			self.assertTrue( achieved in self.ax.lines )
+			self.assertEqual( pcg.aesthetic.markersize, 12 )
+			self.assertEqual( len(pcg.graph), 1 )
+			self.assertIsNone( slack.axes, None )
+			self.assertNotIn( slack, self.ax.lines )
+			self.assertIs( requested.axes, None )
+			self.assertNotIn( requested, self.ax.lines )
+			self.assertIs( achieved.axes, self.ax )
+			self.assertIn( achieved, self.ax.lines )
 
 		def test_percentileconstraint_graph_maxdose(self):
 			pcg = PercentileConstraintGraph(self.doses, self.percentiles,
 											self.symbol, self.color)
-			self.assertTrue( pcg.maxdose == max(self.doses) )
+			self.assertEqual( pcg.maxdose, max(self.doses) )
 
 	class PrescriptionGraphTestCase(ConradTestCase):
 		@classmethod
@@ -396,8 +396,8 @@ else:
 
 		def test_prescription_graph_init_draw(self):
 			pg = PrescriptionGraph(30.0, self.color)
-			self.assertTrue( len(pg.graph) == 1 )
+			self.assertEqual( len(pg.graph), 1 )
 
 			pg.draw(self.ax)
-			self.assertTrue( pg.graph[0].axes is self.ax )
-			self.assertTrue( pg.graph[0] in self.ax.lines )
+			self.assertIs( pg.graph[0].axes, self.ax )
+			self.assertIn( pg.graph[0], self.ax.lines )

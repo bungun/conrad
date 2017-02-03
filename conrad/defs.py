@@ -33,6 +33,7 @@ from conrad.compat import *
 
 import os
 import pip
+import operator as op
 import numpy as np
 import scipy.sparse as sp
 
@@ -82,6 +83,22 @@ def positive_real_valued(val):
 			return True
 	else:
 		return False
+
+def cvxpy_var_size(cvxpy_var):
+	if hasattr(cvxpy_var, 'size'):
+		size = cvxpy_var.size
+	elif hasattr(cvxpy_var, 'shape'):
+		size = cvxpy_var.shape
+
+	if isinstance(size, tuple):
+		size = reduce(op.mul, size)
+	return size
+
+def cvxpy_var_shape(cvxpy_var):
+	if hasattr(cvxpy_var, 'shape'):
+		return cvxpy_var.shape
+	else:
+		return cvxpy_var.size
 
 def module_installed(name, version_string=None):
 	"""

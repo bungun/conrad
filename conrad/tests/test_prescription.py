@@ -153,18 +153,11 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(20) < 1.05 * rx_dose
 		for s in s_variants:
-			self.assertTrue( eval_constraint(s, rx_dose=rx_dose) == c )
-			try:
+			self.assertEqual( eval_constraint(s, rx_dose=rx_dose), c )
+			with self.assertRaises(ValueError):
 				c1 = eval_constraint(s)
-				self.assertTrue( False )
-			except:
-				self.assertTrue( True )
-
-			try:
+			with self.assertRaises(TypeError):
 				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
-				self.assertTrue( False )
-			except:
-				self.assertTrue( True )
 
 		# - "D__% > {frac} rx"
 		s_variants = [
@@ -173,18 +166,11 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(80) > 0.95 * rx_dose
 		for s in s_variants:
-			self.assertTrue( eval_constraint(s, rx_dose=rx_dose) == c )
-			try:
+			self.assertEqual( eval_constraint(s, rx_dose=rx_dose), c )
+			with self.assertRaises(ValueError):
 				c1 = eval_constraint(s)
-				self.assertTrue( False )
-			except:
-				self.assertTrue( True )
-
-			try:
+			with self.assertRaises(TypeError):
 				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
-				self.assertTrue( False )
-			except:
-				self.assertTrue( True )
 
 		# - "V__ rx < p %"
 		s_variants = [
@@ -193,18 +179,11 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(20) < 0.1 * rx_dose
 		for s in s_variants:
-			self.assertTrue( eval_constraint(s, rx_dose=rx_dose) == c )
-			try:
+			self.assertEqual( eval_constraint(s, rx_dose=rx_dose), c )
+			with self.assertRaises(ValueError):
 				c1 = eval_constraint(s)
-				self.assertTrue( False )
-			except:
-				self.assertTrue( True )
-
-			try:
+			with self.assertRaises(TypeError):
 				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
-				self.assertTrue( False )
-			except:
-				self.assertTrue( True )
 
 		# - "V__ rx > p %"
 		s_variants = [
@@ -213,18 +192,11 @@ class PrescriptionTestCase(ConradTestCase):
 			]
 		c = D(80) > 0.9 * rx_dose
 		for s in s_variants:
-			self.assertTrue( eval_constraint(s, rx_dose=rx_dose) == c )
-			try:
+			self.assertEqual( eval_constraint(s, rx_dose=rx_dose), c )
+			with self.assertRaises(ValueError):
 				c1 = eval_constraint(s)
-				self.assertTrue( False )
-			except:
-				self.assertTrue( True )
-
-			try:
+			with self.assertRaises(TypeError):
 				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
-				self.assertTrue( False )
-			except:
-				self.assertTrue( True )
 
 		# PARSE FAILURE:
 		# - "V_ Gy > x cm3"
@@ -238,11 +210,8 @@ class PrescriptionTestCase(ConradTestCase):
 			'V 0.9rx < 10 CM3'
 			]
 		for s in s_variants:
-			try:
+			with self.assertRaises(ValueError):
 				c = eval_constraint(s)
-				self.assertTrue( False )
-			except:
-				self.assertTrue( True )
 
 	def validate_prescription_contents(self, prescription):
 		""" check that input "prescription" matches the following content:
@@ -277,7 +246,7 @@ class PrescriptionTestCase(ConradTestCase):
 			  	- the local file json_rx.json
 
 		"""
-		self.assertTrue( isinstance(prescription, Prescription) )
+		self.assertIsInstance( prescription, Prescription )
 		rx = prescription
 
 		# structure labels
@@ -285,39 +254,39 @@ class PrescriptionTestCase(ConradTestCase):
 		LABEL2 = self.LABEL2
 		LABEL3 = self.LABEL3
 
-		self.assertTrue( LABEL1 in rx.structure_dict)
-		self.assertTrue( LABEL2 in rx.structure_dict)
-		self.assertTrue( LABEL3 in rx.structure_dict)
-		self.assertTrue( isinstance(rx.structure_dict[LABEL1], Structure) )
-		self.assertTrue( isinstance(rx.structure_dict[LABEL2], Structure) )
-		self.assertTrue( isinstance(rx.structure_dict[LABEL3], Structure) )
-		self.assertTrue( rx.structure_dict[LABEL1].name in self.NAME1_VARIANTS )
-		self.assertTrue( rx.structure_dict[LABEL2].name == self.NAME2 )
-		self.assertTrue( rx.structure_dict[LABEL2].name == self.NAME2 )
-		self.assertTrue( rx.structure_dict[LABEL1].dose == self.DOSE1 )
-		self.assertTrue( rx.structure_dict[LABEL2].dose == self.DOSE2 )
-		self.assertTrue( rx.structure_dict[LABEL3].dose == self.DOSE3 )
+		self.assertIn( LABEL1, rx.structure_dict)
+		self.assertIn( LABEL2, rx.structure_dict)
+		self.assertIn( LABEL3, rx.structure_dict)
+		self.assertIsInstance( rx.structure_dict[LABEL1], Structure )
+		self.assertIsInstance( rx.structure_dict[LABEL2], Structure )
+		self.assertIsInstance( rx.structure_dict[LABEL3], Structure )
+		self.assertIn( rx.structure_dict[LABEL1].name, self.NAME1_VARIANTS )
+		self.assertEqual( rx.structure_dict[LABEL2].name, self.NAME2 )
+		self.assertEqual( rx.structure_dict[LABEL2].name, self.NAME2 )
+		self.assertEqual( rx.structure_dict[LABEL1].dose, self.DOSE1 )
+		self.assertEqual( rx.structure_dict[LABEL2].dose, self.DOSE2 )
+		self.assertEqual( rx.structure_dict[LABEL3].dose, self.DOSE3 )
 
-		self.assertTrue( LABEL1 in rx.constraint_dict)
-		self.assertTrue( LABEL2 in rx.constraint_dict)
-		self.assertTrue( LABEL3 in rx.constraint_dict)
-		self.assertTrue( str(self.c11) in str(rx.constraint_dict[LABEL1]) )
-		self.assertTrue( str(self.c12) in str(rx.constraint_dict[LABEL1]) )
-		self.assertTrue( str(self.c21) in str(rx.constraint_dict[LABEL2]) )
-		self.assertTrue( str(self.c22) in str(rx.constraint_dict[LABEL2]) )
-		self.assertTrue( str(self.c31) in str(rx.constraint_dict[LABEL3]) )
-		self.assertTrue( str(self.c32) in str(rx.constraint_dict[LABEL3]) )
+		self.assertIn( LABEL1, rx.constraint_dict)
+		self.assertIn( LABEL2, rx.constraint_dict)
+		self.assertIn( LABEL3, rx.constraint_dict)
+		self.assertIn( str(self.c11), str(rx.constraint_dict[LABEL1]) )
+		self.assertIn( str(self.c12), str(rx.constraint_dict[LABEL1]) )
+		self.assertIn( str(self.c21), str(rx.constraint_dict[LABEL2]) )
+		self.assertIn( str(self.c22), str(rx.constraint_dict[LABEL2]) )
+		self.assertIn( str(self.c31), str(rx.constraint_dict[LABEL3]) )
+		self.assertIn( str(self.c32), str(rx.constraint_dict[LABEL3]) )
 
 	def test_prescription_init(self):
 		rx = Prescription()
-		self.assertTrue( isinstance(rx.constraint_dict, dict) )
-		self.assertTrue( len(rx.constraint_dict) == 0 )
+		self.assertIsInstance( rx.constraint_dict, dict )
+		self.assertEqual( len(rx.constraint_dict), 0 )
 
-		self.assertTrue( isinstance(rx.structure_dict, dict) )
-		self.assertTrue( len(rx.structure_dict) == 0 )
+		self.assertIsInstance( rx.structure_dict, dict )
+		self.assertEqual( len(rx.structure_dict), 0 )
 
-		self.assertTrue( isinstance(rx.rx_list, list) )
-		self.assertTrue( len(rx.rx_list) == 0 )
+		self.assertIsInstance( rx.rx_list, list )
+		self.assertEqual( len(rx.rx_list), 0 )
 
 		slist = [
 				Structure(self.LABEL1, self.NAME1, True, dose=self.DOSE1),
@@ -326,9 +295,9 @@ class PrescriptionTestCase(ConradTestCase):
 		]
 		for s in slist:
 			rx.add_structure_to_dictionaries(s)
-			self.assertTrue( s.label in rx.structure_dict )
-			self.assertTrue( s.label in rx.constraint_dict )
-			self.assertTrue( rx.constraint_dict[s.label].size == 0 )
+			self.assertIn( s.label, rx.structure_dict )
+			self.assertIn( s.label, rx.constraint_dict )
+			self.assertEqual( rx.constraint_dict[s.label].size, 0 )
 
 		rx.constraint_dict[self.LABEL1] += self.c11
 		rx.constraint_dict[self.LABEL1] += self.c12

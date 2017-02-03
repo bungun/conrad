@@ -70,7 +70,7 @@ class PlanningProblem(object):
 		else:
 			return self.__solver
 
-	def __update_constraints(self, structure, slack_tol=1e-3):
+	def __update_constraints(self, structure, slack_tol=5e-3):
 		"""
 		Pull solver results pertaining to constraint slacks.
 
@@ -218,7 +218,7 @@ class PlanningProblem(object):
 			None
 
 		Raises:
-			AttributeError: If neither a CVXPY solver nor an OPTKIT/POGS
+			ValueError: If neither a CVXPY solver nor an OPTKIT/POGS
 				solver is available.
 		"""
 		if self.solver_pogs is not None:
@@ -229,7 +229,7 @@ class PlanningProblem(object):
 			self.__solver = self.solver_cvxpy
 			return
 
-		raise AttributeError('no solvers available')
+		raise ValueError('no solvers available')
 
 	def __verify_2pass_applicable(self, structures):
 		"""
@@ -282,12 +282,12 @@ class PlanningProblem(object):
 			``2`` if two-pass method requested and both passes feasible.
 
 		Raises:
-			AttributeError: If no solvers avaialable.
+			ValueError: If no solvers avaialable.
 		"""
 		if self.solver_cvxpy is None and self.solver_pogs is None:
-			raise AttributeError('at least one of packages\n-cvxpy\n'
-								 '-optkit\nmust be installed to perform'
-								 ' optimization')
+			raise ValueError(
+					'at least one of packages\n-cvxpy\n-optkit\nmust '
+					'be installed to perform optimization')
 		if 'print_construction' in options:
 			PRINT_PROBLEM_CONSTRUCTION = bool(options['print_construction'])
 		else:

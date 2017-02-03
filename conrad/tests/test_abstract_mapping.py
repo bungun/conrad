@@ -30,17 +30,17 @@ class DiscreteMappingTestCase(ConradTestCase):
 	def test_discrete_mapping_init(self):
 		dmap = DiscreteMapping(range(10))
 
-		self.assertTrue( isinstance(dmap.vec, np.ndarray) )
+		self.assertIsInstance( dmap.vec, np.ndarray )
 		self.assert_vector_equal( dmap.vec, [i for i in xrange(10)] )
-		self.assertTrue( dmap.n_frame0 == 10 )
-		self.assertTrue( dmap.n_frame1 == 10 )
+		self.assertEqual( dmap.n_frame0, 10 )
+		self.assertEqual( dmap.n_frame1, 10 )
 
 		dmap = DiscreteMapping([0, 3, 5])
-		self.assertTrue( dmap.n_frame0 == 3 )
-		self.assertTrue( dmap.n_frame1 == 6 )
+		self.assertEqual( dmap.n_frame0, 3 )
+		self.assertEqual( dmap.n_frame1, 6 )
 
 		for i in xrange(dmap.n_frame0):
-			self.assertTrue( dmap[i] == dmap.vec[i] )
+			self.assertEqual( dmap[i], dmap.vec[i] )
 
 	def test_discrete_mapping_01(self):
 		dmap = DiscreteMapping([1, 3, 5])
@@ -53,15 +53,14 @@ class DiscreteMappingTestCase(ConradTestCase):
 			dmap.frame0_to_1_inplace(vec_0, vec_1, clear_output=clear)
 			vec_1a = dmap.frame0_to_1(vec_0)
 
-			self.assertTrue( isinstance(vec_1a, np.ndarray) )
+			self.assertIsInstance( vec_1a, np.ndarray )
 			for index in range(dmap.n_frame1):
 				if index in reverse:
-					self.assertTrue(
-							vec_1[index] == t * vec_0[reverse[index]] )
-					self.assertTrue( vec_1a[index] == vec_0[reverse[index]] )
+					self.assertEqual( vec_1[index], t * vec_0[reverse[index]] )
+					self.assertEqual( vec_1a[index], vec_0[reverse[index]] )
 				else:
-					self.assertTrue( vec_1[index] == 0 )
-					self.assertTrue( vec_1a[index] == 0 )
+					self.assertEqual( vec_1[index], 0 )
+					self.assertEqual( vec_1a[index], 0 )
 			vec_1a = None
 
 		n = 5
@@ -71,7 +70,7 @@ class DiscreteMappingTestCase(ConradTestCase):
 		for clear, t in [(False, 1), (False, 2), (True, 1)]:
 			dmap.frame0_to_1_inplace(mat_0, mat_1, clear_output=clear)
 			mat_1a = dmap.frame0_to_1(mat_0)
-			self.assertTrue( isinstance(mat_1a, np.ndarray) )
+			self.assertIsInstance( mat_1a, np.ndarray )
 			for index in range(dmap.n_frame1):
 				if index in reverse:
 					self.assert_vector_equal(
@@ -80,17 +79,15 @@ class DiscreteMappingTestCase(ConradTestCase):
 							mat_1a[index, :], mat_0[reverse[index], :])
 
 				else:
-					self.assertTrue(
-							np.sum(mat_1[index, :] != 0) == 0 )
-					self.assertTrue(
-							np.sum(mat_1a[index, :] != 0) == 0 )
+					self.assertEqual( np.sum(mat_1[index, :] != 0), 0 )
+					self.assertEqual( np.sum(mat_1a[index, :] != 0), 0 )
 			mat_1a = None
 
 		dmap = DiscreteMapping([0, 1, 1])
 		i = np.random.rand(3)
 		o = dmap.frame0_to_1(i)
-		self.assertTrue( o[0] == i[0] )
-		self.assertTrue( o[1] == i[1] + i[2] )
+		self.assertEqual( o[0], i[0] )
+		self.assertEqual( o[1], i[1] + i[2] )
 
 		i = np.random.rand(3, 4)
 		o = dmap.frame0_to_1(i)
@@ -115,12 +112,11 @@ class DiscreteMappingTestCase(ConradTestCase):
 			dmap.frame1_to_0_inplace(vec_1, vec_0, clear_output=clear)
 			vec_0a = dmap.frame1_to_0(vec_1)
 
-			self.assertTrue( isinstance(vec_0a, np.ndarray) )
+			self.assertIsInstance( vec_0a, np.ndarray )
 			for index in range(dmap.n_frame1):
 				if index in reverse:
-					self.assertTrue(
-							vec_0[reverse[index]] == t * vec_1[index] )
-					self.assertTrue( vec_0a[reverse[index]] == vec_1[index] )
+					self.assertEqual( vec_0[reverse[index]], t * vec_1[index] )
+					self.assertEqual( vec_0a[reverse[index]], vec_1[index] )
 			vec_0a = None
 
 		n = 5
@@ -130,7 +126,7 @@ class DiscreteMappingTestCase(ConradTestCase):
 		for clear, t in [(False, 1), (False, 2), (True, 1)]:
 			dmap.frame1_to_0_inplace(mat_1, mat_0, clear_output=clear)
 			mat_0a = dmap.frame1_to_0(mat_1)
-			self.assertTrue( isinstance(mat_0a, np.ndarray) )
+			self.assertIsInstance( mat_0a, np.ndarray )
 			for index in range(dmap.n_frame1):
 				if index in reverse:
 					self.assert_vector_equal(
@@ -143,9 +139,9 @@ class DiscreteMappingTestCase(ConradTestCase):
 		dmap = DiscreteMapping([0, 1, 1])
 		i = np.random.rand(2)
 		o = dmap.frame1_to_0(i)
-		self.assertTrue( o[0] == i[0] )
-		self.assertTrue( o[1] == i[1] )
-		self.assertTrue( o[2] == i[1] )
+		self.assertEqual( o[0], i[0] )
+		self.assertEqual( o[1], i[1] )
+		self.assertEqual( o[2], i[1] )
 
 		i = np.random.rand(2, 4)
 		o = dmap.frame1_to_0(i)
@@ -163,8 +159,8 @@ class DiscreteMappingTestCase(ConradTestCase):
 class ClusterMappingTestCase(ConradTestCase):
 	def test_cluster_mapping_init(self):
 		cmap = ClusterMapping([1, 2, 2, 3, 3, 3])
-		self.assertTrue( cmap.n_points == 6 )
-		self.assertTrue( cmap.n_clusters == 4 )
+		self.assertEqual( cmap.n_points, 6 )
+		self.assertEqual( cmap.n_clusters, 4 )
 		self.assert_vector_equal( cmap.cluster_weights, np.array([range(4)]) )
 
 	def test_cluster_mapping_rescale_points(self):
@@ -280,11 +276,11 @@ class ClusterMappingTestCase(ConradTestCase):
 
 	def test_cluster_mapping_to_contiguous(self):
 		cmap = ClusterMapping([0, 1, 1, 2])
-		self.assertTrue( cmap.contiguous is cmap )
+		self.assertIs( cmap.contiguous, cmap )
 
 		cmap = ClusterMapping([1, 3, 3, 5, 3])
 		cmap_c = cmap.contiguous
-		self.assertFalse( cmap_c is cmap )
+		self.assertIsNot( cmap_c, cmap )
 
 		self.assert_vector_equal( cmap_c.vec, [0, 1, 1, 2, 1] )
 
@@ -299,20 +295,21 @@ class PermutationMappingTestCase(ConradTestCase):
 
 class MappingMethodsTestCase(ConradTestCase):
 	def test_map_type_to_string(self):
-		self.assertTrue( map_type_to_string(
-				PermutationMapping(range(10))) == 'permutation' )
-		self.assertTrue( map_type_to_string(
-				ClusterMapping(range(10))) == 'cluster' )
-		self.assertTrue( map_type_to_string(
-				DiscreteMapping(range(10))) == 'discrete' )
+		self.assertEqual(
+				map_type_to_string(PermutationMapping(range(10))),
+				'permutation' )
+		self.assertEqual(
+				map_type_to_string(ClusterMapping(range(10))),
+				'cluster' )
+		self.assertEqual( map_type_to_string(
+				DiscreteMapping(range(10))), 'discrete' )
 		with self.assertRaises(TypeError):
 			map_type_to_string(range(10))
 
 	def test_string_to_map_constructor(self):
-		self.assertTrue(
-				string_to_map_constructor('permutation') ==
-				PermutationMapping )
-		self.assertTrue(
-				string_to_map_constructor('cluster') == ClusterMapping )
-		self.assertTrue(
-				string_to_map_constructor('') == DiscreteMapping )
+		self.assertEqual(
+				string_to_map_constructor('permutation'), PermutationMapping )
+		self.assertEqual(
+				string_to_map_constructor('cluster'), ClusterMapping )
+		self.assertEqual(
+				string_to_map_constructor(''), DiscreteMapping )

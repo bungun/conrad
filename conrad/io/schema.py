@@ -136,9 +136,8 @@ class ConradDatabaseEntry(object):
 	def flat_dictionary(self):
 		raise NotImplementedError
 
+@add_metaclass(abc.ABCMeta)
 class CaseEntry(ConradDatabaseEntry):
-	__metaclass__ = abc.ABCMeta
-
 	def __init__(self, **entry_dictionary):
 		ConradDatabaseEntry.__init__(self)
 		self.__name = None
@@ -874,9 +873,9 @@ class DoseFrameMappingEntry(ConradDatabaseEntry):
 				'beam_map_type': self.beam_map_type,
 		}
 
-class DataFragmentEntry(ConradDatabaseEntry):
-	__metaclass__ = abc.ABCMeta
 
+@add_metaclass(abc.ABCMeta)
+class DataFragmentEntry(ConradDatabaseEntry):
 	def __init__(self):
 		ConradDatabaseEntry.__init__(self)
 		self.__type = None
@@ -1017,9 +1016,8 @@ class DataDictionaryEntry(DataFragmentEntry):
 				'entries': str(self.entries),
 		}
 
+@add_metaclass(abc.ABCMeta)
 class DenseArrayEntry(DataFragmentEntry):
-	__metaclass__ = abc.ABCMeta
-
 	def __init__(self):
 		DataFragmentEntry.__init__(self)
 
@@ -1830,7 +1828,7 @@ class StructureEntry(ConradDatabaseEntry):
 		self.__rx = None
 		self.__size = None
 		self.__constraints = []
-		self.__objective = {'type': None, 'weight': None, 'parameters': None}
+		self.__objective = None
 		self.ingest_dictionary(**entry_dictionary)
 
 	@property
@@ -1912,17 +1910,12 @@ class StructureEntry(ConradDatabaseEntry):
 
 	@objective.setter
 	def objective(self, objective_dict):
-		type_ = objective_dict.pop('type', None)
-		if type_ is not None:
-			self.__objectives['type'] = str(type_)
-		weight = objective_dict.pop('weight', None)
-		if weight is not None:
-			self.__objectives['weight'] = float(weight)
-		parameters = objective_dict.pop('parameters', None)
-		if parameters not in (None, 'None'):
-			if isinstance(parameters, str):
-				parameters = ast.literal_eval(parameters)
-			self.__objectives['parameters'] = [float(p) for p in parameters]
+		if isinstance(objective_dict, str):
+			objective_dict = ast.literal_eval(objective_dict)
+		if isinstance(objective_dict, dict):
+			if 'type' in objective_dict and 'parameters' in objective_dict:
+				self.__objective = objective_dict
+
 
 	def ingest_dictionary(self, **structure_dictionary):
 		self.name = structure_dictionary.pop('name', None)
@@ -1931,17 +1924,7 @@ class StructureEntry(ConradDatabaseEntry):
 		self.rx = cdb_util.try_keys(
 				structure_dictionary, 'rx', 'dose', 'rx_dose')
 		self.constraint_list = structure_dictionary.pop('constraints', None)
-		self.objective = {
-				'type': cdb_util.try_keys(
-						structure_dictionary, 'objective_type',
-						['objective', 'type']),
-				'weight': cdb_util.try_keys(
-						structure_dictionary, 'objective_weight',
-						['objective', 'weight']),
-				'parameters': cdb_util.try_keys(
-						structure_dictionary, 'objective_parameters',
-						['objective', 'parameters']),
-		}
+		self.objective = structure_dictionary.pop('objective', None)
 
 	def flatten(self, conrad_db):
 		return self
@@ -1972,9 +1955,7 @@ class StructureEntry(ConradDatabaseEntry):
 				'rx': self.rx,
 				'size': self.size,
 				'constraints': str(self.constraints),
-				'objective_type': self.objective['type'],
-				'objective_weight': self.objective['weight'],
-				'objective_parameters': str(self.objective['parameters']),
+				'objective': str(self.objective),
 		}
 
 CONRAD_DB_ENTRY_PREFIXES = {

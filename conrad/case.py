@@ -277,30 +277,26 @@ class Case(object):
 				s.set_constraint(constr_id, threshold, direction, dose)
 				break
 
-	def change_objective(self, label, dose=None, w_under=None, w_over=None):
+	def change_objective(self, label, **objective_parameters):
 		"""
 		Modify objective for structure in :class:`Case`.
 
 		Arguments:
 			label: Label or name of a :class:`~conrad.medicine.Structure`
 				in :attr:`Case.anatomy`.
-			dose (:class:`~conrad.physics.units.DeliveredDose`, optional):
-				Set target dose for structure.
-			w_under (:obj:`float`, optional): Set underdose weight for
-				structure.
-			w_over (:obj:`float`, optional): Set overdose weight for
-				structure.
+			**options:
 
 		Returns:
 			None
 		"""
-		if self.anatomy[label].is_target:
-			if dose is not None:
-				self.anatomy[label].dose = dose
-			if w_under is not None:
-				self.anatomy[label].w_under = w_under
-		if w_over is not None:
-			self.anatomy[label].w_over = w_over
+		self.anatomy[label].objective.change_parameters(**objective_parameters)
+		# if self.anatomy[label].is_target:
+		# 	if dose is not None:
+		# 		self.anatomy[label].dose = dose
+		# 	if w_under is not None:
+		# 		self.anatomy[label].w_under = w_under
+		# if w_over is not None:
+		# 	self.anatomy[label].w_over = w_over
 
 	def load_physics_to_anatomy(self, overwrite=False):
 		"""

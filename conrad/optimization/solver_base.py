@@ -43,7 +43,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import diff, zeros
+import numpy as np
 
 GAMMA_DEFAULT = 1e-2
 RELTOL_DEFAULT = 1e-3
@@ -206,80 +206,13 @@ class Solver(object):
 				raise ValueError('structure {} does not have a dose '
 								 'matrix or mean dose vector assigned'
 								 ''.format(s.name))
-		if sum(diff(cols) != 0) > 0:
+		if sum(np.diff(cols) != 0) > 0:
 			raise ValueError('all structures in plan must have a dose '
 							 'matrix with same number of beams:\n'
 							 'either M x N dose matrix or N x 1 mean '
 							 'dose vector, with N = # beams\nSizes: {}'
 							 ''.format(cols))
 		return cols[0]
-
-	def __gather_matrix_and_coefficients(self, structures):
-		r"""
-		Gather dose matrix and objective parameters from ``structures``.
-
-		The objective to be built is of the form::
-		:math: w_{abs}^T |Ax - \mbox{dose}| + w_{lin} (Ax - \mbox{dose})
-
-		Procedure for gathering dose matrix::
-			# Set A = [] empty matrix with 0 rows and N columns.
-			#
-			# for each structure in structures do
-			#	if structure is collapsable (mean/no dose constraints):
-			#		append structure's 1 x N mean dose vector to A.
-			#	else:
-			#		append structure's M_structure x N dose matrix to A.
-			# end for
-
-		The dose vector is built by repeating the structure dose for as
-		many rows as the structure's dose data occupies in the coalesced
-		dose matrix (once for collapsed structure, M_structure times for
-		full structures). These subvectors are concatenated vertically.
-
-		The weight vectors are built by converting the underdose and
-		overdose penalties for each structure into equivalent absolute
-		value and affine penalties, and multiplying each by the
-		structure's vector of voxel weights (or by the sum of the
-		structure's voxel weights, if the structure is collapsable).
-		These subvectors are concatenated vertically.
-
-		Arguments:
-			structures: Iterable collection of
-				:class:`~conrad.medicine.Structure` objects.
-
-		Returns:
-			:obj:`tuple`: Tuple of dose matrix, target dose vector,
-			absolute value penalty weight vector and affine penalty
-			weight vector.
-		"""
-		cols = self.__check_dimensions(structures)
-		rows = sum([s.size if not s.collapsable else 1 for s in structures])
-		A = zeros((rows, cols))
-		dose = zeros(rows)
-		weight_abs = zeros(rows)
-		weight_lin = zeros(rows)
-		ptr = 0
-
-		for s in structures:
-			if s.collapsable:
-				A[ptr, :] = s.A_mean[:]
-				weight_abs[ptr] = s.w_over * sum(s.voxel_weights)
-				weight_lin[ptr] = 0
-				ptr += 1
-			else:
-				A[ptr : ptr + s.size, :] += s.A_full
-				if s.is_target:
-					c_, d_ = self.get_cd_from_wts(s.w_under, s.w_over)
-					dose[ptr : ptr + s.size] = s.dose.value
-					weight_abs[ptr : ptr + s.size] = c_ * s.voxel_weights
-					weight_lin[ptr : ptr + s.size] = d_ * s.voxel_weights
-				else:
-					dose[ptr : ptr + s.size] = 0
-					weight_abs[ptr : ptr + s.size] = s.w_over * s.voxel_weights
-					weight_lin[ptr : ptr + s.size] = 0
-				ptr += s.size
-
-		return A, dose, weight_abs, weight_lin
 
 	def __construction_report(self, structures):
 		"""
@@ -306,10 +239,12 @@ class Solver(object):
 					matrix_info = str('using mean dose, dimensions '
 									  '1x{}'.format(structure.A_mean.size))
 					reason = str('structure does NOT have '
-								 'min/max/percentile dose constraints')
+								 'min/max/percentile dose constraints '
+								 'OR nonlinear objective')
 				else:
 					reason = str('structure has min/max/percentile '
-								 'dose constraints')
+								 'dose constraints OR nonlinear '
+								 'objective')
 
 			report.append(str('structure {} (label = {}): '
 							  '{} (reason: {})'.format(structure.name,
@@ -318,14 +253,17 @@ class Solver(object):
 
 	def build(self, structures, exact=False, **options):
 		""" Prototype for problem construction. """
-		raise RuntimeError('solver method "build" not implemented')
+		raise NotImplementedError(
+				'solver method "build" not implemented')
 
 	def get_slack_value(Self, constraint_id):
 		""" Prototype for querying slack variable values. """
-		raise RuntimeError('solver method "get_slack_value" not implemented')
+		raise NotImplementedError(
+				'solver method "get_slack_value" not implemented')
 
 	def get_dvh_slope(self, constraint_id):
 		"""
 		Prototype for querying slopes of restricted percentile constraints.
 		"""
-		raise RuntimeError('solver method "get_dvh_slope" not implemented')
+		raise NotImplementedError(
+				'solver method "get_dvh_slope" not implemented')

@@ -45,14 +45,14 @@ class DoseMatrixTestCase(ConradTestCase):
 		A_ = np.random.rand(m, n)
 		A = DoseMatrix(A_)
 
-		self.assertTrue( A.voxel_dim == m )
-		self.assertTrue( A.beam_dim == n )
+		self.assertEqual( A.voxel_dim, m )
+		self.assertEqual( A.beam_dim, n )
 		self.assert_vector_equal( A.data, A_ )
 
 		data = {i: np.random.rand(m, n) for i in xrange(4)}
 		A = DoseMatrix(data)
-		self.assertTrue( A.voxel_dim == 4 * m )
-		self.assertTrue( A.beam_dim == n )
+		self.assertEqual( A.voxel_dim, 4 * m )
+		self.assertEqual( A.beam_dim, n )
 
 		self.assertTrue( all(i in A for i in xrange(4)) )
 		self.assertTrue( all(('voxel', i) in A for i in xrange(4)) )
@@ -61,8 +61,8 @@ class DoseMatrixTestCase(ConradTestCase):
 
 		data['labeled_by'] = 'voxels'
 		A = DoseMatrix(data)
-		self.assertTrue( A.voxel_dim == 4 * m )
-		self.assertTrue( A.beam_dim == n )
+		self.assertEqual( A.voxel_dim, 4 * m )
+		self.assertEqual( A.beam_dim, n )
 		self.assertTrue( all(i in A for i in xrange(4)) )
 		self.assertTrue( all(('voxel', i) in A for i in xrange(4)) )
 		self.assertFalse( any(('beam', i) in A for i in xrange(4)) )
@@ -70,8 +70,8 @@ class DoseMatrixTestCase(ConradTestCase):
 
 		data['labeled_by'] = 'beams'
 		A = DoseMatrix(data)
-		self.assertTrue( A.voxel_dim == m )
-		self.assertTrue( A.beam_dim == 4 * n )
+		self.assertEqual( A.voxel_dim, m )
+		self.assertEqual( A.beam_dim, 4 * n )
 		self.assertFalse( any(i in A for i in xrange(4)) )
 		self.assertTrue( all(('beam', i) in A for i in xrange(4)) )
 		self.assertFalse( any(('voxel', i) in A for i in xrange(4)) )
@@ -90,8 +90,8 @@ class DoseMatrixTestCase(ConradTestCase):
 
 		D = DoseMatrix(A)
 		D.voxel_slice(0, indices)
-		self.assertTrue( 0 in D )
-		self.assertTrue( ('voxel', 0) in D )
+		self.assertIn( 0, D )
+		self.assertIn( ('voxel', 0), D )
 		self.assert_vector_equal(D.voxel_slice(0, None), A_sub_check)
 
 	def test_dose_mat_beam_slice(self):
@@ -103,7 +103,7 @@ class DoseMatrixTestCase(ConradTestCase):
 
 		D = DoseMatrix(A)
 		D.beam_slice(0, indices)
-		self.assertTrue( ('beam', 0) in D )
+		self.assertIn( ('beam', 0), D )
 		self.assert_vector_equal(D.beam_slice(0, None), A_sub_check)
 
 	def test_dose_mat_slice(self):
@@ -117,7 +117,7 @@ class DoseMatrixTestCase(ConradTestCase):
 		A_sub_vb = A[v_indices, :][:, b_indices]
 
 		D = DoseMatrix(A)
-		self.assertFalse( 'labeled_by' in D.manifest )
+		self.assertNotIn( 'labeled_by', D.manifest )
 
 		with self.assertRaises(ValueError):
 			D.slice()
@@ -126,32 +126,32 @@ class DoseMatrixTestCase(ConradTestCase):
 			D.slice(voxel_label=0)
 
 		D.slice(voxel_label=0, voxel_indices=v_indices)
-		self.assertTrue( 0 in D )
-		self.assertTrue( ('voxel', 0) in D )
-		self.assertTrue( ('beam', 0) not in D )
-		self.assertTrue( ('both', (0, 0)) not in D )
+		self.assertIn( 0, D )
+		self.assertIn( ('voxel', 0), D )
+		self.assertNotIn( ('beam', 0), D )
+		self.assertNotIn( ('both', (0, 0)), D )
 		self.assert_vector_equal( D.slice(voxel_label=0), A_sub_v )
 
-		self.assertTrue( len(D.cached_slices['voxel']) == 1 )
-		self.assertTrue( len(D.cached_slices['beam']) == 0 )
-		self.assertTrue( len(D.cached_slices['both']) == 0 )
+		self.assertEqual( len(D.cached_slices['voxel']), 1 )
+		self.assertEqual( len(D.cached_slices['beam']), 0 )
+		self.assertEqual( len(D.cached_slices['both']), 0 )
 
-		self.assertTrue( 'labeled_by' in D.manifest )
-		self.assertTrue( D.manifest['labeled_by'] == 'voxels' )
+		self.assertIn( 'labeled_by', D.manifest )
+		self.assertEqual( D.manifest['labeled_by'], 'voxels' )
 
 		with self.assertRaises(ValueError):
 			D.slice(beam_label=0)
 
 		D.slice(beam_label=0, beam_indices=b_indices)
-		self.assertTrue( 0 in D )
-		self.assertTrue( ('voxel', 0) in D )
-		self.assertTrue( ('beam', 0) in D )
-		self.assertTrue( ('both', (0, 0)) not in D )
+		self.assertIn( 0, D )
+		self.assertIn( ('voxel', 0), D )
+		self.assertIn( ('beam', 0), D )
+		self.assertNotIn( ('both', (0, 0)), D )
 		self.assert_vector_equal( D.slice(beam_label=0), A_sub_b )
 
-		self.assertTrue( len(D.cached_slices['voxel']) == 1 )
-		self.assertTrue( len(D.cached_slices['beam']) == 1 )
-		self.assertTrue( len(D.cached_slices['both']) == 0 )
+		self.assertEqual( len(D.cached_slices['voxel']), 1 )
+		self.assertEqual( len(D.cached_slices['beam']), 1 )
+		self.assertEqual( len(D.cached_slices['both']), 0 )
 
-		self.assertTrue( 'labeled_by' in D.manifest )
-		self.assertTrue( D.manifest['labeled_by'] == 'voxels' )
+		self.assertIn( 'labeled_by', D.manifest )
+		self.assertEqual( D.manifest['labeled_by'], 'voxels' )

@@ -66,17 +66,17 @@ else:
 			# standard initialization
 			cp = CasePlotter(self.case)
 			n_struc = self.case.anatomy.n_structures
-			self.assertTrue( isinstance(cp.dvh_plot, DVHPlot) )
-			self.assertTrue( cp.dvh_set is None )
-			self.assertTrue( isinstance(cp.structure_subset, list) )
-			self.assertTrue( len(cp.structure_subset) == n_struc )
-			self.assertTrue( isinstance(cp.structure_colors, dict) )
-			self.assertTrue( len(cp.structure_colors) == 0 )
-			self.assertTrue( isinstance(cp._CasePlotter__tag2label, dict))
-			self.assertTrue( len(cp._CasePlotter__tag2label) == 2 * n_struc )
+			self.assertIsInstance( cp.dvh_plot, DVHPlot )
+			self.assertIsNone( cp.dvh_set )
+			self.assertIsInstance( cp.structure_subset, list )
+			self.assertEqual( len(cp.structure_subset), n_struc )
+			self.assertIsInstance( cp.structure_colors, dict )
+			self.assertEqual( len(cp.structure_colors), 0 )
+			self.assertIsInstance( cp._CasePlotter__tag2label, dict )
+			self.assertEqual( len(cp._CasePlotter__tag2label), 2 * n_struc )
 
-			self.assertTrue( cp.grouping == 'together' )
-			self.assertTrue( cp.n_structures == self.anatomy.n_structures )
+			self.assertEqual( cp.grouping, 'together' )
+			self.assertEqual( cp.n_structures, self.anatomy.n_structures )
 
 			tags = [s.label for s in self.anatomy]
 			tags += [s.name for s in self.anatomy]
@@ -86,46 +86,46 @@ else:
 			# subset filtering
 			test_list = [0, 1, 2, 3, 4, 'PTV', 'OAR', 'OAR1', 'some string']
 			filtered_list = cp.filter_labels(test_list)
-			self.assertTrue( set(filtered_list) == {i for i in xrange(n_struc)} )
+			self.assertSetEqual( set(filtered_list), {i for i in xrange(n_struc)} )
 
 			test_dictionary = {item: item for item in test_list}
 			filtered_dict = cp.filter_data(test_dictionary)
-			self.assertTrue( filtered_dict == {i: i for i in xrange(n_struc)} )
+			self.assertDictEqual( filtered_dict, {i: i for i in xrange(n_struc)} )
 
 			# add data
 			cp.dvh_set = self.case.anatomy.plotting_data()
-			self.assertTrue( isinstance(cp.dvh_set, PlanDVHGraph) )
-			self.assertTrue( len(cp.dvh_set.structure_DVHs) == n_struc )
+			self.assertIsInstance( cp.dvh_set, PlanDVHGraph )
+			self.assertEqual( len(cp.dvh_set.structure_DVHs), n_struc )
 
 			# subset initialization
 			subset1 = [0, 1]
 			n_subset = len(subset1)
 			cp = CasePlotter(self.case, subset=subset1)
-			self.assertTrue( len(cp.structure_subset) == n_subset )
-			self.assertTrue( len(cp._CasePlotter__tag2label) == 2 * n_struc )
-			self.assertTrue( cp.n_structures == n_subset )
+			self.assertEqual( len(cp.structure_subset), n_subset )
+			self.assertEqual( len(cp._CasePlotter__tag2label), 2 * n_struc )
+			self.assertEqual( cp.n_structures, n_subset )
 
 			cp.dvh_set = self.case.anatomy.plotting_data()
-			self.assertTrue( len(cp.dvh_set.structure_DVHs) == n_subset )
+			self.assertEqual( len(cp.dvh_set.structure_DVHs), n_subset )
 
 			subset2 = [self.names[label] for label in subset1]
 			cp = CasePlotter(self.case, subset=subset2)
-			self.assertTrue( len(cp.structure_subset) == n_subset )
-			self.assertTrue( len(cp._CasePlotter__tag2label) == 2 * n_struc )
-			self.assertTrue( cp.n_structures == n_subset )
+			self.assertEqual( len(cp.structure_subset), n_subset )
+			self.assertEqual( len(cp._CasePlotter__tag2label), 2 * n_struc )
+			self.assertEqual( cp.n_structures, n_subset )
 
 			cp.dvh_set = self.case.anatomy.plotting_data()
-			self.assertTrue( len(cp.dvh_set.structure_DVHs) == n_subset )
+			self.assertEqual( len(cp.dvh_set.structure_DVHs), n_subset )
 
 			# verify that redundant entries are included once
 			subset3 = subset1 + subset2
 			cp = CasePlotter(self.case, subset=subset3)
-			self.assertTrue( len(cp.structure_subset) == n_subset )
-			self.assertTrue( len(cp._CasePlotter__tag2label) == 2 * n_struc )
-			self.assertTrue( cp.n_structures == n_subset )
+			self.assertEqual( len(cp.structure_subset), n_subset )
+			self.assertEqual( len(cp._CasePlotter__tag2label), 2 * n_struc )
+			self.assertEqual( cp.n_structures, n_subset )
 
 			cp.dvh_set = self.case.anatomy.plotting_data()
-			self.assertTrue( len(cp.dvh_set.structure_DVHs) == n_subset )
+			self.assertEqual( len(cp.dvh_set.structure_DVHs), n_subset )
 
 		def test_caseplotter_colors(self):
 			# disable autoset colors in initialization
@@ -136,23 +136,23 @@ else:
 			colors_snames = {'PTV': 'blue', 'OAR1': 'red', 'OAR2':'yellow'}
 
 			cp.structure_colors = colors
-			self.assertTrue( cp.structure_colors == colors )
+			self.assertEqual( cp.structure_colors, colors )
 
 			cp.structure_colors = colors_snames
-			self.assertTrue( cp.structure_colors == colors )
+			self.assertEqual( cp.structure_colors, colors )
 
 			colors[0] = 'chartreuse'
 			cp.structure_colors = {0: 'chartreuse'}
-			self.assertTrue( cp.structure_colors == colors )
+			self.assertEqual( cp.structure_colors, colors )
 
 			# restore autoset colors
 			CasePlotter.autoset_structure_colors = self.autoset_colors
 
 			# test autoset_structure_colors
 			cp._CasePlotter__structure_colors = {}
-			self.assertTrue( len(cp.structure_colors) == 0 )
+			self.assertEqual( len(cp.structure_colors), 0 )
 			cp.autoset_structure_colors()
-			self.assertTrue( len(cp.structure_colors) == cp.n_structures )
+			self.assertEqual( len(cp.structure_colors), cp.n_structures )
 
 			# autoset with structure order permutation
 			order0 = [0, 1, 2]
@@ -160,7 +160,7 @@ else:
 			colors_permuted = {label: cp.structure_colors[order0[i]]
 							   for i, label in enumerate(order1)}
 			cp.autoset_structure_colors(structure_order=order1)
-			self.assertTrue( colors_permuted == cp.structure_colors )
+			self.assertEqual( colors_permuted, cp.structure_colors )
 
 			# autoset with invalid structure order permutation
 			with self.assertRaises(ValueError):
@@ -169,7 +169,7 @@ else:
 			# autoset with non-default colormap
 			cp._CasePlotter__structure_colors = {}
 			cp.autoset_structure_colors(colormap='rainbow')
-			self.assertTrue( len(cp.structure_colors) == cp.n_structures )
+			self.assertEqual( len(cp.structure_colors), cp.n_structures )
 
 			# autoset with invalid colormap
 			with self.assertRaises(ValueError):
@@ -180,14 +180,14 @@ else:
 			cp = CasePlotter(self.case)
 
 			cp.grouping = 'together'
-			self.assertTrue( cp.grouping == 'together' )
+			self.assertEqual( cp.grouping, 'together' )
 			for i in xrange(3):
-				self.assertTrue( cp.dvh_plot.subplot_assignments[i] == 0 )
+				self.assertEqual( cp.dvh_plot.subplot_assignments[i], 0 )
 
 			cp.grouping = 'separate'
-			self.assertTrue( cp.grouping == 'separate' )
+			self.assertEqual( cp.grouping, 'separate' )
 			for i in xrange(3):
-				self.assertTrue( cp.dvh_plot.subplot_assignments[i] == i )
+				self.assertEqual( cp.dvh_plot.subplot_assignments[i], i )
 
 			group_alternates = [
 					(0, (1, 2)), (0, [1, 2]), [0, (1, 2)], [0, [1, 2]]]
@@ -196,9 +196,9 @@ else:
 			for g in group_alternates:
 				cp.grouping = g
 				for i in xrange(3):
-					self.assertTrue( cp.grouping == 'list' )
-					self.assertTrue( cp.dvh_plot.subplot_assignments[i] ==
-									 int(i > 0) )
+					self.assertEqual( cp.grouping, 'list' )
+					self.assertEqual(
+							cp.dvh_plot.subplot_assignments[i], int(i > 0) )
 
 			with self.assertRaises(TypeError):
 				cp.grouping = 1

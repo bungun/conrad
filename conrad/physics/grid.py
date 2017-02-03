@@ -27,8 +27,8 @@ import operator as op
 
 from conrad.physics.units import mm, mm2, cm3, Length
 
+@add_metaclass(abc.ABCMeta)
 class AbstractGrid(object):
-	__metaclass__ = abc.ABCMeta
 	""" Base class for regular grids. """
 
 	def __init__(self):

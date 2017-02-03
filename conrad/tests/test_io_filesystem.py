@@ -97,17 +97,17 @@ class FilesystemTestCaching(ConradFilesystemBase):
 class FilesystemBaseTestCase(ConradTestCase):
 	def test_fsbase_init(self):
 		fs = FilesystemTestBase()
-		self.assertTrue( isinstance(fs._ConradFilesystemBase__DIGEST, dict) )
+		self.assertIsInstance(fs._ConradFilesystemBase__DIGEST, dict )
 		for type_ in (
 				int, float, str, dict, type(None), DataDictionaryEntry,
 				VectorEntry, DenseMatrixEntry, SparseMatrixEntry):
-			self.assertTrue( type_ in fs._ConradFilesystemBase__DIGEST)
+			self.assertIn( type_, fs._ConradFilesystemBase__DIGEST)
 
-		self.assertTrue( isinstance(fs._ConradFilesystemBase__DUMP, dict) )
+		self.assertIsInstance(fs._ConradFilesystemBase__DUMP, dict )
 		for type_ in (
 				int, float, str, dict, type(None), np.ndarray, sp.csr_matrix,
 				sp.csc_matrix):
-			self.assertTrue( type_ in fs._ConradFilesystemBase__DUMP)
+			self.assertIn( type_, fs._ConradFilesystemBase__DUMP)
 
 	def test_fsbase_abstract(self):
 		fs = FilesystemTestBase()
@@ -123,8 +123,8 @@ class FilesystemBaseTestCase(ConradTestCase):
 	def test_fsbase_write_vector(self):
 		fs = FilesystemTestNaming()
 		ve = fs.write_vector('dir', 'name', np.random.rand(30))
-		self.assertTrue( isinstance(ve, VectorEntry) )
-		self.assertTrue( ve.data_file == 'writing at file `dir/name`' )
+		self.assertIsInstance(ve, VectorEntry )
+		self.assertEqual( ve.data_file, 'writing at file `dir/name`' )
 
 		with self.assertRaises(TypeError):
 			fs.write_vector(np.random.rand(30, 20))
@@ -135,9 +135,9 @@ class FilesystemBaseTestCase(ConradTestCase):
 	def test_fsbase_write_dense_matrix(self):
 		fs = FilesystemTestNaming()
 		dme = fs.write_dense_matrix('dir', 'name', np.random.rand(30, 20))
-		self.assertTrue( isinstance(dme, DenseMatrixEntry) )
+		self.assertIsInstance(dme, DenseMatrixEntry )
 		self.assertTrue( dme.layout_rowmajor )
-		self.assertTrue( dme.data_file == 'writing at file `dir/name`' )
+		self.assertEqual( dme.data_file, 'writing at file `dir/name`' )
 
 		with self.assertRaises(TypeError):
 			fs.write_dense_matrix(np.random.rand(30))
@@ -149,37 +149,37 @@ class FilesystemBaseTestCase(ConradTestCase):
 		fs = FilesystemTestNaming()
 		sme = fs.write_sparse_matrix(
 				'dir', 'name', sp.rand(30, 20, 0.2, format='csr'))
-		self.assertTrue( isinstance(sme, SparseMatrixEntry) )
+		self.assertIsInstance(sme, SparseMatrixEntry )
 		self.assertTrue( sme.layout_CSR )
-		self.assertTrue( sme.layout_fortran_indexing is not None )
+		self.assertIsNotNone( sme.layout_fortran_indexing )
 		self.assertFalse( sme.layout_fortran_indexing )
-		self.assertTrue( sme.shape == (30, 20) )
-		self.assertTrue(
-				sme.data_pointers_file ==
+		self.assertEqual( sme.shape, (30, 20) )
+		self.assertEqual(
+				sme.data_pointers_file,
 				'writing at file `dir/name_pointers`' )
-		self.assertTrue(
-				sme.data_indices_file ==
+		self.assertEqual(
+				sme.data_indices_file,
 				'writing at file `dir/name_indices`' )
-		self.assertTrue(
-				sme.data_values_file ==
+		self.assertEqual(
+				sme.data_values_file,
 				'writing at file `dir/name_values`' )
 
 		sme2 = fs.write_sparse_matrix(
 				'dir', 'name', sp.rand(30, 20, 0.2, format='csc'))
-		self.assertTrue( isinstance(sme2, SparseMatrixEntry) )
-		self.assertTrue( sme.layout_CSR is not None )
+		self.assertIsInstance(sme2, SparseMatrixEntry )
+		self.assertIsNotNone( sme.layout_CSR )
 		self.assertFalse( sme2.layout_CSR )
-		self.assertTrue( sme.layout_fortran_indexing is not None )
+		self.assertIsNotNone( sme.layout_fortran_indexing )
 		self.assertFalse( sme2.layout_fortran_indexing )
-		self.assertTrue( sme2.shape == (30, 20) )
-		self.assertTrue(
-				sme2.data_pointers_file ==
+		self.assertEqual( sme2.shape, (30, 20) )
+		self.assertEqual(
+				sme2.data_pointers_file,
 				'writing at file `dir/name_pointers`' )
-		self.assertTrue(
-				sme2.data_indices_file ==
+		self.assertEqual(
+				sme2.data_indices_file,
 				'writing at file `dir/name_indices`' )
-		self.assertTrue(
-				sme2.data_values_file ==
+		self.assertEqual(
+				sme2.data_values_file,
 				'writing at file `dir/name_values`' )
 
 		with self.assertRaises(TypeError):
@@ -193,9 +193,9 @@ class FilesystemBaseTestCase(ConradTestCase):
 	def test_fsbase_write_ndarray(self):
 		fs = FilesystemTestNaming()
 		ve = fs.write_ndarray('dir', 'name', np.random.rand(30))
-		self.assertTrue( isinstance(ve, VectorEntry) )
+		self.assertIsInstance(ve, VectorEntry )
 		dme = fs.write_ndarray('dir', 'name', np.random.rand(30, 20))
-		self.assertTrue( isinstance(dme, DenseMatrixEntry) )
+		self.assertIsInstance(dme, DenseMatrixEntry )
 
 		with self.assertRaises(TypeError):
 			fs.write_ndarray(sp.rand(30, 20, 0.2, format='csr'))
@@ -204,13 +204,13 @@ class FilesystemBaseTestCase(ConradTestCase):
 		fs = FilesystemTestNaming()
 
 		dme = fs.write_matrix('dir', 'name', np.random.rand(30, 20))
-		self.assertTrue( isinstance(dme, DenseMatrixEntry) )
+		self.assertIsInstance(dme, DenseMatrixEntry )
 		sme = fs.write_matrix(
 				'dir', 'name', sp.rand(30, 20, 0.2, format='csr'))
-		self.assertTrue( isinstance(sme, SparseMatrixEntry) )
+		self.assertIsInstance(sme, SparseMatrixEntry )
 		sme2 = fs.write_matrix(
 				'dir', 'name', sp.rand(30, 20, 0.2, format='csc'))
-		self.assertTrue( isinstance(sme2, SparseMatrixEntry) )
+		self.assertIsInstance(sme2, SparseMatrixEntry )
 
 		with self.assertRaises(TypeError):
 			fs.write_ndarray(np.random.rand(30))
@@ -220,63 +220,63 @@ class FilesystemBaseTestCase(ConradTestCase):
 
 		dd = {'1': 'string', '2': 'numeric'}
 		dd_out = fs.write_data_dictionary('dir', 'name', dd)
-		self.assertTrue( dd == dd_out )
+		self.assertEqual( dd, dd_out )
 
 		dd['3'] = np.random.rand(30)
 		dd_out = fs.write_data_dictionary('dir', 'name', dd)
-		self.assertTrue( isinstance(dd_out, DataDictionaryEntry) )
-		self.assertTrue( isinstance(dd_out.entries['3'], VectorEntry) )
-		self.assertTrue(
-				dd_out.entries['3'].data_file ==
+		self.assertIsInstance(dd_out, DataDictionaryEntry )
+		self.assertIsInstance(dd_out.entries['3'], VectorEntry )
+		self.assertEqual(
+				dd_out.entries['3'].data_file,
 				'writing at file `dir/name_3`' )
 
 		dd['4'] = np.random.rand(30, 20)
 		dd_out = fs.write_data_dictionary('dir', 'name', dd)
-		self.assertTrue( isinstance(dd_out, DataDictionaryEntry) )
-		self.assertTrue( isinstance(dd_out.entries['4'], DenseMatrixEntry) )
-		self.assertTrue(
-				dd_out.entries['4'].data_file ==
+		self.assertIsInstance(dd_out, DataDictionaryEntry )
+		self.assertIsInstance(dd_out.entries['4'], DenseMatrixEntry )
+		self.assertEqual(
+				dd_out.entries['4'].data_file,
 				'writing at file `dir/name_4`' )
 
 		dd['5'] = sp.rand(30, 20, 0.2, format='csr')
 		dd_out = fs.write_data_dictionary('dir', 'name', dd)
-		self.assertTrue( isinstance(dd_out, DataDictionaryEntry) )
-		self.assertTrue( isinstance(dd_out.entries['5'], SparseMatrixEntry) )
-		self.assertTrue(
-				dd_out.entries['5'].data_pointers_file ==
+		self.assertIsInstance(dd_out, DataDictionaryEntry )
+		self.assertIsInstance(dd_out.entries['5'], SparseMatrixEntry )
+		self.assertEqual(
+				dd_out.entries['5'].data_pointers_file,
 				'writing at file `dir/name_5_pointers`' )
-		self.assertTrue(
-				dd_out.entries['5'].data_indices_file ==
+		self.assertEqual(
+				dd_out.entries['5'].data_indices_file,
 				'writing at file `dir/name_5_indices`' )
-		self.assertTrue(
-				dd_out.entries['5'].data_values_file ==
+		self.assertEqual(
+				dd_out.entries['5'].data_values_file,
 				'writing at file `dir/name_5_values`' )
 
 		dd['6'] = {'key': 'value'}
 		dd_out = fs.write_data_dictionary('dir', 'name', dd)
-		self.assertTrue( isinstance(dd_out, DataDictionaryEntry) )
-		self.assertTrue( dd_out.entries['6'] == dd['6'] )
+		self.assertIsInstance(dd_out, DataDictionaryEntry )
+		self.assertEqual( dd_out.entries['6'], dd['6'] )
 
 		dd['7'] = {'key': np.random.rand(30)}
 		dd_out = fs.write_data_dictionary('dir', 'name', dd)
-		self.assertTrue( isinstance(dd_out, DataDictionaryEntry) )
-		self.assertTrue( isinstance(dd_out.entries['7'], DataDictionaryEntry) )
-		self.assertTrue( isinstance(
-				dd_out.entries['7'].entries['key'], VectorEntry) )
-		self.assertTrue(
-				dd_out.entries['7'].entries['key'].data_file ==
+		self.assertIsInstance(dd_out, DataDictionaryEntry )
+		self.assertIsInstance(dd_out.entries['7'], DataDictionaryEntry )
+		self.assertIsInstance(
+				dd_out.entries['7'].entries['key'], VectorEntry )
+		self.assertEqual(
+				dd_out.entries['7'].entries['key'].data_file,
 				'writing at file `dir/name_7_key`' )
 
 	def test_fsbase_write_generic(self):
 		fs = FilesystemTestNaming()
 		int_val = fs.write_data('dir', 'name', 2)
-		self.assertTrue( isinstance(int_val, int) )
+		self.assertIsInstance(int_val, int )
 		flt_val = fs.write_data('dir', 'name', 2.)
-		self.assertTrue( isinstance(flt_val, float) )
+		self.assertIsInstance(flt_val, float )
 		str_val = fs.write_data('dir', 'name', '2')
-		self.assertTrue( isinstance(str_val, str) )
+		self.assertIsInstance(str_val, str )
 		dct_val = fs.write_data('dir', 'name', {'key': 'value'})
-		self.assertTrue( isinstance(dct_val, dict) )
+		self.assertIsInstance(dct_val, dict )
 
 		with self.assertRaises(TypeError):
 			fs.write_data('dir', 'name', [])
@@ -284,18 +284,18 @@ class FilesystemBaseTestCase(ConradTestCase):
 			fs.write_data('dir', 'name', set())
 
 		ve = fs.write_data('dir', 'name', np.random.rand(30))
-		self.assertTrue( isinstance(ve, VectorEntry) )
-		self.assertTrue( '`dir/name`' in ve.data_file )
+		self.assertIsInstance(ve, VectorEntry )
+		self.assertIn( '`dir/name`', ve.data_file )
 
 		dme = fs.write_data('dir', 'name', np.random.rand(30, 20))
-		self.assertTrue( isinstance(dme, DenseMatrixEntry) )
-		self.assertTrue( '`dir/name`' in dme.data_file )
+		self.assertIsInstance(dme, DenseMatrixEntry )
+		self.assertIn( '`dir/name`', dme.data_file )
 
 		sme = fs.write_data('dir', 'name', sp.rand(30, 20, 0.2, format='csr'))
-		self.assertTrue( isinstance(sme, SparseMatrixEntry) )
-		self.assertTrue( '`dir/name_pointers`' in sme.data_pointers_file )
-		self.assertTrue( '`dir/name_indices`' in sme.data_indices_file )
-		self.assertTrue( '`dir/name_values`' in sme.data_values_file )
+		self.assertIsInstance(sme, SparseMatrixEntry )
+		self.assertIn( '`dir/name_pointers`', sme.data_pointers_file )
+		self.assertIn( '`dir/name_indices`', sme.data_indices_file )
+		self.assertIn( '`dir/name_values`', sme.data_values_file )
 
 		dde = fs.write_data('dir', 'name', {
 				'first_key': np.random.rand(30),
@@ -308,43 +308,38 @@ class FilesystemBaseTestCase(ConradTestCase):
 				'eighth_key': 'string',
 				'ninth_key': {'key': np.random.rand(30)},
 		})
-		self.assertTrue( isinstance(dde, DataDictionaryEntry) )
-		self.assertTrue(
-				isinstance(dde.entries['first_key'], VectorEntry))
-		self.assertTrue(
-				'`dir/name_first_key`' in
+		self.assertIsInstance(dde, DataDictionaryEntry )
+		self.assertIsInstance( dde.entries['first_key'], VectorEntry )
+		self.assertIn(
+				'`dir/name_first_key`',
 				dde.entries['first_key'].data_file)
-		self.assertTrue(
-				isinstance(dde.entries['second_key'], VectorEntry))
-		self.assertTrue(
-				'`dir/name_second_key`' in
+		self.assertIsInstance( dde.entries['second_key'], VectorEntry )
+		self.assertIn(
+				'`dir/name_second_key`',
 				dde.entries['second_key'].data_file)
-		self.assertTrue(
-				isinstance(dde.entries['third_key'], DenseMatrixEntry))
-		self.assertTrue(
-				'`dir/name_third_key`' in
+		self.assertIsInstance( dde.entries['third_key'], DenseMatrixEntry )
+		self.assertIn(
+				'`dir/name_third_key`',
 				dde.entries['third_key'].data_file)
-		self.assertTrue(
-				isinstance(dde.entries['fourth_key'], SparseMatrixEntry))
-		self.assertTrue(
-				'`dir/name_fourth_key_pointers`' in
+		self.assertIsInstance( dde.entries['fourth_key'], SparseMatrixEntry )
+		self.assertIn(
+				'`dir/name_fourth_key_pointers`',
 				dde.entries['fourth_key'].data_pointers_file)
-		self.assertTrue(
-				'`dir/name_fourth_key_indices`' in
+		self.assertIn(
+				'`dir/name_fourth_key_indices`',
 				dde.entries['fourth_key'].data_indices_file)
-		self.assertTrue(
-				'`dir/name_fourth_key_values`' in
+		self.assertIn(
+				'`dir/name_fourth_key_values`',
 				dde.entries['fourth_key'].data_values_file)
-		self.assertTrue( isinstance(dde.entries['fifth_key'], dict) )
-		self.assertTrue( isinstance(dde.entries['sixth_key'], int) )
-		self.assertTrue( isinstance(dde.entries['seventh_key'], float) )
-		self.assertTrue( isinstance(dde.entries['eighth_key'], str) )
-		self.assertTrue(
-				isinstance(dde.entries['ninth_key'], DataDictionaryEntry) )
-		self.assertTrue( isinstance(
-			dde.entries['ninth_key'].entries['key'], VectorEntry) )
-		self.assertTrue(
-				'`dir/name_ninth_key_key`' in
+		self.assertIsInstance(dde.entries['fifth_key'], dict )
+		self.assertIsInstance(dde.entries['sixth_key'], int )
+		self.assertIsInstance(dde.entries['seventh_key'], float )
+		self.assertIsInstance(dde.entries['eighth_key'], str )
+		self.assertIsInstance( dde.entries['ninth_key'], DataDictionaryEntry )
+		self.assertIsInstance(
+			dde.entries['ninth_key'].entries['key'], VectorEntry )
+		self.assertIn(
+				'`dir/name_ninth_key_key`',
 				dde.entries['ninth_key'].entries['key'].data_file )
 
 	def test_fsbase_read_vector(self):
@@ -366,7 +361,7 @@ class FilesystemBaseTestCase(ConradTestCase):
 		mat = sp.rand(30, 20, 0.2, format='csr')
 		mat_entry = fs.write_sparse_matrix('dir', 'mat1', mat)
 		mat_back = fs.to_sparse_matrix(mat_entry)
-		self.assertTrue( isinstance(mat_back, sp.csr_matrix) )
+		self.assertIsInstance(mat_back, sp.csr_matrix )
 		self.assert_vector_equal(mat.indptr, mat_back.indptr)
 		self.assert_vector_equal(mat.indices, mat_back.indices)
 		self.assert_vector_equal(mat.data, mat_back.data)
@@ -374,7 +369,7 @@ class FilesystemBaseTestCase(ConradTestCase):
 		mat = sp.rand(30, 20, 0.2, format='csc')
 		mat_entry = fs.write_sparse_matrix('dir', 'mat2', mat)
 		mat_back = fs.to_sparse_matrix(mat_entry)
-		self.assertTrue( isinstance(mat_back, sp.csc_matrix) )
+		self.assertIsInstance(mat_back, sp.csc_matrix )
 		self.assert_vector_equal(mat.indptr, mat_back.indptr)
 		self.assert_vector_equal(mat.indices, mat_back.indices)
 		self.assert_vector_equal(mat.data, mat_back.data)
@@ -387,7 +382,7 @@ class FilesystemBaseTestCase(ConradTestCase):
 		}
 		dict_entry = fs.write_data_dictionary('dir', 'dict1', data_dict)
 		dict_back = fs.to_data_dictionary(dict_entry)
-		self.assertTrue( isinstance(dict_back, dict) )
+		self.assertIsInstance(dict_back, dict )
 		for k in data_dict:
 			self.assert_vector_equal(data_dict[k], dict_back[k])
 
@@ -405,10 +400,10 @@ class FilesystemBaseTestCase(ConradTestCase):
 				9: {'part1': np.random.rand(30), 'part2': np.random.rand(30)}
 		}
 		output_ = fs.read_data(fs.write_data('dir', 'file', input_))
-		self.assertTrue( isinstance(output_, dict) )
+		self.assertIsInstance(output_, dict )
 		for k in input_:
-			self.assertTrue( k in output_ )
-			self.assertTrue( type(input_[k]) == type(output_[k]) )
+			self.assertIn( k, output_ )
+			self.assertEqual( type(input_[k]), type(output_[k]) )
 			if k <= 2:
 				self.assert_vector_equal( input_[k], output_[k] )
 			elif k <= 4:
@@ -417,17 +412,17 @@ class FilesystemBaseTestCase(ConradTestCase):
 						input_[k].indices, output_[k].indices )
 				self.assert_vector_equal( input_[k].data, output_[k].data )
 			elif k <= 8:
-				self.assertTrue( input_[k] == output_[k] )
+				self.assertEqual( input_[k], output_[k] )
 			else:
 				for subk in input_[k]:
-					self.assertTrue( subk in output_[k] )
+					self.assertIn( subk, output_[k] )
 					self.assert_vector_equal(
 							input_[k][subk], output_[k][subk] )
 
 class LocaFilesystemTestCase(ConradTestCase):
 	def test_lfs_init(self):
 		lfs = LocalFilesystem()
-		self.assertTrue( isinstance(lfs, ConradFilesystemBase) )
+		self.assertIsInstance(lfs, ConradFilesystemBase )
 
 	@classmethod
 	def setUpClass(self):
@@ -463,7 +458,7 @@ class LocaFilesystemTestCase(ConradTestCase):
 		self.directories.append(d1_)
 		self.assertFalse( os.path.exists(d1_) )
 		d1 = lfs.join_mkdir(d, 'test')
-		self.assertTrue( d1 == d1_ )
+		self.assertEqual( d1, d1_ )
 		self.assertTrue( os.path.exists(d1_) )
 
 		d2_ = os.path.join(d, 'test1', 'test2')
@@ -471,14 +466,14 @@ class LocaFilesystemTestCase(ConradTestCase):
 		self.directories.append(d2_)
 		self.assertFalse( os.path.exists(d2_) )
 		d2 = lfs.join_mkdir(d, 'test1', 'test2')
-		self.assertTrue( d2 == d2_ )
+		self.assertEqual( d2, d2_ )
 		self.assertTrue( os.path.exists(d2_) )
 
 		d3_ = os.path.join(d2_, 'test3')
 		self.directories.append(d3_)
 		self.assertFalse( os.path.exists(d3_) )
 		d3 = lfs.join_mkdir(d, 'test1', 'test2', 'test2', 'test3')
-		self.assertTrue( d3 == d3_ )
+		self.assertEqual( d3, d3_ )
 		self.assertTrue( os.path.exists(d3_) )
 
 	def test_lfs_read(self):
@@ -514,7 +509,7 @@ class LocaFilesystemTestCase(ConradTestCase):
 
 		f_ = os.path.join(os.getcwd(), self.file_tag + 'vec1')
 		f = lfs.write(f_, np.random.rand(30))
-		self.assertTrue( f_ in f['file'] )
+		self.assertIn( f_, f['file'] )
 		self.assertTrue( f['file'].endswith('.npy') )
 
 		with self.assertRaises(OSError):
@@ -523,7 +518,7 @@ class LocaFilesystemTestCase(ConradTestCase):
 		f3 = lfs.write(f_, np.random.rand(30), overwrite=True)
 
 		f4 = lfs.write(f_, {'1': np.random.rand(30)})
-		self.assertTrue( f_ in f4['1']['file'] )
+		self.assertIn( f_, f4['1']['file'] )
 		self.assertTrue( f4['1']['file'].endswith('.npz') )
 
 	def test_lfs_functionality(self):
@@ -541,10 +536,10 @@ class LocaFilesystemTestCase(ConradTestCase):
 		}
 		output_ = lfs.read_data(lfs.write_data(
 				os.getcwd(), self.file_tag, input_))
-		self.assertTrue( isinstance(output_, dict) )
+		self.assertIsInstance(output_, dict )
 		for k in input_:
-			self.assertTrue( k in output_ )
-			self.assertTrue( type(input_[k]) == type(output_[k]) )
+			self.assertIn( k, output_ )
+			self.assertEqual( type(input_[k]), type(output_[k]) )
 			if k <= 2:
 				self.assert_vector_equal( input_[k], output_[k] )
 			elif k <= 4:
@@ -553,9 +548,9 @@ class LocaFilesystemTestCase(ConradTestCase):
 						input_[k].indices, output_[k].indices )
 				self.assert_vector_equal( input_[k].data, output_[k].data )
 			elif k <= 8:
-				self.assertTrue( input_[k] == output_[k] )
+				self.assertEqual( input_[k], output_[k] )
 			else:
 				for subk in input_[k]:
-					self.assertTrue( subk in output_[k] )
+					self.assertIn( subk, output_[k] )
 					self.assert_vector_equal(
 							input_[k][subk], output_[k][subk] )

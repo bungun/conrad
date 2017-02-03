@@ -58,14 +58,14 @@ class ConradDBSchemaUtilitesTestCase(ConradTestCase):
 		class TestEntry(ConradDatabaseEntry):
 			nested_dictionary = {'somefield': 3}
 
-		self.assertTrue( cdb_util.expand_if_db_entry(test_dict['a']) == 1 )
-		self.assertTrue( cdb_util.expand_if_db_entry(test_dict['b']) == 2 )
+		self.assertEqual( cdb_util.expand_if_db_entry(test_dict['a']), 1 )
+		self.assertEqual( cdb_util.expand_if_db_entry(test_dict['b']), 2 )
 		with self.assertRaises(NotImplementedError):
 				cdb_util.expand_if_db_entry(test_dict['c'])
 
 		test_dict['d'] = TestEntry()
-		self.assertTrue(
-				cdb_util.expand_if_db_entry(test_dict['d'], 'somefield') == 3 )
+		self.assertEqual(
+				cdb_util.expand_if_db_entry(test_dict['d'], 'somefield'), 3 )
 
 		entry_list = [1, ConradDatabaseEntry(), TestEntry()]
 		with self.assertRaises(NotImplementedError):
@@ -88,32 +88,32 @@ class DataFragmentEntryTestCase(ConradTestCase):
 		self.assertFalse( dfe._DataFragmentEntry__check_npyz_file_key(
 				'test.npz', None) )
 
-		self.assertTrue( dfe.type is None )
+		self.assertIsNone( dfe.type )
 		with self.assertRaises(NotImplementedError):
 			dfe.nested_dictionary
 		with self.assertRaises(NotImplementedError):
 			dfe.flat_dictionary
-		self.assertTrue( isinstance(dfe.fragment_flat_dictionary, dict) )
+		self.assertIsInstance( dfe.fragment_flat_dictionary, dict )
 		with self.assertRaises(NotImplementedError):
 			dfe.ingest_dictionary(**{})
 
 class DataDictionaryEntryTestCase(ConradTestCase):
 	def test_data_dictionary_entry(self):
 		dde = DataDictionaryEntry()
-		self.assertTrue( isinstance(dde, DataFragmentEntry) )
-		self.assertTrue( dde.type == 'dictionary' )
-		self.assertTrue( isinstance(dde.entries, dict) )
-		self.assertTrue( len(dde.entries) == 0 )
+		self.assertIsInstance( dde, DataFragmentEntry )
+		self.assertEqual( dde.type, 'dictionary' )
+		self.assertIsInstance( dde.entries, dict )
+		self.assertEqual( len(dde.entries), 0 )
 		self.assertFalse( dde.complete )
 		dde.entries = {'1': 2}
-		self.assertTrue( dde.entries['1'] == 2 )
+		self.assertEqual( dde.entries['1'], 2 )
 		self.assertTrue( dde.complete )
 
 		dde.entries = '{"3": 4}'
-		self.assertTrue( dde.entries['3'] == 4 )
+		self.assertEqual( dde.entries['3'], 4 )
 
 		dde.ingest_dictionary(entries={'5': 6})
-		self.assertTrue( dde.entries['5'] == 6 )
+		self.assertEqual( dde.entries['5'], 6 )
 
 		dde2 = DataDictionaryEntry(**dde.nested_dictionary)
 		dde3 = DataDictionaryEntry(**dde.flat_dictionary)
@@ -121,10 +121,10 @@ class DataDictionaryEntryTestCase(ConradTestCase):
 class DenseArrayEntryTestCase(ConradTestCase):
 	def test_dense_array_entry(self):
 		dae = DenseArrayEntry()
-		self.assertTrue( isinstance(dae, DataFragmentEntry) )
-		self.assertTrue( dae.type is None )
-		self.assertTrue( dae.data_file is None )
-		self.assertTrue( dae.data_key is None )
+		self.assertIsInstance( dae, DataFragmentEntry )
+		self.assertIsNone( dae.type )
+		self.assertIsNone( dae.data_file )
+		self.assertIsNone( dae.data_key )
 
 		self.assertFalse( dae._DenseArrayEntry__complete )
 		dae.data_file = 'test.npy'
@@ -137,7 +137,7 @@ class DenseArrayEntryTestCase(ConradTestCase):
 class VectorEntryTestCase(ConradTestCase):
 	def test_vector_entry(self):
 		ve = VectorEntry()
-		self.assertTrue( isinstance(ve, DenseArrayEntry) )
+		self.assertIsInstance( ve, DenseArrayEntry )
 
 		ve2 = VectorEntry(**ve.nested_dictionary)
 		ve3 = VectorEntry(**ve.flat_dictionary)
@@ -145,8 +145,8 @@ class VectorEntryTestCase(ConradTestCase):
 class DenseMatrixEntryTestCase(ConradTestCase):
 	def test_dense_matrix_entry(self):
 		dme = DenseMatrixEntry()
-		self.assertTrue( isinstance(dme, DenseArrayEntry) )
-		self.assertTrue( dme.layout_rowmajor is None )
+		self.assertIsInstance( dme, DenseArrayEntry )
+		self.assertIsNone( dme.layout_rowmajor )
 
 		dme.data_file = 'test.npy'
 		self.assertFalse( dme.complete )
@@ -159,10 +159,10 @@ class DenseMatrixEntryTestCase(ConradTestCase):
 class SparseMatrixEntryTestCase(ConradTestCase):
 	def test_sparse_matrix_entry(self):
 		sme = SparseMatrixEntry()
-		self.assertTrue( isinstance(sme, DataFragmentEntry) )
-		self.assertTrue( sme.layout_CSR is None )
-		self.assertTrue( sme.layout_fortran_indexing is None )
-		self.assertTrue( sme.shape is None )
+		self.assertIsInstance( sme, DataFragmentEntry )
+		self.assertIsNone( sme.layout_CSR )
+		self.assertIsNone( sme.layout_fortran_indexing )
+		self.assertIsNone( sme.shape )
 
 		self.assertFalse( sme.complete )
 		sme.layout_CSR = True
@@ -184,15 +184,15 @@ class SparseMatrixEntryTestCase(ConradTestCase):
 class DoseFrameEntryTestCase(ConradTestCase):
 	def test_dose_frame_entry(self):
 		dfe = DoseFrameEntry()
-		self.assertTrue( isinstance(dfe, ConradDatabaseEntry) )
-		self.assertTrue( dfe.name is None )
-		self.assertTrue( dfe.n_voxels is None )
-		self.assertTrue( dfe.n_beams is None )
-		self.assertTrue( dfe.dose_matrix is None )
-		self.assertTrue( dfe.voxel_labels is None )
-		self.assertTrue( dfe.voxel_weights is None )
-		self.assertTrue( dfe.beam_labels is None )
-		self.assertTrue( dfe.beam_weights is None )
+		self.assertIsInstance( dfe, ConradDatabaseEntry )
+		self.assertIsNone( dfe.name )
+		self.assertIsNone( dfe.n_voxels )
+		self.assertIsNone( dfe.n_beams )
+		self.assertIsNone( dfe.dose_matrix )
+		self.assertIsNone( dfe.voxel_labels )
+		self.assertIsNone( dfe.voxel_weights )
+		self.assertIsNone( dfe.beam_labels )
+		self.assertIsNone( dfe.beam_weights )
 
 		self.assertFalse( dfe.complete )
 		dfe.name = 'frame name'
@@ -218,20 +218,20 @@ class DoseFrameEntryTestCase(ConradTestCase):
 class DoseFrameMappingEntryTestCase(ConradTestCase):
 	def test_frame_mapping_entry(self):
 		dfie = DoseFrameMappingEntry()
-		self.assertTrue( isinstance(dfie, ConradDatabaseEntry) )
+		self.assertIsInstance( dfie, ConradDatabaseEntry )
 
 		# TODO: remainder of unit test
 
 class PhysicsEntryTestCase(ConradTestCase):
 	def test_physics_entry(self):
 		pe = PhysicsEntry()
-		self.assertTrue( isinstance(pe, ConradDatabaseEntry) )
-		self.assertTrue( isinstance(pe.voxel_grid, dict) )
-		self.assertTrue( pe.voxel_bitmask is None )
-		self.assertTrue( isinstance(pe.beam_set, dict) )
-		self.assertTrue( isinstance(pe.beam_set['control_points'], dict) )
-		self.assertTrue( isinstance(pe.frames, list) )
-		self.assertTrue( isinstance(pe.frame_mappings, list) )
+		self.assertIsInstance( pe, ConradDatabaseEntry )
+		self.assertIsInstance( pe.voxel_grid, dict )
+		self.assertIsNone( pe.voxel_bitmask )
+		self.assertIsInstance( pe.beam_set, dict )
+		self.assertIsInstance( pe.beam_set['control_points'], dict )
+		self.assertIsInstance( pe.frames, list )
+		self.assertIsInstance( pe.frame_mappings, list )
 
 		self.assertFalse( pe.complete )
 
@@ -261,13 +261,13 @@ class PhysicsEntryTestCase(ConradTestCase):
 class SolutionEntryTestCase(ConradTestCase):
 	def test_solution_entry(self):
 		se = SolutionEntry()
-		self.assertTrue( isinstance(se, ConradDatabaseEntry) )
-		self.assertTrue( se.name is None )
-		self.assertTrue( se.frame is None )
-		self.assertTrue( se.x is None )
-		self.assertTrue( se.y is None )
-		self.assertTrue( se.x_dual is None )
-		self.assertTrue( se.y_dual is None )
+		self.assertIsInstance( se, ConradDatabaseEntry )
+		self.assertIsNone( se.name )
+		self.assertIsNone( se.frame )
+		self.assertIsNone( se.x )
+		self.assertIsNone( se.y )
+		self.assertIsNone( se.x_dual )
+		self.assertIsNone( se.y_dual )
 
 		self.assertFalse( se.complete )
 		se.name = 'sol'
@@ -296,9 +296,9 @@ class SolutionEntryTestCase(ConradTestCase):
 class HistoryEntryTestCase(ConradTestCase):
 	def test_history_entry(self):
 		he = HistoryEntry()
-		self.assertTrue( isinstance(he, ConradDatabaseEntry) )
-		self.assertTrue( isinstance(he.solutions, list) )
-		self.assertTrue( len(he.solutions) == 0 )
+		self.assertIsInstance( he, ConradDatabaseEntry )
+		self.assertIsInstance( he.solutions, list )
+		self.assertEqual( len(he.solutions), 0 )
 
 		self.assertFalse( he.complete )
 		he.add_solutions(SolutionEntry())
@@ -316,15 +316,15 @@ class HistoryEntryTestCase(ConradTestCase):
 class SolverCacheEntryTestCase(ConradTestCase):
 	def test_solver_cache_entry(self):
 		sce = SolverCacheEntry()
-		self.assertTrue( isinstance(sce, ConradDatabaseEntry) )
-		self.assertTrue( sce.name is None )
-		self.assertTrue( sce.frame is None )
-		self.assertTrue( sce.solver is None )
-		self.assertTrue( sce.left_preconditioner is None )
-		self.assertTrue( sce.matrix is None )
-		self.assertTrue( sce.right_preconditioner is None )
-		self.assertTrue( sce.projector_type is None )
-		self.assertTrue( sce.projector_matrix is None )
+		self.assertIsInstance( sce, ConradDatabaseEntry )
+		self.assertIsNone( sce.name )
+		self.assertIsNone( sce.frame )
+		self.assertIsNone( sce.solver )
+		self.assertIsNone( sce.left_preconditioner )
+		self.assertIsNone( sce.matrix )
+		self.assertIsNone( sce.right_preconditioner )
+		self.assertIsNone( sce.projector_type )
+		self.assertIsNone( sce.projector_matrix )
 
 		self.assertFalse( sce.complete )
 		sce.name = 'my cache'
@@ -356,15 +356,15 @@ class SolverCacheEntryTestCase(ConradTestCase):
 class StructureEntryTestCase(ConradTestCase):
 	def test_structure_entry(self):
 		se = StructureEntry()
-		self.assertTrue( isinstance(se, ConradDatabaseEntry) )
-		self.assertTrue( se.label is None )
-		self.assertTrue( se.name is None )
-		self.assertTrue( se.target is None )
-		self.assertTrue( se.rx is None )
-		self.assertTrue( se.size is None )
-		self.assertTrue( isinstance(se.constraints, list) )
-		self.assertTrue( len(se.constraints) == 0 )
-		self.assertTrue( isinstance(se.objective, dict) )
+		self.assertIsInstance( se, ConradDatabaseEntry )
+		self.assertIsNone( se.label )
+		self.assertIsNone( se.name )
+		self.assertIsNone( se.target )
+		self.assertIsNone( se.rx )
+		self.assertIsNone( se.size )
+		self.assertIsInstance( se.constraints, list )
+		self.assertEqual( len(se.constraints), 0 )
+		self.assertIsNone( se.objective )
 
 		self.assertFalse( se.complete )
 		se.label = 0
@@ -385,9 +385,9 @@ class StructureEntryTestCase(ConradTestCase):
 class AnatomyEntryTestCase(ConradTestCase):
 	def test_anatomy_entry(self):
 		ae = AnatomyEntry()
-		self.assertTrue( isinstance(ae, ConradDatabaseEntry) )
-		self.assertTrue( isinstance(ae.structures, list) )
-		self.assertTrue( len(ae.structures) == 0 )
+		self.assertIsInstance( ae, ConradDatabaseEntry )
+		self.assertIsInstance( ae.structures, list )
+		self.assertEqual( len(ae.structures), 0 )
 
 		self.assertFalse( ae.complete )
 		ae.add_structures(StructureEntry())
@@ -405,14 +405,14 @@ class AnatomyEntryTestCase(ConradTestCase):
 class CaseEntryTestCase(ConradTestCase):
 	def test_case_entry(self):
 		ce = CaseEntry()
-		self.assertTrue( isinstance(ce, ConradDatabaseEntry) )
-		self.assertTrue( ce.name is None )
-		self.assertTrue( ce.prescription is None )
-		self.assertTrue( ce.anatomy is None )
-		self.assertTrue( ce.physics is None )
-		self.assertTrue( ce.history is None )
-		self.assertTrue( isinstance(ce.solver_caches, list) )
-		self.assertTrue( len(ce.solver_caches) == 0 )
+		self.assertIsInstance( ce, ConradDatabaseEntry )
+		self.assertIsNone( ce.name )
+		self.assertIsNone( ce.prescription )
+		self.assertIsNone( ce.anatomy )
+		self.assertIsNone( ce.physics )
+		self.assertIsNone( ce.history )
+		self.assertIsInstance( ce.solver_caches, list )
+		self.assertEqual( len(ce.solver_caches), 0 )
 
 		self.assertFalse( ce.complete )
 		ce.name = 'case name'

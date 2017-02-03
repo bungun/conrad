@@ -40,18 +40,18 @@ class DoseFrameTestCase(ConradTestCase):
 		self.assert_nan( d.beams )
 
 		d = DoseFrame(m, n, None)
-		self.assertTrue( d.voxels == m )
-		self.assertTrue( d.beams == n )
+		self.assertEqual( d.voxels, m )
+		self.assertEqual( d.beams, n )
 
 		b = BeamSet(n)
 		d = DoseFrame(m, b, None)
-		self.assertTrue( d.voxels == m )
-		self.assertTrue( d.beams == n )
+		self.assertEqual( d.voxels, m )
+		self.assertEqual( d.beams, n )
 
 		A = np.random.rand(m, n)
 		d = DoseFrame(None, None, A)
-		self.assertTrue( d.voxels == m )
-		self.assertTrue( d.beams == n )
+		self.assertEqual( d.voxels, m )
+		self.assertEqual( d.beams, n )
 		# size mismatches
 		with self.assertRaises(ValueError):
 			DoseFrame(None, n + 1, A)
@@ -63,12 +63,12 @@ class DoseFrameTestCase(ConradTestCase):
 			DoseFrame(m + 1, n, A)
 
 		A = sp.rand(m, n, 0.2, 'csr')
-		self.assertTrue( d.voxels == m )
-		self.assertTrue( d.beams == n )
+		self.assertEqual( d.voxels, m )
+		self.assertEqual( d.beams, n )
 
 		A = sp.rand(m, n, 0.2, 'csc')
-		self.assertTrue( d.voxels == m )
-		self.assertTrue( d.beams == n )
+		self.assertEqual( d.voxels, m )
+		self.assertEqual( d.beams, n )
 
 		A = sp.rand(m, n, 0.2) # COO sparse storage, not supported
 		with self.assertRaises(TypeError):
@@ -85,7 +85,7 @@ class DoseFrameTestCase(ConradTestCase):
 			d.beams = m
 
 		d.dose_matrix = np.random.rand(m, n)
-		self.assertTrue( isinstance(d.dose_matrix, DoseMatrix) )
+		self.assertIsInstance( d.dose_matrix, DoseMatrix )
 
 		# matrix with wrong size fails
 		with self.assertRaises(ValueError):
@@ -103,7 +103,7 @@ class DoseFrameTestCase(ConradTestCase):
 		# voxel labels
 		vl = (10 * np.random.rand(m)).astype(int)
 		d.voxel_labels = vl
-		self.assertTrue( sum(vl - d.voxel_labels) == 0 )
+		self.assertEqual( sum(vl - d.voxel_labels), 0 )
 
 		vl_missized = (10 * np.random.rand(m + 1)).astype(int)
 		with self.assertRaises(ValueError):
@@ -112,17 +112,17 @@ class DoseFrameTestCase(ConradTestCase):
 		# beam labels
 		bl = (4 * np.random.rand(n)).astype(int)
 		d.beam_labels = bl
-		self.assertTrue( sum(bl - d.beam_labels) == 0 )
+		self.assertEqual( sum(bl - d.beam_labels), 0 )
 
 		bl_missized = (10 * np.random.rand(n + 1)).astype(int)
 		with self.assertRaises(ValueError):
 			d.beam_labels = bl_missized
 
 		# voxel weights
-		self.assertTrue( isinstance(d.voxel_weights, WeightVector) )
-		self.assertTrue( isinstance(d.voxel_weights.data, np.ndarray) )
-		self.assertTrue( d.voxel_weights.size == m )
-		self.assertTrue( sum(d.voxel_weights.data != 1) == 0 )
+		self.assertIsInstance( d.voxel_weights, WeightVector )
+		self.assertIsInstance( d.voxel_weights.data, np.ndarray )
+		self.assertEqual( d.voxel_weights.size, m )
+		self.assertEqual( sum(d.voxel_weights.data != 1), 0 )
 		vw = (5 * np.random.rand(m)).astype(int).astype(float)
 		d.voxel_weights = vw
 		self.assert_vector_equal( vw, d.voxel_weights.data )
@@ -132,10 +132,10 @@ class DoseFrameTestCase(ConradTestCase):
 			d.voxel_weights = vw_missized
 
 		# beam weights
-		self.assertTrue( isinstance(d.beam_weights, WeightVector) )
-		self.assertTrue( isinstance(d.beam_weights.data, np.ndarray) )
-		self.assertTrue( d.beam_weights.size == n )
-		self.assertTrue( sum(d.beam_weights.data != 1) == 0 )
+		self.assertIsInstance( d.beam_weights, WeightVector )
+		self.assertIsInstance( d.beam_weights.data, np.ndarray )
+		self.assertEqual( d.beam_weights.size, n )
+		self.assertEqual( sum(d.beam_weights.data != 1), 0 )
 		bw = (5 * np.random.rand(n)).astype(int).astype(float)
 		d.beam_weights = bw
 		self.assert_vector_equal( bw, d.beam_weights.data )
@@ -249,21 +249,21 @@ class DoseFrameTestCase(ConradTestCase):
 class DoseFrameMappingTestCase(ConradTestCase):
 	def test_dose_frame_mapping(self):
 		dfm = DoseFrameMapping('source', 'target')
-		self.assertTrue( dfm.source == 'source' )
-		self.assertTrue( dfm.target == 'target' )
-		self.assertTrue( dfm.voxel_map is None )
-		self.assertTrue( dfm.beam_map is None )
-		self.assertTrue( dfm.voxel_map_type is None )
-		self.assertTrue( dfm.beam_map_type is None )
+		self.assertEqual( dfm.source, 'source' )
+		self.assertEqual( dfm.target, 'target' )
+		self.assertIsNone( dfm.voxel_map )
+		self.assertIsNone( dfm.beam_map )
+		self.assertIsNone( dfm.voxel_map_type )
+		self.assertIsNone( dfm.beam_map_type )
 
 		dfm.voxel_map = DiscreteMapping([1, 1, 3, 4])
-		self.assertTrue( isinstance(dfm.voxel_map, DiscreteMapping) )
-		self.assertTrue( dfm.voxel_map_type == 'discrete' )
+		self.assertIsInstance( dfm.voxel_map, DiscreteMapping )
+		self.assertEqual( dfm.voxel_map_type, 'discrete' )
 
 		dfm.beam_map = PermutationMapping([1, 3, 2, 4, 0])
-		self.assertTrue( isinstance(dfm.beam_map, PermutationMapping) )
-		self.assertTrue( isinstance(dfm.beam_map, DiscreteMapping) )
-		self.assertTrue( dfm.beam_map_type == 'permutation' )
+		self.assertIsInstance( dfm.beam_map, PermutationMapping )
+		self.assertIsInstance( dfm.beam_map, DiscreteMapping )
+		self.assertEqual( dfm.beam_map_type, 'permutation' )
 
 class PhysicsTestCase(ConradTestCase):
 	def test_physics_init(self):
@@ -274,47 +274,47 @@ class PhysicsTestCase(ConradTestCase):
 		A = np.random.rand(m, n)
 
 		p = Physics(m, n)
-		self.assertTrue( DEFAULT_FRAME0_NAME in p._Physics__frames )
-		self.assertFalse( 'geometric' in p._Physics__frames )
-		self.assertTrue( p.dose_matrix is None )
-		self.assertTrue( p.dose_grid is None )
-		self.assertTrue( p.voxel_labels is None )
-		self.assertTrue( p._Physics__beams.count == n )
+		self.assertIn( DEFAULT_FRAME0_NAME, p._Physics__frames )
+		self.assertNotIn( 'geometric', p._Physics__frames )
+		self.assertIsNone( p.dose_matrix )
+		self.assertIsNone( p.dose_grid )
+		self.assertIsNone( p.voxel_labels )
+		self.assertEqual( p._Physics__beams.count, n )
 		self.assertFalse( p.plannable )
 
 		p = Physics(dose_matrix=A)
 		self.assert_vector_equal( p.dose_matrix.data, A )
-		self.assertTrue( p.dose_grid is None )
-		self.assertTrue( p.voxel_labels is None )
-		self.assertTrue( p._Physics__beams.count == n )
+		self.assertIsNone( p.dose_grid )
+		self.assertIsNone( p.voxel_labels )
+		self.assertEqual( p._Physics__beams.count, n )
 		self.assertFalse( p.plannable )
 
 		b = BeamSet(n)
 		p = Physics(m, b)
-		self.assertTrue( p.dose_matrix is None )
-		self.assertTrue( p.dose_grid is None )
-		self.assertTrue( p.voxel_labels is None )
-		self.assertTrue( p._Physics__beams.count == n )
+		self.assertIsNone( p.dose_matrix )
+		self.assertIsNone( p.dose_grid )
+		self.assertIsNone( p.voxel_labels )
+		self.assertEqual( p._Physics__beams.count, n )
 		self.assertFalse( p.plannable )
 
 		vl = (10 * np.random.rand(m)).astype(int)
 		p = Physics(beams=n, voxel_labels=vl)
-		self.assertTrue( p.dose_matrix is None )
-		self.assertTrue( p.dose_grid is None )
+		self.assertIsNone( p.dose_matrix )
+		self.assertIsNone( p.dose_grid )
 		self.assert_vector_equal( p.voxel_labels, vl )
-		self.assertTrue( p._Physics__beams.count == n )
+		self.assertEqual( p._Physics__beams.count, n )
 		self.assertFalse( p.plannable )
 
 		vg = VoxelGrid(5, 5, 4)
 		p = Physics(beams=n, dose_grid=vg)
-		self.assertTrue( p.dose_matrix is None )
-		self.assertFalse( p.dose_grid is None )
-		self.assertTrue( p.voxel_labels is None )
-		self.assertTrue( p._Physics__beams.count == n )
+		self.assertIsNone( p.dose_matrix )
+		self.assertIsNotNone( p.dose_grid )
+		self.assertIsNone( p.voxel_labels )
+		self.assertEqual( p._Physics__beams.count, n )
 		self.assertFalse( p.plannable )
 
-		self.assertTrue( vg.voxels == m )
-		self.assertTrue( 'geometric' in p._Physics__frames )
+		self.assertEqual( vg.voxels, m )
+		self.assertIn( 'geometric', p._Physics__frames )
 
 		vw = np.random.rand(m)
 		bw = np.random.rand(n)
@@ -322,9 +322,9 @@ class PhysicsTestCase(ConradTestCase):
 		p = Physics(m, n, dose_matrix=A, dose_grid=vg, voxel_labels=vl,
 					voxel_weights=vw, beam_weights=bw, beam_labels=bl)
 		self.assert_vector_equal( p.dose_matrix.data, A )
-		self.assertFalse( p.dose_grid is None )
+		self.assertIsNotNone( p.dose_grid )
 		self.assert_vector_equal( p.voxel_labels, vl )
-		self.assertTrue( p._Physics__beams.count == n )
+		self.assertEqual( p._Physics__beams.count, n )
 		self.assert_vector_equal( p.frame.beam_labels, bl )
 		self.assert_vector_equal( p.frame.voxel_weights.data, vw )
 		self.assert_vector_equal( p.frame.beam_weights.data, bw )
@@ -333,9 +333,9 @@ class PhysicsTestCase(ConradTestCase):
 		# test copy constructor
 		p2 = Physics(p)
 		self.assert_vector_equal( p.dose_matrix.data, A )
-		self.assertFalse( p.dose_grid is None )
+		self.assertIsNotNone( p.dose_grid )
 		self.assert_vector_equal( p.voxel_labels, vl )
-		self.assertTrue( p._Physics__beams.count == n )
+		self.assertEqual( p._Physics__beams.count, n )
 		self.assert_vector_equal( p.frame.beam_labels, bl )
 		self.assert_vector_equal( p.frame.voxel_weights.data, vw )
 		self.assert_vector_equal( p.frame.beam_weights.data, bw )
@@ -360,31 +360,31 @@ class PhysicsTestCase(ConradTestCase):
 		m, n = 100, 50
 
 		p = Physics(m, n)
-		self.assertTrue( DEFAULT_FRAME0_NAME in p.available_frames )
-		self.assertTrue( len(p.available_frames) == 1 )
-		self.assertTrue( len(p.unique_frames) == 1 )
-		self.assertTrue( isinstance(p.unique_frames[0], DoseFrame) )
-		self.assertTrue( p.frame.name == DEFAULT_FRAME0_NAME )
+		self.assertIn( DEFAULT_FRAME0_NAME, p.available_frames )
+		self.assertEqual( len(p.available_frames), 1 )
+		self.assertEqual( len(p.unique_frames), 1 )
+		self.assertIsInstance( p.unique_frames[0], DoseFrame )
+		self.assertEqual( p.frame.name, DEFAULT_FRAME0_NAME )
 
 		# add
 		p.add_dose_frame('another frame', voxels=2*m, beams=2*n)
 
 		# available frames
-		self.assertTrue( 'another frame' in p.available_frames )
-		self.assertTrue( len(p.available_frames) == 2 )
+		self.assertIn( 'another frame', p.available_frames )
+		self.assertEqual( len(p.available_frames), 2 )
 
 		# unique frames
-		self.assertTrue( len(p.unique_frames) == 2 )
+		self.assertEqual( len(p.unique_frames), 2 )
 		self.assertTrue(
 				all([isinstance(f, DoseFrame) for f in p.unique_frames]))
 		self.assertTrue(
 				p.unique_frames[1].name == 'another frame' or
-				p.unique_frames[0].name == 'another frame')
+				p.unique_frames[0].name == 'another frame' )
 
 		# change
-		self.assertTrue( p.frame in p.unique_frames )
+		self.assertIn( p.frame, p.unique_frames )
 		p.change_dose_frame('another frame')
-		self.assertTrue( p.frame in p.unique_frames )
+		self.assertIn( p.frame, p.unique_frames )
 
 		with self.assertRaises(KeyError):
 			p.change_dose_frame('bad key')
@@ -392,7 +392,7 @@ class PhysicsTestCase(ConradTestCase):
 	def test_physics_frame_mappings(self):
 		p = Physics()
 		# available frame mappings
-		self.assertTrue( len(p.available_frame_mappings) == 0 )
+		self.assertEqual( len(p.available_frame_mappings), 0 )
 
 		# add
 		with self.assertRaises(TypeError):
@@ -402,7 +402,7 @@ class PhysicsTestCase(ConradTestCase):
 		p.add_frame_mapping(DoseFrameMapping('frame0', 'frame1'))
 
 		# available
-		self.assertTrue( len(p.available_frame_mappings) == 1 )
+		self.assertEqual( len(p.available_frame_mappings), 1 )
 
 		# retrieve
 		with self.assertRaises(ValueError):
@@ -412,7 +412,7 @@ class PhysicsTestCase(ConradTestCase):
 		with self.assertRaises(ValueError):
 			p.retrieve_frame_mapping('frame1', 'frame0')
 		fm = p.retrieve_frame_mapping('frame0', 'frame1')
-		self.assertTrue( isinstance(fm, DoseFrameMapping) )
+		self.assertIsInstance( fm, DoseFrameMapping )
 
 	def test_data_retrieval(self):
 		LABEL = 0

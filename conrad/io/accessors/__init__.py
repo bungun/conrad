@@ -1,5 +1,10 @@
 """
-TOOO: DOCSTRING
+Define accessor classes for conversion between database entries and
+objects.
+
+Each accessor includes methods for converting to/from an
+object in the :class:`~conrad.case.Case` hierarchy, and its
+corresponding :class:`ConradDBEntry` metadata representation.
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu

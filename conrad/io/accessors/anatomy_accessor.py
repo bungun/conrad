@@ -1,5 +1,5 @@
 """
-TOOO: DOCSTRING
+Define :class:`StructureAccessor` and :class:`AnatomyAccessor`
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu
@@ -24,6 +24,7 @@ from conrad.compat import *
 from conrad.physics.string import dose_from_string
 from conrad.medicine import Anatomy, Structure
 from conrad.medicine.prescription import eval_constraint
+from conrad.optimization.objectives import dictionary_to_objective
 from conrad.case import Case
 from conrad.io.schema import AnatomyEntry, StructureEntry
 from conrad.io.accessors.base_accessor import ConradDBAccessor
@@ -82,7 +83,8 @@ class StructureAccessor(ConradDBAccessor):
 				label=structure.label, name=structure.name,
 				target=structure.is_target, size=structure.size,
 				rx=structure.dose_rx,
-				constraints=list(map(str, structure.constraints.list))))
+				constraints=list(map(str, structure.constraints.list)),
+				objective=structure.objective.dict))
 
 	def load_structure(self, structure_entry):
 		structure_entry = self.DB.get(structure_entry)
@@ -106,7 +108,6 @@ class StructureAccessor(ConradDBAccessor):
 				s.constraints += eval_constraint(c)
 
 		if structure_entry.objective is not None:
-			pass
-			# TODO: implement this
+			s.objective = dictionary_to_objective(**structure_entry.objective)
 
 		return s

@@ -32,20 +32,19 @@ class TestGrid(AbstractGrid):
 class AbstractGridTestCase(ConradTestCase):
 	def test_grid_init(self):
 		grid = TestGrid()
-		self.assertTrue( grid._AbstractGrid__x == 0 )
-		self.assertTrue( grid._AbstractGrid__y == 0 )
-		self.assertTrue( grid._AbstractGrid__z == 0 )
-		self.assertTrue( isinstance(grid.x_unit_length, Length) )
-		self.assertTrue( isinstance(grid.y_unit_length, Length) )
-		self.assertTrue(
-				isinstance(grid._AbstractGrid__z_unit_length, Length) )
-		self.assertTrue( grid.z_unit_length is None)
-		self.assertTrue( grid.order == '' )
-		self.assertTrue( isinstance(grid.dims, list) )
-		self.assertTrue( len(grid.dims) == 0 )
+		self.assertEqual( grid._AbstractGrid__x, 0 )
+		self.assertEqual( grid._AbstractGrid__y, 0 )
+		self.assertEqual( grid._AbstractGrid__z, 0 )
+		self.assertIsInstance( grid.x_unit_length, Length )
+		self.assertIsInstance( grid.y_unit_length, Length )
+		self.assertIsInstance( grid._AbstractGrid__z_unit_length, Length )
+		self.assertIsNone( grid.z_unit_length )
+		self.assertEqual( grid.order, '' )
+		self.assertIsInstance( grid.dims, list )
+		self.assertEqual( len(grid.dims), 0 )
 
-		self.assertTrue( isinstance(grid._AbstractGrid__pos, dict) )
-		self.assertTrue( len(grid._AbstractGrid__pos) == 0 )
+		self.assertIsInstance( grid._AbstractGrid__pos, dict )
+		self.assertEqual( len(grid._AbstractGrid__pos), 0 )
 
 	def test_grid_helpers(self):
 		grid = TestGrid()
@@ -81,12 +80,12 @@ class AbstractGridTestCase(ConradTestCase):
 class Grid2DTestCase(ConradTestCase):
 	def test_grid2D(self):
 		g2 = Grid2D(4, 5)
-		self.assertTrue( g2.dims == ('x', 'y') )
-		self.assertTrue( g2.shape == (4, 5) )
-		self.assertTrue( g2.order == 'xy' )
-		self.assertTrue( g2.strides == {'x': 1, 'y': 4} )
+		self.assertTupleEqual( g2.dims, ('x', 'y') )
+		self.assertTupleEqual( g2.shape, (4, 5) )
+		self.assertEqual( g2.order, 'xy' )
+		self.assertDictEqual( g2.strides, {'x': 1, 'y': 4} )
 		g2.set_order('yx')
-		self.assertTrue( g2.strides == {'x': 5, 'y': 1} )
+		self.assertDictEqual( g2.strides, {'x': 5, 'y': 1} )
 
 
 		with self.assertRaises(AttributeError):
@@ -100,10 +99,10 @@ class Grid2DTestCase(ConradTestCase):
 class Grid3DTestCase(ConradTestCase):
 	def test_grid3D(self):
 		g3 = Grid3D(4, 5, 6)
-		self.assertTrue( g3.dims == ('x', 'y', 'z') )
-		self.assertTrue( g3.shape == (4, 5, 6) )
-		self.assertTrue( g3.order == 'xyz' )
-		self.assertTrue( g3.strides == {'x': 1, 'y': 4, 'z': 20})
+		self.assertTupleEqual( g3.dims, ('x', 'y', 'z') )
+		self.assertTupleEqual( g3.shape, (4, 5, 6) )
+		self.assertEqual( g3.order, 'xyz' )
+		self.assertDictEqual( g3.strides, {'x': 1, 'y': 4, 'z': 20})
 		# TODO: test index2position
 		# TODO: test position2index
 

@@ -21,16 +21,15 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-import json, yaml
 import abc
 import os
+import yaml
 import operator as op
 from conrad.defs import is_vector, sparse_or_dense
 from conrad.io.schema import *
 
+@add_metaclass(abc.ABCMeta)
 class ConradDatabaseBase(ConradDatabaseSuper):
-	__metaclass__ = abc.ABCMeta
-
 	def __init__(self, dictionary=None, yaml_file=None, **args):
 		ConradDatabaseSuper.__init__(self)
 		if dictionary is not None:

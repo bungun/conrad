@@ -38,20 +38,20 @@ else:
 
 			# test standard initialization and properties
 			ds = DVHSubplot(ax)
-			self.assertTrue( ds._DVHSubplot__title_location == 'left' )
-			self.assertTrue( ds._DVHSubplot__title_fontsize == 12 )
-			self.assertTrue( ds._DVHSubplot__title_fontweight == 'bold' )
-			self.assertTrue( isinstance(ds._DVHSubplot__title_font_dictionary,
-										dict) )
-			self.assertTrue( ds.axes is ax )
+			self.assertEqual( ds._DVHSubplot__title_location, 'left' )
+			self.assertEqual( ds._DVHSubplot__title_fontsize, 12 )
+			self.assertEqual( ds._DVHSubplot__title_fontweight, 'bold' )
+			self.assertIsInstance(
+					ds._DVHSubplot__title_font_dictionary, dict )
+			self.assertIs( ds.axes, ax )
 			self.assertTrue( ds.left )
 			self.assertTrue( ds.bottom )
-			self.assertTrue( ds.title == '' )
+			self.assertEqual( ds.title, '' )
 
 			ds.title = test_title = 'subplot title test'
-			self.assertTrue( ds.title == test_title )
+			self.assertEqual( ds.title, test_title )
 
-			self.assertTrue( ds.legend is None )
+			self.assertIsNone( ds.legend )
 
 			# test initialization with type other than mpl.axes.AxesSubplot
 			with self.assertRaises(TypeError):
@@ -81,15 +81,15 @@ else:
 
 		def test_dvhsubplot_legend(self):
 			ds = DVHSubplot(mpl.figure.Figure().add_subplot(1, 1, 1))
-			self.assertTrue( ds.legend is None )
+			self.assertIsNone( ds.legend )
 
 			# no data series
 			ds.legend = True
-			self.assertTrue( ds.legend is None )
+			self.assertIsNone( ds.legend )
 
 			ds.axes.lines.append(mpl.lines.Line2D([], [], label='test line'))
 			ds.legend = True
-			self.assertTrue( ds.legend is not None )
+			self.assertIsNotNone( ds.legend )
 			self.assertTrue( ds.legend.get_visible() )
 
 			ds.legend = False
@@ -117,17 +117,19 @@ else:
 			for minimal in [True, False]:
 				for subplot in [ds_NW, ds_NE, ds_SW, ds_SE]:
 					subplot.format(xlim, 'X LABEL', 'Y LABEL', minimal)
-					self.assertTrue( subplot.axes.get_xlim() == (0.0, xlim) )
-					self.assertTrue( subplot.axes.get_ylim() == (0.0, 103.0) )
+					self.assertEqual( subplot.axes.get_xlim(), (0.0, xlim) )
+					self.assertEqual( subplot.axes.get_ylim(), (0.0, 103.0) )
 
-					self.assertTrue( bool(subplot.xlabel == 'X LABEL') ==
-									 subplot.bottom )
-					self.assertTrue( bool(subplot.ylabel == 'Y LABEL') ==
-									 bool(subplot.left or not minimal) )
+					self.assertEqual(
+							bool(subplot.xlabel == 'X LABEL'), subplot.bottom )
+					self.assertEqual(
+							bool(subplot.ylabel == 'Y LABEL'),
+							bool(subplot.left or not minimal) )
 
-					self.assertTrue( subplot.xaxis == subplot.bottom )
-					self.assertTrue( subplot.yaxis == bool(
-							subplot.left or not minimal) )
+					self.assertEqual( subplot.xaxis, subplot.bottom )
+					self.assertEqual(
+							subplot.yaxis,
+							bool(subplot.left or not minimal) )
 
 	class DVHPlotTestCase(ConradTestCase):
 		@classmethod
@@ -152,34 +154,34 @@ else:
 			DVHPlot.build = lambda arg_self: None
 
 			d = DVHPlot(self.panel_assignments)
-			self.assertFalse( isinstance(d.figure, mpl.figure.Figure) )
-			self.assertTrue( d.n_structures == 3 )
-			self.assertTrue( isinstance(d.subplots, dict) )
-			self.assertTrue( len(d.subplots) == 0 )
-			self.assertTrue( isinstance(d.panels, list) )
-			self.assertTrue( len(d.panels) == 0 )
+			self.assertNotIsInstance( d.figure, mpl.figure.Figure )
+			self.assertEqual( d.n_structures, 3 )
+			self.assertIsInstance( d.subplots, dict )
+			self.assertEqual( len(d.subplots), 0 )
+			self.assertIsInstance( d.panels, list )
+			self.assertEqual( len(d.panels), 0 )
 			for k, v in d.subplot_assignments.items():
-				self.assertTrue( self.panel_assignments[k] == v )
+				self.assertEqual( self.panel_assignments[k], v )
 
-			self.assertTrue( d.cols == 1 )
-			self.assertTrue( d.rows == 1 )
-			self.assertTrue( d.layout == 'auto' )
+			self.assertEqual( d.cols, 1 )
+			self.assertEqual( d.rows, 1 )
+			self.assertEqual( d.layout, 'auto' )
 
 		def test_dvhplot_panels_to_cols(self):
 			DVHPlot.build = lambda arg_self: None
 			d = DVHPlot(self.panel_assignments)
 
-			self.assertTrue( d.subplots_to_cols(1) == 1 )
-			self.assertTrue( d.subplots_to_cols(2) == 2 )
-			self.assertTrue( d.subplots_to_cols(3) == 2 )
-			self.assertTrue( d.subplots_to_cols(4) == 2 )
-			self.assertTrue( d.subplots_to_cols(5) == 3 )
-			self.assertTrue( d.subplots_to_cols(6) == 3 )
-			self.assertTrue( d.subplots_to_cols(7) == 4 )
-			self.assertTrue( d.subplots_to_cols(8) == 4 )
-			self.assertTrue( d.subplots_to_cols(12) == 4 )
-			self.assertTrue( d.subplots_to_cols(15) == 4 )
-			self.assertTrue( d.subplots_to_cols(25) == 4 )
+			self.assertEqual( d.subplots_to_cols(1), 1 )
+			self.assertEqual( d.subplots_to_cols(2), 2 )
+			self.assertEqual( d.subplots_to_cols(3), 2 )
+			self.assertEqual( d.subplots_to_cols(4), 2 )
+			self.assertEqual( d.subplots_to_cols(5), 3 )
+			self.assertEqual( d.subplots_to_cols(6), 3 )
+			self.assertEqual( d.subplots_to_cols(7), 4 )
+			self.assertEqual( d.subplots_to_cols(8), 4 )
+			self.assertEqual( d.subplots_to_cols(12), 4 )
+			self.assertEqual( d.subplots_to_cols(15), 4 )
+			self.assertEqual( d.subplots_to_cols(25), 4 )
 
 		def test_dvhplot_sift_options(self):
 			DVHPlot.build = lambda arg_self: None
@@ -191,112 +193,112 @@ else:
 
 			o_opt, l_opt = d.sift_options(**options)
 			for k, v in legend_options.items():
-				self.assertTrue( l_opt[k] == v )
+				self.assertEqual( l_opt[k], v )
 			for k, v in other_options.items():
-				self.assertTrue( o_opt[k] == v )
+				self.assertEqual( o_opt[k], v )
 
 		def test_dvhplot_build_clear(self):
 			DVHPlot.build = lambda arg_self: None
 			d = DVHPlot(self.panel_assignments)
-			self.assertFalse( isinstance(d.figure, mpl.figure.Figure) )
-			self.assertTrue( isinstance(d.subplots, dict) )
-			self.assertTrue( len(d.subplots) == 0 )
-			self.assertTrue( isinstance(d.panels, list) )
-			self.assertTrue( len(d.panels) == 0 )
+			self.assertNotIsInstance( d.figure, mpl.figure.Figure )
+			self.assertIsInstance( d.subplots, dict )
+			self.assertEqual( len(d.subplots), 0 )
+			self.assertIsInstance( d.panels, list )
+			self.assertEqual( len(d.panels), 0 )
 
 			# test calculate panels
 			d.calculate_panels()
-			self.assertTrue( d.n_subplots == 1 )
-			self.assertTrue( d.rows == 1 )
-			self.assertTrue( d.cols == 1 )
+			self.assertEqual( d.n_subplots, 1 )
+			self.assertEqual( d.rows, 1 )
+			self.assertEqual( d.cols, 1 )
 
 			d._DVHPlot__subplot_assignments_by_structure = {0: 0, 1: 1, 2: 2}
 			d.calculate_panels()
-			self.assertTrue( d.n_subplots == 3 )
-			self.assertTrue( d.rows == 2 )
-			self.assertTrue( d.cols == 2 )
+			self.assertEqual( d.n_subplots, 3 )
+			self.assertEqual( d.rows, 2 )
+			self.assertEqual( d.cols, 2 )
 
 			d._DVHPlot__layout = 'vertical'
 			d.calculate_panels()
-			self.assertTrue( d.n_subplots == 3 )
-			self.assertTrue( d.rows == 3 )
-			self.assertTrue( d.cols == 1 )
+			self.assertEqual( d.n_subplots, 3 )
+			self.assertEqual( d.rows, 3 )
+			self.assertEqual( d.cols, 1 )
 
 			d._DVHPlot__layout = 'horizontal'
 			d.calculate_panels()
-			self.assertTrue( d.n_subplots == 3 )
-			self.assertTrue( d.rows == 1 )
-			self.assertTrue( d.cols == 3 )
+			self.assertEqual( d.n_subplots, 3 )
+			self.assertEqual( d.rows, 1 )
+			self.assertEqual( d.cols, 3 )
 
 			# test build/clear
 			DVHPlot.build = self.build_call
 			d._DVHPlot__layout = 'auto'
 			d.subplot_assignments = {0: 0, 1: 0, 2: 0}
 			d.build()
-			self.assertTrue( isinstance(d.figure, mpl.figure.Figure) )
-			self.assertTrue( len(d.subplots) == 3 )
+			self.assertIsInstance( d.figure, mpl.figure.Figure )
+			self.assertEqual( len(d.subplots), 3 )
 			for sp in d.subplots.values():
-				self.assertTrue( isinstance(sp, DVHSubplot) )
-			self.assertTrue( isinstance(d.panels, list) )
-			self.assertTrue( len(d.panels) == 1 )
+				self.assertIsInstance( sp, DVHSubplot )
+			self.assertIsInstance( d.panels, list )
+			self.assertEqual( len(d.panels), 1 )
 			for sp in d.panels:
-				self.assertTrue( isinstance(sp, DVHSubplot) )
+				self.assertIsInstance( sp, DVHSubplot )
 
 			d.clear()
-			self.assertFalse( isinstance(d.figure, mpl.figure.Figure) )
-			self.assertTrue( isinstance(d.subplots, dict) )
-			self.assertTrue( len(d.subplots) == 0 )
-			self.assertTrue( isinstance(d.panels, list) )
-			self.assertTrue( len(d.panels) == 0 )
+			self.assertNotIsInstance( d.figure, mpl.figure.Figure )
+			self.assertIsInstance( d.subplots, dict )
+			self.assertEqual( len(d.subplots), 0 )
+			self.assertIsInstance( d.panels, list )
+			self.assertEqual( len(d.panels), 0 )
 
 		def test_dvhplot_panels_layout(self):
 			d = DVHPlot(self.panel_assignments)
-			self.assertTrue( isinstance(d.figure, mpl.figure.Figure) )
-			self.assertTrue( d.n_subplots == 1 )
-			self.assertTrue( d.rows == 1 )
-			self.assertTrue( d.cols == 1 )
-			self.assertTrue( len(d.subplots) == 3 )
-			self.assertTrue( len(d.panels) == 1 )
+			self.assertIsInstance( d.figure, mpl.figure.Figure )
+			self.assertEqual( d.n_subplots, 1 )
+			self.assertEqual( d.rows, 1 )
+			self.assertEqual( d.cols, 1 )
+			self.assertEqual( len(d.subplots), 3 )
+			self.assertEqual( len(d.panels), 1 )
 			for i in xrange(3):
-				self.assertTrue( d.subplots[i] == d.panels[0] )
+				self.assertEqual( d.subplots[i], d.panels[0] )
 				self.assertTrue( d.subplots[i].bottom )
 				self.assertTrue( d.subplots[i].left )
 
 			d.subplot_assignments = {0: 0, 1: 1, 2: 2}
 			d.build()
 
-			self.assertTrue( d.n_subplots == 3 )
-			self.assertTrue( d.rows == 2 )
-			self.assertTrue( d.cols == 2 )
-			self.assertTrue( len(d.subplots) == 3 )
-			self.assertTrue( len(d.panels) == 3 )
+			self.assertEqual( d.n_subplots, 3 )
+			self.assertEqual( d.rows, 2 )
+			self.assertEqual( d.cols, 2 )
+			self.assertEqual( len(d.subplots), 3 )
+			self.assertEqual( len(d.panels), 3 )
 			for i in xrange(3):
-				self.assertTrue( d.subplots[i] == d.panels[i] )
-				self.assertTrue( d.subplots[i].bottom == bool(i >= d.cols) )
-				self.assertTrue( d.subplots[i].left == bool(i % d.cols == 0) )
+				self.assertEqual( d.subplots[i], d.panels[i] )
+				self.assertEqual( d.subplots[i].bottom, bool(i >= d.cols) )
+				self.assertEqual( d.subplots[i].left, bool(i % d.cols == 0) )
 
 			d.layout = 'vertical'
-			self.assertTrue( d.n_subplots == 3 )
-			self.assertTrue( d.rows == 3 )
-			self.assertTrue( d.cols == 1 )
-			self.assertTrue( len(d.subplots) == 3 )
-			self.assertTrue( len(d.panels) == 3 )
+			self.assertEqual( d.n_subplots, 3 )
+			self.assertEqual( d.rows, 3 )
+			self.assertEqual( d.cols, 1 )
+			self.assertEqual( len(d.subplots), 3 )
+			self.assertEqual( len(d.panels), 3 )
 			for i in xrange(3):
-				self.assertTrue( d.subplots[i] == d.panels[i] )
-				self.assertTrue( d.subplots[i].bottom ==
+				self.assertEqual( d.subplots[i], d.panels[i] )
+				self.assertEqual( d.subplots[i].bottom,
 								 bool(i == d.n_subplots - 1 ) )
 				self.assertTrue( d.subplots[i].left )
 
 			d.layout = 'horizontal'
-			self.assertTrue( d.n_subplots == 3 )
-			self.assertTrue( d.rows == 1 )
-			self.assertTrue( d.cols == 3 )
-			self.assertTrue( len(d.subplots) == 3 )
-			self.assertTrue( len(d.panels) == 3 )
+			self.assertEqual( d.n_subplots, 3 )
+			self.assertEqual( d.rows, 1 )
+			self.assertEqual( d.cols, 3 )
+			self.assertEqual( len(d.subplots), 3 )
+			self.assertEqual( len(d.panels), 3 )
 			for i in xrange(3):
-				self.assertTrue( d.subplots[i] == d.panels[i] )
+				self.assertEqual( d.subplots[i], d.panels[i] )
 				self.assertTrue( d.subplots[i].bottom  )
-				self.assertTrue( d.subplots[i].left == bool(i == 0) )
+				self.assertEqual( d.subplots[i].left, bool(i == 0) )
 
 			with self.assertRaises(ValueError):
 				d.layout = 'not a valid layout string'
@@ -305,33 +307,33 @@ else:
 			d = DVHPlot(self.panel_assignments)
 
 			for key in [0, 1, 2, 'upper right']:
-				self.assertTrue( isinstance(d[key], DVHSubplot) )
-				self.assertTrue( d[key] == d.panels[0] )
+				self.assertIsInstance( d[key], DVHSubplot )
+				self.assertEqual( d[key], d.panels[0] )
 
 			d.subplot_assignments = {0: 0, 1: 1, 2: 2}
 			d.build()
 
 			for key in [0, 1, 2, 'upper right']:
-				self.assertTrue( isinstance(d[key], DVHSubplot) )
+				self.assertIsInstance( d[key], DVHSubplot )
 				if isinstance(key, int):
-					self.assertTrue( d[key] == d.panels[key] )
+					self.assertEqual( d[key], d.panels[key] )
 				else:
-					self.assertTrue( d[key] == d.panels[1] )
+					self.assertEqual( d[key], d.panels[1] )
 
 			d.layout = 'horizontal'
-			self.assertTrue( d['upper right'] == d.panels[-1] )
+			self.assertEqual( d['upper right'], d.panels[-1] )
 
 		def test_dvhplot_drawlegend(self):
 			d = DVHPlot(self.panel_assignments)
 			series = [mpl.lines.Line2D([],[]) for i in xrange(3)]
 			names = ['first', 'second', 'third']
 
-			self.assertTrue( len(d.figure.legends) == 0 )
+			self.assertEqual( len(d.figure.legends), 0 )
 			d.draw_legend(series, names)
-			self.assertTrue( len(d.figure.legends) == 1 )
+			self.assertEqual( len(d.figure.legends), 1 )
 
-			self.assertTrue( len(d.figure.legends[-1].get_lines()) ==
-							 len(series))
+			self.assertEqual(
+					len(d.figure.legends[-1].get_lines()), len(series) )
 			for text in d.figure.legends[-1].get_texts():
 				self.assertTrue( text.get_text() in names )
 
@@ -350,13 +352,13 @@ else:
 			# location
 			d.draw_legend(series, names, coordinates=coords, alignment='right')
 			d.draw_legend(series, names, coordinates=coords, alignment='center')
-			self.assertTrue( d.figure.legends[-2]._loc !=
-							 d.figure.legends[-1]._loc )
+			self.assertNotEqual(
+					d.figure.legends[-2]._loc, d.figure.legends[-1]._loc )
 
 		def test_dvhplot_drawtitle(self):
 			d = DVHPlot(self.panel_assignments)
 			d.draw_title('test title')
-			self.assertTrue( d.figure.texts[-1].get_text() == 'test title' )
+			self.assertEqual( d.figure.texts[-1].get_text(), 'test title' )
 
 		def test_dvhplot_format_subplots(self):
 			d = DVHPlot(self.panel_assignments)
@@ -365,7 +367,7 @@ else:
 			d.format_subplots(xmax)
 
 			for subplot in d.panels:
-				self.assertTrue( subplot.xmax == xmax )
+				self.assertEqual( subplot.xmax, xmax )
 
 		def test_check_figure(self):
 			DVHPlot.build = lambda arg_self: None
@@ -391,10 +393,10 @@ else:
 
 			d.plot_virtual(series_names, series_aesthetics)
 
-			self.assertTrue( len(d.figure.legends) == 1 )
-			self.assertTrue( len(d.figure.legends[-1].get_lines()) == 3 )
+			self.assertEqual( len(d.figure.legends), 1 )
+			self.assertEqual( len(d.figure.legends[-1].get_lines()), 3 )
 			for text in d.figure.legends[-1].get_texts():
-				self.assertTrue( text.get_text() in series_names )
+				self.assertIn( text.get_text(), series_names )
 
 		def test_dvhplot_plotlabels(self):
 			d = DVHPlot(self.panel_assignments)
@@ -402,10 +404,10 @@ else:
 			coords = (0.5, 0.6)
 			d.plot_labels({1: coords}, self.anatomy.plotting_data())
 
-			self.assertTrue( len(d.subplots[1].axes.texts) == 1 )
+			self.assertEqual( len(d.subplots[1].axes.texts), 1 )
 			t = d.subplots[1].axes.texts[-1]
-			self.assertTrue( t.get_text() == self.anatomy[1].name )
-			self.assertTrue( t.get_unitless_position() == coords )
+			self.assertEqual( t.get_text(), self.anatomy[1].name )
+			self.assertEqual( t.get_unitless_position(), coords )
 
 			with self.assertRaises(KeyError):
 				d.plot_labels({4: coords}, self.anatomy.plotting_data())
@@ -419,7 +421,7 @@ else:
 
 			d.plot_constraints(pc)
 			for constr in pc[LABEL]:
-				self.assertTrue( constr.axes is d.subplots[LABEL].axes )
+				self.assertIs( constr.axes, d.subplots[LABEL].axes )
 
 		def test_dvhplot_plot(self):
 			d = DVHPlot({i: i for i in xrange(3)})
@@ -433,24 +435,23 @@ else:
 			# vanilla plot + self-title subplots
 			d.plot(self.anatomy.plotting_data(), self_title_subplots=True)
 			for structure in self.anatomy:
-				self.assertTrue( d.subplots[structure.label].title ==
+				self.assertEqual( d.subplots[structure.label].title,
 								 structure.name  )
 
 			# individual legends
 			d.plot(self.anatomy.plotting_data(), legend='each')
 			for structure in self.anatomy:
-				self.assertTrue(
-						d.subplots[structure.label].legend is not None )
-				self.assertTrue(
-						len(d.subplots[structure.label].legend.get_lines())
-						== 1 )
-			self.assertTrue( len(d.figure.legends) == 0 )
+				self.assertIsNotNone( d.subplots[structure.label].legend )
+				self.assertEqual(
+						len(d.subplots[structure.label].legend.get_lines()),
+						1 )
+			self.assertEqual( len(d.figure.legends), 0 )
 
 			# overall legend
 			d.plot(self.anatomy.plotting_data(), legend=True)
 			for structure in self.anatomy:
-				self.assertTrue( d.subplots[structure.label].legend is None )
-			self.assertTrue( len(d.figure.legends) == 1 )
+				self.assertIsNone( d.subplots[structure.label].legend )
+			self.assertEqual( len(d.figure.legends), 1 )
 
 			# self-title for multiple structures on single subplot
 			d.subplot_assignments = {i: 0 for i in xrange(3)}
@@ -462,7 +463,7 @@ else:
 				title += ', '
 
 			title = title[:-2] # trim terminal ", "
-			self.assertTrue( d.panels[0].title == title )
+			self.assertEqual( d.panels[0].title, title )
 
 		# def test_dvhplot_show(self):
 			# pass

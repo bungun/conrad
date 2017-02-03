@@ -36,11 +36,11 @@ class SparseMatrixSlicingTestCase(ConradTestCase):
 
 		A_csr_sub = csx_slice_compressed(A_csr, indices)
 		A_csr_sub_check = A_csr[indices, :]
-		self.assertTrue( ( A_csr_sub - A_csr_sub_check).nnz == 0 )
+		self.assertEqual( (A_csr_sub - A_csr_sub_check).nnz, 0 )
 
 		A_csc_sub = csx_slice_compressed(A_csc, indices)
 		A_csc_sub_check = A_csc[:, indices]
-		self.assertTrue( ( A_csc_sub - A_csc_sub_check).nnz == 0 )
+		self.assertEqual( (A_csc_sub - A_csc_sub_check).nnz, 0 )
 
 	def test_csx_slice_uncompressed(self):
 		m = 50
@@ -53,11 +53,11 @@ class SparseMatrixSlicingTestCase(ConradTestCase):
 
 		# A_csr_sub = csx_slice_uncompressed(A_csr, indices)
 		# A_csr_sub_check = A_csr[:, indices]
-		# self.assertTrue( (A_csr_sub - A_csr_sub_check).nnz == 0 )
+		# self.assertEqual( (A_csr_sub - A_csr_sub_check).nnz, 0 )
 
 		A_csc_sub = csx_slice_uncompressed(A_csc, indices)
 		A_csc_sub_check = A_csc[indices, :]
-		self.assertTrue( (A_csc_sub - A_csc_sub_check).nnz == 0 )
+		self.assertEqual( (A_csc_sub - A_csc_sub_check).nnz, 0 )
 
 class SliceCachingMatrixTestCase(ConradTestCase):
 	def test_sc_mat_init_attr(self):
@@ -65,12 +65,12 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 		A_ = np.random.rand(m, n)
 		A = SliceCachingMatrix(A_)
 
-		self.assertTrue( A.row_dim == m )
-		self.assertTrue( A.column_dim == n )
+		self.assertEqual( A.row_dim, m )
+		self.assertEqual( A.column_dim, n )
 		self.assert_vector_equal( A.data, A_ )
-		self.assertTrue( len(A._SliceCachingMatrix__row_slices) == 0 )
-		self.assertTrue( len(A._SliceCachingMatrix__column_slices) == 0 )
-		self.assertTrue( len(A._SliceCachingMatrix__double_slices) == 0 )
+		self.assertEqual( len(A._SliceCachingMatrix__row_slices), 0 )
+		self.assertEqual( len(A._SliceCachingMatrix__column_slices), 0 )
+		self.assertEqual( len(A._SliceCachingMatrix__double_slices), 0 )
 
 		with self.assertRaises(TypeError):
 			# 1-D array not accepted
@@ -90,11 +90,11 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 
 		data = {i: np.random.rand(m, n) for i in xrange(4)}
 		A = SliceCachingMatrix(data)
-		self.assertTrue( A.row_dim == 4 * m )
-		self.assertTrue( A.column_dim == n )
-		self.assertTrue( len(A._SliceCachingMatrix__row_slices) == 4 )
-		self.assertTrue( len(A._SliceCachingMatrix__column_slices) == 0 )
-		self.assertTrue( len(A._SliceCachingMatrix__double_slices) == 0 )
+		self.assertEqual( A.row_dim, 4 * m )
+		self.assertEqual( A.column_dim, n )
+		self.assertEqual( len(A._SliceCachingMatrix__row_slices), 4 )
+		self.assertEqual( len(A._SliceCachingMatrix__column_slices), 0 )
+		self.assertEqual( len(A._SliceCachingMatrix__double_slices), 0 )
 
 		self.assertTrue( all(i in A for i in xrange(4)) )
 		self.assertTrue( all(('row', i) in A for i in xrange(4)) )
@@ -103,11 +103,11 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 
 		data['labeled_by'] = 'rows'
 		A = SliceCachingMatrix(data)
-		self.assertTrue( A.row_dim == 4 * m )
-		self.assertTrue( A.column_dim == n )
-		self.assertTrue( len(A._SliceCachingMatrix__row_slices) == 4 )
-		self.assertTrue( len(A._SliceCachingMatrix__column_slices) == 0 )
-		self.assertTrue( len(A._SliceCachingMatrix__double_slices) == 0 )
+		self.assertEqual( A.row_dim, 4 * m )
+		self.assertEqual( A.column_dim, n )
+		self.assertEqual( len(A._SliceCachingMatrix__row_slices), 4 )
+		self.assertEqual( len(A._SliceCachingMatrix__column_slices), 0 )
+		self.assertEqual( len(A._SliceCachingMatrix__double_slices), 0 )
 
 		self.assertTrue( all(i in A for i in xrange(4)) )
 		self.assertTrue( all(('row', i) in A for i in xrange(4)) )
@@ -116,11 +116,11 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 
 		data['labeled_by'] = 'columns'
 		A = SliceCachingMatrix(data)
-		self.assertTrue( A.row_dim == m )
-		self.assertTrue( A.column_dim == 4 * n )
-		self.assertTrue( len(A._SliceCachingMatrix__row_slices) == 0 )
-		self.assertTrue( len(A._SliceCachingMatrix__column_slices) == 4 )
-		self.assertTrue( len(A._SliceCachingMatrix__double_slices) == 0 )
+		self.assertEqual( A.row_dim, m )
+		self.assertEqual( A.column_dim, 4 * n )
+		self.assertEqual( len(A._SliceCachingMatrix__row_slices), 0 )
+		self.assertEqual( len(A._SliceCachingMatrix__column_slices), 4 )
+		self.assertEqual( len(A._SliceCachingMatrix__double_slices), 0 )
 
 		self.assertFalse( any(i in A for i in xrange(4)) )
 		self.assertTrue( all(('column', i) in A for i in xrange(4)) )
@@ -146,17 +146,16 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 			if isinstance(A, np.ndarray):
 				self.assert_vector_equal(A_sub, A_sub_check)
 			else:
-				self.assertTrue( (A_sub - A_sub_check).nnz == 0 )
+				self.assertEqual( (A_sub - A_sub_check).nnz, 0 )
 
 			D = SliceCachingMatrix(A)
 			D.row_slice(0, indices)
-			self.assertTrue( 0 in D )
-			self.assertTrue( ('row', 0) in D )
+			self.assertIn( 0, D )
+			self.assertIn( ('row', 0), D )
 			if isinstance(A, np.ndarray):
 				self.assert_vector_equal(D.row_slice(0, None), A_sub_check)
 			else:
-				self.assertTrue( (D.row_slice(0, None) - A_sub_check).nnz
-								 == 0 )
+				self.assertEqual( (D.row_slice(0, None) - A_sub_check).nnz, 0 )
 
 	def test_sc_mat_column_slice(self):
 		m, n = 30, 40
@@ -173,16 +172,16 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 			if isinstance(A, np.ndarray):
 				self.assert_vector_equal(A_sub, A_sub_check)
 			else:
-				self.assertTrue( (A_sub - A_sub_check).nnz == 0 )
+				self.assertEqual( (A_sub - A_sub_check).nnz, 0 )
 
 			D = SliceCachingMatrix(A)
 			D.column_slice(0, indices)
-			self.assertTrue( ('column', 0) in D )
+			self.assertIn( ('column', 0), D )
 			if isinstance(A, np.ndarray):
 				self.assert_vector_equal(D.column_slice(0, None), A_sub_check)
 			else:
-				self.assertTrue( (D.column_slice(0, None) - A_sub_check).nnz
-								 == 0 )
+				self.assertEqual(
+						(D.column_slice(0, None) - A_sub_check).nnz, 0 )
 	def test_sc_mat_slice(self):
 		m, n = 30, 40
 		v_indices = [1, 5, 8, 15, 20, 22]
@@ -204,27 +203,27 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 				D.slice(row_label=0)
 
 			D.slice(row_label=0, row_indices=v_indices)
-			self.assertTrue( 0 in D )
-			self.assertTrue( ('row', 0) in D )
-			self.assertTrue( ('column', 0) not in D )
-			self.assertTrue( ('both', (0, 0)) not in D )
+			self.assertIn( 0, D )
+			self.assertIn( ('row', 0), D )
+			self.assertNotIn( ('column', 0), D )
+			self.assertNotIn( ('both', (0, 0)), D )
 			if isinstance(A, np.ndarray):
 				self.assert_vector_equal( D.slice(row_label=0), A_sub_v )
 			else:
-				self.assertTrue( (D.slice(row_label=0) - A_sub_v).nnz == 0 )
+				self.assertEqual( (D.slice(row_label=0) - A_sub_v).nnz, 0 )
 
 			with self.assertRaises(ValueError):
 				D.slice(column_label=0)
 
 			D.slice(column_label=0, column_indices=b_indices)
-			self.assertTrue( 0 in D )
-			self.assertTrue( ('row', 0) in D )
-			self.assertTrue( ('column', 0) in D )
-			self.assertTrue( ('both', (0, 0)) not in D )
+			self.assertIn( 0, D )
+			self.assertIn( ('row', 0), D )
+			self.assertIn( ('column', 0), D )
+			self.assertNotIn( ('both', (0, 0)), D )
 			if isinstance(A, np.ndarray):
 				self.assert_vector_equal( D.slice(column_label=0), A_sub_b )
 			else:
-				self.assertTrue( (D.slice(column_label=0) - A_sub_b).nnz == 0 )
+				self.assertEqual( (D.slice(column_label=0) - A_sub_b).nnz, 0 )
 
 			E = SliceCachingMatrix(A)
 			# when slicing in both dimensions, make sure easy path taken
@@ -232,20 +231,18 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 			E.slice(row_label=0, row_indices=v_indices, column_label=0,
 					column_indices=b_indices)
 			if isinstance(A, (np.ndarray, sp.csr_matrix)):
-				self.assertTrue( ('row', 0) in E )
-				self.assertTrue( ('column', 0) not in E )
+				self.assertIn( ('row', 0), E )
+				self.assertNotIn( ('column', 0), E )
 				if isinstance(A, np.ndarray):
 					self.assert_vector_equal( E.slice(row_label=0), A_sub_v )
 				else:
-					self.assertTrue( (E.slice(row_label=0) - A_sub_v).nnz
-									 == 0 )
+					self.assertEqual( (E.slice(row_label=0) - A_sub_v).nnz, 0 )
 
 			else:
-				self.assertTrue( ('row', 0) not in E )
-				self.assertTrue( ('column', 0) in E )
-				self.assertTrue( (E.slice(column_label=0) - A_sub_b).nnz
-								 == 0 )
-			self.assertTrue( ('both', (0, 0)) in E )
+				self.assertNotIn( ('row', 0), E )
+				self.assertIn( ('column', 0), E )
+				self.assertEqual( (E.slice(column_label=0) - A_sub_b).nnz, 0 )
+			self.assertIn( ('both', (0, 0)), E )
 			if isinstance(A, np.ndarray):
 				self.assert_vector_equal( E.slice(row_label=0, column_label=0),
 										  A_sub_vb)
@@ -259,8 +256,8 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 				F.column_slice(0, b_indices)
 				F.slice(row_label=0, row_indices=v_indices, column_label=0,
 						column_indices=b_indices)
-				self.assertTrue( ('row', 0) not in F )
-				self.assertTrue( ('column', 0) in F )
+				self.assertNotIn( ('row', 0), F )
+				self.assertIn( ('column', 0), F )
 				if isinstance(A, np.ndarray):
 					self.assert_vector_equal(F.slice(column_label=0), A_sub_b)
 				else:
@@ -272,15 +269,14 @@ class SliceCachingMatrixTestCase(ConradTestCase):
 				F.row_slice(0, v_indices)
 				F.slice(row_label=0, row_indices=v_indices, column_label=0,
 						column_indices=b_indices)
-				self.assertTrue( ('row', 0) in F )
-				self.assertTrue( ('column', 0) not in F )
-				self.assertTrue( (F.slice(row_label=0) - A_sub_v).nnz
-								 == 0 )
-			self.assertTrue( ('both', (0, 0)) in F )
+				self.assertIn( ('row', 0), F )
+				self.assertNotIn( ('column', 0), F )
+				self.assertEqual( (F.slice(row_label=0) - A_sub_v).nnz, 0 )
+
+			self.assertIn( ('both', (0, 0)), F )
 			if isinstance(A, np.ndarray):
 				self.assert_vector_equal(
 						F.slice(row_label=0, column_label=0), A_sub_vb)
 			else:
-				self.assertTrue(
-					(F.slice(row_label=0, column_label=0) - A_sub_vb).nnz
-					== 0 )
+				self.assertEqual(
+					(F.slice(row_label=0, column_label=0) - A_sub_vb).nnz, 0 )

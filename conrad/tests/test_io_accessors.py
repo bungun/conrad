@@ -45,17 +45,17 @@ SKIP_POGS_CACHING_TESTS = os.getenv('CONRAD_SKIP_POGS_CACHING_TESTS', False)
 class ConradDBAccessorTestCase(ConradTestCase):
 	def test_cdba_init(self):
 		cdba = ConradDBAccessor()
-		self.assertTrue( isinstance(cdba.FS, ConradFilesystemBase) )
-		self.assertTrue( isinstance(cdba.DB, ConradDatabaseBase) )
-		self.assertTrue( len(cdba._ConradDBAccessor__subaccessors) == 0 )
+		self.assertIsInstance( cdba.FS, ConradFilesystemBase )
+		self.assertIsInstance( cdba.DB, ConradDatabaseBase )
+		self.assertEqual( len(cdba._ConradDBAccessor__subaccessors), 0 )
 
 	def test_cdba_set(self):
 		cdba = ConradDBAccessor()
 		cdba.set_filesystem()
-		self.assertTrue( isinstance(cdba.FS, LocalFilesystem) )
+		self.assertIsInstance( cdba.FS, LocalFilesystem )
 
 		cdba.set_database()
-		self.assertTrue( isinstance(cdba.DB, LocalPythonDatabase) )
+		self.assertIsInstance( cdba.DB, LocalPythonDatabase )
 
 	def test_cdba_record_entry(self):
 		cdba = ConradDBAccessor(filesystem=FilesystemTestCaching())
@@ -63,7 +63,7 @@ class ConradDBAccessorTestCase(ConradTestCase):
 		# unrecorded basic types
 		for val in [None, 1, 1.0, '1', {'1': 2, 3: 4.0, '5': '6'}]:
 			res = cdba.record_entry('dir', 'name', val)
-			self.assertTrue( res == val )
+			self.assertEqual( res, val )
 
 		# unhandled basic types
 		for val in [set(), list()]:
@@ -92,22 +92,22 @@ class ConradDBAccessorTestCase(ConradTestCase):
 		input_dict = {}
 
 		result = cdba.pop_and_record(input_dict, 'key', 'dir')
-		self.assertTrue( result is None )
+		self.assertIsNone( result )
 
 		for val in [2, 2.0, '2', {'some data': 'value'}]:
 			# test unrecorded types
 			input_dict['key'] = val
 			result = cdba.pop_and_record(input_dict, 'key', 'dir')
-			self.assertTrue( result == val )
-			self.assertTrue( len(cdba.FS.files) == 0 )
+			self.assertEqual( result, val )
+			self.assertEqual( len(cdba.FS.files), 0 )
 
 			# test alternate keys
 			input_dict.pop('key')
 			input_dict['alternate_key'] = val
 			result = cdba.pop_and_record(
 					input_dict, 'key', 'dir', alternate_keys=['alternate_key'])
-			self.assertTrue( result == val )
-			self.assertTrue( len(cdba.FS.files) == 0 )
+			self.assertEqual( result, val )
+			self.assertEqual( len(cdba.FS.files), 0 )
 
 			# test nested keys
 			input_dict.pop('alternate_key')
@@ -115,8 +115,8 @@ class ConradDBAccessorTestCase(ConradTestCase):
 			result = cdba.pop_and_record(
 					input_dict, 'key', 'dir',
 					alternate_keys=['alternate_key', ['key2', 'subkey']])
-			self.assertTrue( result == val )
-			self.assertTrue( len(cdba.FS.files) == 0 )
+			self.assertEqual( result, val )
+			self.assertEqual( len(cdba.FS.files), 0 )
 
 		# test rejected types
 		for val in [
@@ -129,7 +129,7 @@ class ConradDBAccessorTestCase(ConradTestCase):
 				np.random.rand(30), np.random.rand(30, 20),
 				sp.rand(30, 20, 0.2, format='csr')]:
 			result = cdba.pop_and_record({'key': val}, 'key', 'dir')
-			self.assertTrue( isinstance(result, str) )
+			self.assertIsInstance( result, str )
 			self.assertTrue( cdba.DB.has_key(result) )
 			rex = r'dir/key.*.npy'
 			entry_vals = cdba.DB.get(result).flat_dictionary.values()
@@ -138,7 +138,7 @@ class ConradDBAccessorTestCase(ConradTestCase):
 
 			result = cdba.pop_and_record(
 					{'key': val}, 'key', 'dir', name_base='base_name')
-			self.assertTrue( isinstance(result, str) )
+			self.assertIsInstance( result, str )
 			self.assertTrue( cdba.DB.has_key(result) )
 			entry_vals = cdba.DB.get(result).flat_dictionary.values()
 			rex = r'dir/base_name_key.*.npy'
@@ -157,13 +157,14 @@ class ConradDBAccessorTestCase(ConradTestCase):
 class StructureAccessorTestCase(ConradTestCase):
 	def test_structure_accessor_save_load(self):
 		sa = StructureAccessor()
-		ptr = sa.save_structure(Structure(0, 'name', True))
+		ptr = sa.save_structure(Structure(0, 'name', True, w_under=2.75))
 		self.assertTrue( sa.DB.has_key(ptr) )
 		s = sa.load_structure(ptr)
-		self.assertTrue( isinstance(s, Structure) )
-		self.assertTrue( s.label == 0 )
-		self.assertTrue( s.name == 'name' )
+		self.assertIsInstance( s, Structure )
+		self.assertEqual( s.label, 0 )
+		self.assertEqual( s.name, 'name' )
 		self.assertTrue( s.is_target )
+		self.assertEqual( s.objective.weight_underdose_raw, 2.75 )
 
 class AnatomyAccessorTestCase(ConradTestCase):
 	def test_anatomy_accessor_init(self):
@@ -181,13 +182,13 @@ class AnatomyAccessorTestCase(ConradTestCase):
 		ptr = aa.save_anatomy(anatomy_in)
 		self.assertTrue( aa.DB.has_key(ptr) )
 		a = aa.load_anatomy(ptr)
-		self.assertTrue( isinstance(a, Anatomy) )
-		self.assertTrue( len(a.list) == 2 )
+		self.assertIsInstance( a, Anatomy )
+		self.assertEqual( len(a.list), 2 )
 
-		self.assertTrue( a['name0'].label == 0 )
+		self.assertEqual( a['name0'].label, 0 )
 		self.assertFalse( a['name0'].is_target )
 
-		self.assertTrue( a[1].name == 'name1' )
+		self.assertEqual( a[1].name, 'name1' )
 		self.assertFalse( a[1].is_target )
 
 class DoseFrameAccessorTestCase(ConradTestCase):
@@ -208,7 +209,7 @@ class DoseFrameAccessorTestCase(ConradTestCase):
 		ptr = dfa.save_frame(self.frame, 'dir')
 		self.assertTrue( dfa.DB.has_key(ptr) )
 		df = dfa.load_frame(ptr)
-		self.assertTrue( isinstance(df, DoseFrame) )
+		self.assertIsInstance( df, DoseFrame )
 		self.assert_vector_equal( df.dose_matrix.data, self.mat )
 		self.assert_vector_equal( df.voxel_weights.data, self.vw )
 		self.assert_vector_equal( df.beam_weights.data, self.bw )
@@ -225,11 +226,11 @@ class DoseFrameAccessorTestCase(ConradTestCase):
 
 		frame_list.append(DoseFrameEntry(name='third'))
 		fe = dfa.select_frame_entry(frame_list, 'third')
-		self.assertTrue( isinstance(fe, DoseFrameEntry) )
+		self.assertIsInstance( fe, DoseFrameEntry )
 
 		frame_list.append(dfa.save_frame(self.frame, 'dir'))
 		fe = dfa.select_frame_entry(frame_list, self.frame.name)
-		self.assertTrue( isinstance(fe, DoseFrameEntry) )
+		self.assertIsInstance( fe, DoseFrameEntry )
 
 class FrameMappingAccessorTestCase(ConradTestCase):
 	@classmethod
@@ -247,7 +248,7 @@ class FrameMappingAccessorTestCase(ConradTestCase):
 		ptr = fma.save_frame_mapping(self.frame_mapping, 'dir')
 		self.assertTrue( fma.DB.has_key(ptr) )
 		dfm = fma.load_frame_mapping(ptr)
-		self.assertTrue( isinstance(dfm, DoseFrameMapping) )
+		self.assertIsInstance( dfm, DoseFrameMapping )
 		self.assert_vector_equal( dfm.voxel_map.vec, self.fmap )
 
 	def test_dose_frame_mapping_accessor_select(self):
@@ -264,7 +265,7 @@ class FrameMappingAccessorTestCase(ConradTestCase):
 		with self.assertRaises(ValueError):
 			fma.select_frame_mapping_entry(frame_mapping_list, '0', '2')
 		fme = fma.select_frame_mapping_entry(frame_mapping_list, '0', '1')
-		self.assertTrue( isinstance(fme, DoseFrameMappingEntry) )
+		self.assertIsInstance( fme, DoseFrameMappingEntry )
 
 class PhysicsAccessorTestCase(ConradTestCase):
 	@classmethod
@@ -287,12 +288,12 @@ class PhysicsAccessorTestCase(ConradTestCase):
 
 	def test_physics_accessor_init(self):
 		pa = PhysicsAccessor(filesystem=FilesystemTestCaching())
-		self.assertTrue( pa.FS is pa.frame_accessor.FS )
-		self.assertTrue( pa.DB is pa.frame_accessor.DB )
-		self.assertTrue( pa.FS is pa.frame_mapping_accessor.FS )
-		self.assertTrue( pa.DB is pa.frame_mapping_accessor.DB )
-		self.assertTrue( len(pa.available_frames) == 0 )
-		self.assertTrue( len(pa.available_frame_mappings) == 0 )
+		self.assertIs( pa.FS, pa.frame_accessor.FS )
+		self.assertIs( pa.DB, pa.frame_accessor.DB )
+		self.assertIs( pa.FS, pa.frame_mapping_accessor.FS )
+		self.assertIs( pa.DB, pa.frame_mapping_accessor.DB )
+		self.assertEqual( len(pa.available_frames), 0 )
+		self.assertEqual( len(pa.available_frame_mappings), 0 )
 
 	def test_physics_accessor_save_load(self):
 		pa = PhysicsAccessor(filesystem=FilesystemTestCaching())
@@ -305,24 +306,24 @@ class PhysicsAccessorTestCase(ConradTestCase):
 
 		# load physics
 		p = pa.load_physics(ptr)
-		self.assertTrue( isinstance(p, Physics) )
+		self.assertIsInstance( p, Physics )
 
-		self.assertTrue( p.frame.name in ('0', '1') )
+		self.assertIn( p.frame.name, ('0', '1') )
 		self.assert_vector_equal( p.frame.dose_matrix.data, self.mat )
 		self.assert_vector_equal( p.frame.voxel_weights.data, self.vw )
 		self.assert_vector_equal( p.frame.beam_weights.data, self.bw )
 
-		self.assertTrue( len(p.unique_frames) == 1 )
-		self.assertTrue( len(p.available_frame_mappings) == 0 )
+		self.assertEqual( len(p.unique_frames), 1 )
+		self.assertEqual( len(p.available_frame_mappings), 0 )
 
 		# load frame
 		next_name = '1' if p.frame.name == '0' else '0'
 		next_frame = pa.load_frame(next_name)
-		self.assertTrue( isinstance(next_frame, DoseFrame) )
+		self.assertIsInstance( next_frame, DoseFrame )
 
 		# load frame mapping
 		fm = pa.load_frame_mapping('0', '1')
-		self.assertTrue( isinstance(fm, DoseFrameMapping) )
+		self.assertIsInstance( fm, DoseFrameMapping )
 
 class SolutionAccessorTestCase(ConradTestCase):
 	def test_solution_accessor_save_load(self):
@@ -332,12 +333,12 @@ class SolutionAccessorTestCase(ConradTestCase):
 		ptr = sa.save_solution('dir', 'solution0', 'frame0', x=sol_x)
 		self.assertTrue( sa.DB.has_key(ptr) )
 		s = sa.load_solution(ptr)
-		self.assertTrue( isinstance(s, dict) )
+		self.assertIsInstance( s, dict )
 		for key in ['x', 'y', 'x_dual', 'y_dual']:
 			self.assertTrue( key in s)
 		self.assert_vector_equal( s['x'], sol_x )
 		for key in ['y', 'x_dual', 'y_dual']:
-			self.assertTrue( s[key] is None )
+			self.assertIsNone( s[key] )
 
 	def test_solution_accessor_select(self):
 		sa = SolutionAccessor(filesystem=FilesystemTestCaching())
@@ -356,15 +357,15 @@ class SolutionAccessorTestCase(ConradTestCase):
 			sa.select_solution_entry(solution_list, 'f1', 'bad name')
 
 		se = sa.select_solution_entry(solution_list, 'f1', 'sol1')
-		self.assertTrue( isinstance(se, SolutionEntry) )
+		self.assertIsInstance( se, SolutionEntry )
 
 class HistoryAccessorTestCase(ConradTestCase):
 	def test_history_accessor_init(self):
 		ha = HistoryAccessor(filesystem=FilesystemTestCaching())
-		self.assertTrue( ha.FS is ha.solution_accessor.FS )
-		self.assertTrue( ha.DB is ha.solution_accessor.DB )
-		self.assertTrue( isinstance(ha._HistoryAccessor__solution_cache, dict) )
-		self.assertTrue( len(ha._HistoryAccessor__solution_cache) == 0 )
+		self.assertIs( ha.FS, ha.solution_accessor.FS )
+		self.assertIs( ha.DB, ha.solution_accessor.DB )
+		self.assertIsInstance( ha._HistoryAccessor__solution_cache, dict )
+		self.assertEqual( len(ha._HistoryAccessor__solution_cache), 0 )
 
 	def test_history_accessor_save_load(self):
 		ha = HistoryAccessor(filesystem=FilesystemTestCaching())
@@ -383,7 +384,7 @@ class HistoryAccessorTestCase(ConradTestCase):
 		ptr = ha.save_history(h_dict, 'dir')
 		self.assertTrue( ha.DB.has_key(ptr) )
 		he = ha.load_history(ptr)
-		self.assertTrue( isinstance(he, HistoryEntry) )
+		self.assertIsInstance( he, HistoryEntry )
 
 		# load solution
 		s = ha.load_solution('f1', 'sol1')
@@ -413,17 +414,17 @@ class SolverCacheAccessorTestCase(ConradTestCase):
 		self.assertTrue( sca.DB.has_key(ptr) )
 		cache = sca._SolverCacheAccessor__load_pogs_solver_cache(ptr)
 
-		self.assertTrue( isinstance(cache, dict) )
+		self.assertIsInstance( cache, dict )
 		for key in ['matrix', 'left_preconditioner', 'right_preconditioner']:
-			self.assertTrue( key in cache )
-			self.assertTrue( isinstance(cache[key], np.ndarray))
-		self.assertTrue( cache['matrix'].shape == (31, 20) )
-		self.assertTrue( cache['left_preconditioner'].size == 31 )
-		self.assertTrue( cache['right_preconditioner'].size == 20 )
+			self.assertIn( key, cache )
+			self.assertIsInstance( cache[key], np.ndarray )
+		self.assertTupleEqual( cache['matrix'].shape, (31, 20) )
+		self.assertEqual( cache['left_preconditioner'].size, 31 )
+		self.assertEqual( cache['right_preconditioner'].size, 20 )
 		projector_matrix = cache.pop('projector_matrix', None)
 		if projector_matrix is not None:
-			self.assertTrue( isinstance(projector_matrix, np.ndarray) )
-			self.assertTrue( projector_matrix.shape == (20, 20) )
+			self.assertIsInstance( projector_matrix, np.ndarray )
+			self.assertTupleEqual( projector_matrix.shape, (20, 20) )
 
 	def test_solver_cache_accessor_save_load(self):
 		if SKIP_POGS_CACHING_TESTS:
@@ -437,17 +438,17 @@ class SolverCacheAccessorTestCase(ConradTestCase):
 		self.assertTrue( sca.DB.has_key(ptr) )
 		cache = sca.load_solver_cache(ptr)
 
-		self.assertTrue( isinstance(cache, dict) )
+		self.assertIsInstance( cache, dict )
 		for key in ['matrix', 'left_preconditioner', 'right_preconditioner']:
 			self.assertTrue( key in cache )
-			self.assertTrue( isinstance(cache[key], np.ndarray))
-		self.assertTrue( cache['matrix'].shape == (31, 20) )
-		self.assertTrue( cache['left_preconditioner'].size == 31 )
-		self.assertTrue( cache['right_preconditioner'].size == 20 )
+			self.assertIsInstance( cache[key], np.ndarray )
+		self.assertTupleEqual( cache['matrix'].shape, (31, 20) )
+		self.assertEqual( cache['left_preconditioner'].size, 31 )
+		self.assertEqual( cache['right_preconditioner'].size, 20 )
 		projector_matrix = cache.pop('projector_matrix', None)
 		if projector_matrix is not None:
-			self.assertTrue( isinstance(projector_matrix, np.ndarray) )
-			self.assertTrue( projector_matrix.shape == (20, 20) )
+			self.assertIsInstance( projector_matrix, np.ndarray )
+			self.assertTupleEqual( projector_matrix.shape, (20, 20) )
 
 		# caching only for SolverOptkit
 		with self.assertRaises(TypeError):
@@ -471,7 +472,7 @@ class SolverCacheAccessorTestCase(ConradTestCase):
 		]
 
 		entry = sca.select_solver_cache_entry(cache_list, 'first', 'f1')
-		self.assertTrue( entry is cache_list[0] )
+		self.assertIs( entry, cache_list[0] )
 
 		with self.assertRaises(ValueError):
 			sca.select_solver_cache_entry(cache_list, 'bad name', 'f1')
@@ -498,10 +499,10 @@ class CaseAccessorTestCase(ConradTestCase):
 
 	def test_case_accessor_init(self):
 		ca = CaseAccessor(filesystem=FilesystemTestCaching())
-		self.assertTrue( ca.DB is ca.anatomy_accessor.DB )
-		self.assertTrue( ca.DB is ca.physics_accessor.DB )
-		self.assertTrue( ca.DB is ca.solver_cache_accessor.DB )
-		self.assertTrue( ca.DB is ca.history_accessor.DB )
+		self.assertIs( ca.DB, ca.anatomy_accessor.DB )
+		self.assertIs( ca.DB, ca.physics_accessor.DB )
+		self.assertIs( ca.DB, ca.solver_cache_accessor.DB )
+		self.assertIs( ca.DB, ca.history_accessor.DB )
 
 	def test_case_accessor_save_load(self):
 		ca = CaseAccessor(filesystem=FilesystemTestCaching())
@@ -510,9 +511,9 @@ class CaseAccessorTestCase(ConradTestCase):
 		self.assertTrue( ca.DB.has_key(ptr) )
 
 		case = ca.load_case(ptr)
-		self.assertTrue( isinstance(case, Case) )
+		self.assertIsInstance( case, Case )
 		self.assertTrue( case.anatomy[0].is_target )
-		self.assertTrue( case.anatomy[0].name == 'ptv' )
+		self.assertEqual( case.anatomy[0].name, 'ptv' )
 
 	def test_case_accessor_update(self):
 		ca = CaseAccessor(filesystem=FilesystemTestCaching())
@@ -523,11 +524,11 @@ class CaseAccessorTestCase(ConradTestCase):
 		self.case.anatomy += Structure(1, 'oar', False)
 
 		ptr2 = ca.update_case_entry(case_entry, self.case, 'dir', case_ID=ptr)
-		self.assertTrue( ptr2 == ptr )
+		self.assertEqual( ptr2, ptr )
 
 		self.case.anatomy += Structure(2, 'oar2', False)
 		ptr3 = ca.update_case_entry(case_entry, self.case, 'dir')
-		self.assertFalse( ptr3 == ptr )
+		self.assertNotEqual( ptr3, ptr )
 
 	def test_case_accessor_save_load_components(self):
 		ca = CaseAccessor(filesystem=FilesystemTestCaching())
@@ -544,15 +545,15 @@ class CaseAccessorTestCase(ConradTestCase):
 
 		# load frame
 		frame1 = ca.load_frame(case_entry, 'frame1')
-		self.assertTrue( isinstance(frame1, DoseFrame) )
-		self.assertTrue( frame1.voxels == 10 )
-		self.assertTrue( frame1.beams == 15 )
+		self.assertIsInstance( frame1, DoseFrame )
+		self.assertEqual( frame1.voxels, 10 )
+		self.assertEqual( frame1.beams, 15 )
 
 		# load frame mapping
 		fmap01 = ca.load_frame_mapping(case_entry, 'frame0', 'frame1')
-		self.assertTrue( isinstance(fmap01, DoseFrameMapping) )
-		self.assertTrue( fmap01.source == 'frame0' )
-		self.assertTrue( fmap01.target == 'frame1' )
+		self.assertIsInstance( fmap01, DoseFrameMapping )
+		self.assertEqual( fmap01.source, 'frame0' )
+		self.assertEqual( fmap01.target, 'frame1' )
 
 		# save solver cache
 		case.physics.voxel_labels = np.zeros(case.physics.frame.voxels)
@@ -571,7 +572,7 @@ class CaseAccessorTestCase(ConradTestCase):
 		# load solver cache
 		if not (case.problem.solver_pogs is None or SKIP_POGS_CACHING_TESTS):
 			cache = ca.load_solver_cache(case_entry, 'cache0', 'frame0')
-			self.assertTrue( isinstance(cache, dict) )
+			self.assertIsInstance( cache, dict )
 		else:
 			with self.assertRaises(ValueError):
 				ca.load_solver_cache(case_entry, 'cache0', 'frame0')
@@ -594,25 +595,25 @@ class CaseAccessorTestCase(ConradTestCase):
 		# file containing multiple documents
 		y = ca.write_case_yaml(self.case, 'my_case', '.')
 		self.__files.append(y)
-		self.assertTrue( '.yaml' in y )
+		self.assertIn( '.yaml', y )
 		self.assertTrue( os.path.exists(y) )
 
 		case = ca.load_case_yaml(y)
-		self.assertTrue( isinstance(case, Case) )
+		self.assertIsInstance( case, Case )
 
 		# secondary mode: dump case dictionary into YAML file
 		y2 = ca.write_case_yaml(
 				self.case, 'my_case2', '.', single_document=True)
 		self.__files.append(y2)
-		self.assertTrue( '.yaml' in y2 )
+		self.assertIn( '.yaml', y2 )
 		self.assertTrue( os.path.exists(y2) )
 
 		case2 = ca.load_case_yaml(y2)
-		self.assertTrue( isinstance(case2, Case) )
+		self.assertIsInstance( case2, Case )
 
 		# dose matrix dims in `case_example.yml` = (30, 20)
 		# database pointer is `data_fragment.1000`
 		ca.DB.set(1000, ca.FS.write_data('dir', 'A', np.random.rand(30, 20)))
 		case3 = ca.load_case_yaml(os.path.join(
 				os.path.dirname(__file__), 'case_example.yml'))
-		self.assertTrue( isinstance(case3, Case) )
+		self.assertIsInstance( case3, Case )

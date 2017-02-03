@@ -1,5 +1,5 @@
 """
-TOOO: DOCSTRING
+Define accessor base class :class:`ConradDBAccessor`
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu

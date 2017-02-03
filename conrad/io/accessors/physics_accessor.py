@@ -1,5 +1,6 @@
 """
-TOOO: DOCSTRING
+Define :class:`DoseFrameAccessor`, :class:`FrameMappingAccessor` and
+:class:`PhysicsAccessor`.
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu

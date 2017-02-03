@@ -1,5 +1,5 @@
 """
-TOOO: DOCSTRING
+Define :class:`SolutionAccessor` and :class:`HistoryAccessor`
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu

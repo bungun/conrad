@@ -28,20 +28,20 @@ class SliceCachingVectorTestCase(ConradTestCase):
 	def test_sc_vec_init_attr(self):
 		v_ = np.random.rand(10)
 		v = SliceCachingVector(v_)
-		self.assertTrue(v.size == v_.size)
+		self.assertEqual(v.size, v_.size)
 		self.assert_vector_equal(v_, v.data)
 
 		v_ = [3, 5, 9]
 		v = SliceCachingVector(v_)
-		self.assertTrue(v.size == len(v_))
+		self.assertEqual(v.size, len(v_))
 		self.assert_vector_equal(v_, v.data)
 
 		v_ = { 0: np.random.rand(3), 1: np.random.rand(4),
 			   2: np.random.rand(5)}
 		v = SliceCachingVector(v_)
-		self.assertTrue( len(v._SliceCachingVector__slices) == 3 )
-		self.assertTrue( v.data is None )
-		self.assertTrue( v.size == 3 + 4 + 5 )
+		self.assertEqual( len(v._SliceCachingVector__slices), 3 )
+		self.assertIsNone( v.data )
+		self.assertEqual( v.size, 3 + 4 + 5 )
 		self.assertTrue( all([label in v for label in [0, 1, 2]]) )
 
 	def test_sc_vec_slice(self):
@@ -57,7 +57,7 @@ class SliceCachingVectorTestCase(ConradTestCase):
 		for i in xrange(3):
 			v_sub[i] = v_[idx[i]]
 			v.slice(i, idx[i])
-			self.assertTrue( i in v )
+			self.assertIn( i, v )
 			self.assert_vector_equal( v._SliceCachingVector__slices[i], v_sub[i] )
 			self.assert_vector_equal( v.slice(i), v_sub[i] )
 
@@ -71,4 +71,4 @@ class SliceCachingVectorTestCase(ConradTestCase):
 		v_ = {i: np.random.rand(i) for i in [4, 7, 9]}
 		v = SliceCachingVector(v_)
 		v.assemble()
-		self.assertTrue( v.data.size == 4 + 7 + 9 )
+		self.assertEqual( v.data.size, 4 + 7 + 9 )

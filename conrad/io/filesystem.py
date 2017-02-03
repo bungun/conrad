@@ -32,9 +32,8 @@ from conrad.case import Case
 from conrad.medicine import Anatomy, Structure, Prescription
 from conrad.io.schema import *
 
+@add_metaclass(abc.ABCMeta)
 class ConradFilesystemBase(object):
-	__metaclass__ = abc.ABCMeta
-
 	def __init__(self):
 		self.__DIGEST = {
 				int : lambda number: number,
