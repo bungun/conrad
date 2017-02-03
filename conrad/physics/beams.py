@@ -26,7 +26,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import nan
+import numpy as np
 
 from conrad.physics.grid import Grid2D, Grid3D
 
@@ -65,8 +65,8 @@ class AbstractBeam(object):
 	def __init__(self):
 		""" Initialize empty :class:`AbstractBeam`. """
 		self.__type = '<unknown beam type>'
-		self.__energy = nan
-		self.__limit = nan
+		self.__energy = np.nan
+		self.__limit = np.nan
 
 	@property
 	def count(self):

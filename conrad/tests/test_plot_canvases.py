@@ -22,6 +22,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 from conrad.compat import *
 
 import os
+
 from conrad.physics.units import Gy
 from conrad.medicine import Anatomy, Structure, D
 from conrad.case import Case

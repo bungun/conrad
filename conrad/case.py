@@ -21,9 +21,8 @@ Define :class:`Case`, the top level interface for treatment planning.
 """
 from conrad.compat import *
 
-from operator import add
-from warnings import warn
-from numpy import ndarray, array, squeeze, zeros, nan
+import warnings
+import numpy as np
 
 from conrad.physics import Physics
 from conrad.medicine import Anatomy, Prescription
@@ -161,7 +160,7 @@ class Case(object):
 		"""
 		Number of voxels in current planning frame of :attr:`Case.physics`.
 		"""
-		if self.physics.voxels is nan:
+		if self.physics.voxels is np.nan:
 			return None
 		return self.physics.voxels
 
@@ -170,7 +169,7 @@ class Case(object):
 		"""
 		Number of beams in current planning frame of :attr:`Case.physics`.
 		"""
-		if self.physics.beams is nan:
+		if self.physics.beams is np.nan:
 			return None
 		return self.physics.beams
 
@@ -368,7 +367,7 @@ class Case(object):
 		Calculate voxel doses for each structure in :attr:`Case.anatomy`.
 
 		Arguments:
-			x: Vector-like array of beam intensities.
+			x: Vector-like np.array of beam intensities.
 
 		Returns:
 			None
@@ -381,7 +380,7 @@ class Case(object):
 		:attr:`Case.anatomy`.
 
 		Arguments:
-			y: Vector-like array of voxel doses, or dictionary mapping
+			y: Vector-like np.array of voxel doses, or dictionary mapping
 				structure labels to voxel dose subvectors,
 		"""
 		self.anatomy.propagate_doses(
@@ -467,7 +466,7 @@ class Case(object):
 			if use_2pass:
 				run.plotting_data['exact'] = self.plotting_data(x=run.x_exact)
 		else:
-			warn('Problem infeasible as formulated')
+			warnings.warn('Problem infeasible as formulated')
 
 		status = (feas == int(1 + int(use_2pass)))
 		return status, run

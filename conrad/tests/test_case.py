@@ -21,7 +21,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from os import path
+import os
 
 from conrad.physics import Gy
 from conrad.medicine import D, Structure
@@ -227,13 +227,13 @@ class CaseTestCase(ConradTestCase):
 		self.assertIn( D(2) < 0.8 * Gy, c.anatomy[4].constraints.list )
 
 		# prescription-based initialization (yaml/json file)
-		curr_dir = path.abspath(path.dirname(__file__))
-		c = Case(prescription=path.join(curr_dir, 'json_rx.json'))
+		curr_dir = os.path.abspath(os.path.dirname(__file__))
+		c = Case(prescription=os.path.join(curr_dir, 'json_rx.json'))
 		self.assertFalse( c.physics.plannable )
 		self.assertFalse( c.anatomy.plannable )
 		self.assertFalse( c.plannable )
 
-		c = Case(prescription=path.join(curr_dir, 'yaml_rx.yml'))
+		c = Case(prescription=os.path.join(curr_dir, 'yaml_rx.yml'))
 		self.assertFalse( c.physics.plannable )
 		self.assertFalse( c.anatomy.plannable )
 		self.assertFalse( c.plannable )

@@ -23,7 +23,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import nan
+import numpy as np
 
 from conrad.physics.grid import Grid3D
 
@@ -65,8 +65,8 @@ class VoxelGrid(Grid3D):
 	@property
 	def total_volume(self):
 		""" Total volume of grid; undefine if unit volume unknown. """
-		if self.unit_volume.value is nan:
-			return nan * self.unit_volume
+		if self.unit_volume.value is np.nan:
+			return np.nan * self.unit_volume
 		else:
 			return self.voxels * self.unit_volume
 

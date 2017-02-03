@@ -63,9 +63,9 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from os import path
+import os
 import json, yaml
-from traceback import format_exc
+import traceback
 
 from conrad.physics.units import percent, Gy, cGy, cm3, Gray, DeliveredDose
 from conrad.physics.string import *
@@ -422,7 +422,7 @@ class Prescription(object):
 
 		# read presription data from file
 		if isinstance(prescription_data, str):
-			if path.exists(prescription_data):
+			if os.path.exists(prescription_data):
 				try:
 					f = open(prescription_data)
 					if '.json' in prescription_data:
@@ -432,7 +432,7 @@ class Prescription(object):
 					f.close
 					data_valid = True
 				except:
-					err = format_exc()
+					err = traceback.format_exc()
 
 		if not data_valid:
 			if err is not None:

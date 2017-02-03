@@ -21,10 +21,10 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
+import numpy as np
 import unittest
-from numpy import nan
-from numpy.linalg import norm
-from numpy.random import rand
+from numpy import np.nan
+from numpy.linalg import np.norm
 
 class ConradTestCase(unittest.TestCase):
 	"""
@@ -36,7 +36,8 @@ class ConradTestCase(unittest.TestCase):
 		Assert ``first`` and ``second`` equal, entrywise, within tolerance.
 		"""
 		atol *= len(first)**0.5
-		self.assertLessEqual( norm(first - second), atol + rtol * norm(second) )
+		self.assertLessEqual(
+				np.norm(first - second), atol + rtol * np.norm(second) )
 
 	def assert_vector_notequal(self, first, second, atol=1e-7, rtol=1e-7):
 		"""
@@ -45,7 +46,8 @@ class ConradTestCase(unittest.TestCase):
 		first = vec(first)
 		second = vec(second)
 		atol *= len(first)**0.5
-		self.assertGreater( norm(first - second), atol + rtol * norm(second) )
+		self.assertGreater(
+				np.norm(first - second), atol + rtol * np.norm(second) )
 
 	def assert_scalar_equal(self, first, second, atol=1e-7, rtol=1e-7):
 		""" Assert ``first`` and ``second`` equal, within tolerance. """
@@ -55,6 +57,6 @@ class ConradTestCase(unittest.TestCase):
 		""" Assert ``first`` and ``second`` not equal, within tolerance. """
 		self.assertGreater( abs(first - second), atol + rtol * abs(second) )
 
-	def assert_nan(self, value):
-		""" Assert ``value`` is :attr:``numpy.nan``. """
-		self.assertTrue( value is nan or str(value) == 'nan' )
+	def assert_np.nan(self, value):
+		""" Assert ``value`` is :attr:``numpy.np.nan``. """
+		self.assertTrue( value is np.nan or str(value) == 'nan' )

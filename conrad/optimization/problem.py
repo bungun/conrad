@@ -22,8 +22,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from os import getenv
-from numpy import inf, array, squeeze, ones, zeros, copy as np_copy
+import os
 
 from conrad.medicine.dose import PercentileConstraint
 from conrad.optimization.solver_cvxpy import SolverCVXPY
@@ -291,7 +290,7 @@ class PlanningProblem(object):
 		if 'print_construction' in options:
 			PRINT_PROBLEM_CONSTRUCTION = bool(options['print_construction'])
 		else:
-			PRINT_PROBLEM_CONSTRUCTION = getenv('CONRAD_PRINT_CONSTRUCTION',
+			PRINT_PROBLEM_CONSTRUCTION = os.getenv('CONRAD_PRINT_CONSTRUCTION',
 												False)
 
 		# get number of beams from dose matrix

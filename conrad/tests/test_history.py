@@ -21,8 +21,8 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from os import path
-from numpy import ndarray
+import os
+import numpy as np
 
 from conrad.medicine import Prescription
 from conrad.optimization.history import *
@@ -30,8 +30,8 @@ from conrad.tests.base import *
 
 class RunProfileTestCase(ConradTestCase):
 	def setUp(self):
-		rx_file = path.join(
-				path.abspath(path.dirname(__file__)), 'yaml_rx.yml')
+		rx_file = os.path.join(
+				os.path.abspath(os.path.dirname(__file__)), 'yaml_rx.yml')
 		self.structures = Prescription(rx_file).structure_dict.values()
 
 	def test_run_profile_init(self):
@@ -90,8 +90,8 @@ class RunOutputTestCase(ConradTestCase):
 
 		ro.optimal_variables['x'] = rand(100)
 		ro.optimal_variables['x_exact'] = rand(100)
-		self.assertIsInstance( ro.x, ndarray )
-		self.assertIsInstance( ro.x_exact, ndarray )
+		self.assertIsInstance( ro.x, np.ndarray )
+		self.assertIsInstance( ro.x_exact, np.ndarray )
 
 		ro.solver_info['time'] = rand()
 		ro.solver_info['time_exact'] = rand()
@@ -134,11 +134,11 @@ class RunRecordTestCase(ConradTestCase):
 		count_exact = sum(xe_rand > 1e-6)
 
 		rr.output.optimal_variables['x'] = x_rand
-		self.assertIsInstance( rr.x, ndarray )
+		self.assertIsInstance( rr.x, np.ndarray )
 		self.assertEqual( rr.nonzero_beam_count, count )
 
 		rr.output.optimal_variables['x_exact'] = xe_rand
-		self.assertIsInstance( rr.x_exact, ndarray )
+		self.assertIsInstance( rr.x_exact, np.ndarray )
 		self.assertEqual( rr.nonzero_beam_count_exact, count_exact )
 
 class PlanningHistoryTestCase(ConradTestCase):

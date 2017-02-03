@@ -21,7 +21,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from os import path
+import os
 
 from conrad.medicine.dose import D
 from conrad.medicine.prescription import *
@@ -336,12 +336,14 @@ class PrescriptionTestCase(ConradTestCase):
 		self.validate_prescription_contents(rx)
 
 	def test_prescription_digest_yaml(self):
-		f = path.join(path.abspath(path.dirname(__file__)), 'yaml_rx.yml')
+		f = os.path.join(
+				os.path.abspath(os.path.dirname(__file__)), 'yaml_rx.yml')
 		rx = Prescription(f)
 		self.validate_prescription_contents(rx)
 
 	def test_prescription_digest_json(self):
-		f = path.join(path.abspath(path.dirname(__file__)), 'json_rx.json')
+		f = os.path.join(
+				os.path.abspath(os.path.dirname(__file__)), 'json_rx.json')
 		rx = Prescription(f)
 		self.validate_prescription_contents(rx)
 

@@ -21,7 +21,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import nan
+import numpy as np
 
 from conrad.medicine.structure import Structure
 
@@ -174,7 +174,7 @@ class Anatomy(object):
 		if self.is_empty:
 			return 0
 		elif any([s.size is None for s in self]):
-			return nan
+			return np.nan
 		else:
 			return sum([s.size for s in self])
 
