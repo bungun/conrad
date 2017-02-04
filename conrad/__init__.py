@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-__version__ = "0.0.2a"
+__version__ = "0.0.3a"
 
 from conrad.medicine import *
 from conrad.physics import *
