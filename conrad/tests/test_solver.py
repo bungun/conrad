@@ -90,7 +90,7 @@ class SolverGenericTestCase(ConradTestCase):
 		self.label_oar = 1
 
 		# Voxel labels on beam matrix
-		self.labelel_order = [self.label_tumor, self.label_oar]
+		self.label_order = [self.label_tumor, self.label_oar]
 		self.voxel_labels = [self.label_tumor] * self.m_target
 		self.voxel_labels += [self.label_oar] * self.m_oar
 

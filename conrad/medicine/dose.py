@@ -1108,7 +1108,7 @@ class DVH(object):
 		elif p1 == p2 and p_des != p1:
 			raise ValueError('arguments "p1", "p2" must be distinct to '
 							 'perform interpolation.\nprovided interval: '
-							 '[{},{}]\ntaget value: {}'.format(p1, p2, p_des))
+							 '[{},{}]\ntarget value: {}'.format(p1, p2, p_des))
 		else:
 			# alpha * p1 + (1 - alpha) * p2 = p_des
 			# (p1 - p2) * alpha = p_des - p2
@@ -1144,7 +1144,7 @@ class DVH(object):
 
 		Since the :class:`DVH` object maintains the DVH curve of
 		(dose, percentile) pairs as two sorted vectors, to approximate
-		the the dose d at percentile ``percentile``, we retrieve the
+		the dose d at percentile ``percentile``, we retrieve the
 		index i that yields the nearest percentile value. The
 		corresponding i'th dose is returned. When the nearest percentile
 		is not within 0.5%, the two nearest neighbor percentiles and
