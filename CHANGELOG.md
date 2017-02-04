@@ -19,16 +19,20 @@
 - display dose distribution slices
 - warn user and stop plan execution if infeasible status returned
 
-## Version 0.0.2 (alpha)
-
-TODO: document conrad.visualization.plot module
+## Version 0.0.3 (alpha)
 TODO: allow plotting of 1st pass when 2-pass is enabled
-TODO: document conrad.io module
 TODO: __str__ method for RunRecord (why?)
 TODO: RunRecord compatibility for CaseIO.save_solution()
 TODO: DictionaryMapping class for structure-wise clustering 
-TODO: Objective class
-TODO: Update docs for v0.0.1
+
+## Version 0.0.2 
+- IO module for saving/loading cases from config files (database compatible)
+- Objective class: specify primal, dual eval and expression methods for cvxpy
+  and POGS backends
+  
+TODO: document conrad.visualization.plot module
+TODO: document conrad.io module
+TODO: Update docs for v0.0.2
 
 ## Version 0.0.1 
 
@@ -36,4 +40,3 @@ TODO: Update docs for v0.0.1
 - Convex handling of dose-volume constraints
 - Connects to cvxpy (solvers: SCS, ECOS, ... ) and POGS solver backends 
 - Plotting module for DVH graphs
-- IO module for saving/loading cases from config files (database compatible)
