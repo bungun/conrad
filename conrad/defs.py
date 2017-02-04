@@ -49,7 +49,7 @@ CONRAD_MATRIX_TYPES = (np.ndarray, sp.csr_matrix, sp.csc_matrix)
 
 def vec(vectorlike):
 	""" Convert input to one-dimensional :class:`~numpy.ndarray`. """
-	return np.squeeze(np.array(vectorlike))
+	return np.reshape(np.array(vectorlike), (np.size(vectorlike),))
 
 def is_vector(vectorlike):
 	""" ``True`` if input is one-dimensional :class:`~numpy.ndarray`. """

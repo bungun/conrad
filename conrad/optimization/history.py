@@ -245,11 +245,17 @@ class RunRecord(object):
 	@property
 	def nonzero_beam_count(self, tol=1e-6):
 		""" Number of active beams in first-pass solution. """
+		if self.x is None:
+			raise ValueError('no beam data assigned')
 		return np.sum(self.x > tol)
 
 	@property
 	def nonzero_beam_count_exact(self, tol=1e-6):
 		""" Number of active beams in second-pass solution. """
+		if self.x_exact is None:
+			raise ValueError(
+					'no beam data assigned for exact solution '
+					'intensities')
 		return np.sum(self.x_exact > tol)
 
 	@property

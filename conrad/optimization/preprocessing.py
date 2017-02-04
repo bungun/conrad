@@ -1,3 +1,24 @@
+"""
+Methods to evaluate/build structure objectives.
+"""
+"""
+Copyright 2016--2017 Baris Ungun, Anqi Fu
+
+This file is part of CONRAD.
+
+CONRAD is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+CONRAD is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
+"""
 from conrad.compat import *
 
 import numpy as np
@@ -105,9 +126,3 @@ class ObjectiveMethods(object):
 		weights = ObjectiveMethods.get_weights(structure)
 		size = 1 if structure.collapsable else structure.size
 		return structure.objective.dual_domain_constraints_pogs(size, weights)
-
-
-
-
-
-

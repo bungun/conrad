@@ -181,6 +181,8 @@ class Structure(object):
 
 	@property
 	def weighted_size(self):
+		if self.voxel_weights is None:
+			return self.size
 		return self.__weighted_size
 
 	@property
@@ -287,33 +289,39 @@ class Structure(object):
 	def A_mean(self, A_mean=None):
 		if A_mean is not None:
 			if not isinstance(A_mean, np.ndarray):
-				raise TypeError('if argument "A_mean" is provided, it '
-								'must be of type {}'.format(np.ndarray))
+				raise TypeError(
+						'if argument "A_mean" is provided, it must be '
+						'of type {}'.format(np.ndarray))
 			elif not A_mean.size in A_mean.shape:
-				raise ValueError('if argument "A_mean" is provided, it must be'
-								 ' a row or column vector. shape of argument: '
-								 '{}'.format(A_mean.shape))
+				raise ValueError(
+						'if argument "A_mean" is provided, it must be '
+						'a row or column vector. shape of argument: {}'
+						''.format(A_mean.shape))
 			else:
 				if self.__A_full is not None:
 					if len(A_mean) != self.__A_full.shape[1]:
-						raise ValueError('field "A_full" already set; '
-										 'proposed value for "A_mean" '
-										 'must have same number of entries '
-										 '({}) as columns in A_full ({})'
-										 ''.format(len(A_mean),
-										 self.__A_full.shape[1]))
-				self.__A_mean = vec(A_mean)
+						raise ValueError(
+								'field "A_full" already set; proposed '
+								'value for "A_mean" must have same '
+								'number of entries ({}) as columns in '
+								'A_full ({})'.format(
+										len(A_mean),
+										self.__A_full.shape[1]))
+			self.__A_mean = vec(A_mean)
 		elif self.__A_full is not None:
 			if not sparse_or_dense(self.A_full):
-				raise TypeError('cannot calculate structure.A_mean from'
-								'structure.A_full: A_full must be one of'
-								' ({},{},{})'.format(
-										np.ndarray, sp.csc_matrix,
-										sp.csr_matrix))
+				raise TypeError(
+						'cannot calculate structure.A_mean from'
+						'structure.A_full: A_full must be one of '
+						'({},{},{})'.format(
+								np.ndarray, sp.csc_matrix,
+								sp.csr_matrix))
 			else:
-				self.__A_mean = self.A_full.sum(0) / self.A_full.shape[0]
-				if not isinstance(self.A_full, np.ndarray):
-					self.__A_mean = vec(self.__A_mean)
+				if isinstance(self.A_full, np.ndarray):
+					self.__A_mean = np.dot(self.voxel_weights, self.A_full)
+				else:
+					self.__A_mean = vec(self.voxel_weights * self.A_full)
+				self.__A_mean /= float(self.weighted_size)
 
 	@property
 	def A(self):
@@ -352,6 +360,13 @@ class Structure(object):
 		self.__voxel_weights = vec(weights)
 		self.__weighted_size = np.sum(self.__voxel_weights)
 		self.objective.normalization = 1. / self.weighted_size
+		if self.weighted_size != self.size and self.A_full is not None:
+			# Pass "None" to self.A_mean setter to trigger calculation of
+			# mean dose matrix from full dose matrix.
+			self.A_mean = None
+		if self.y is not None:
+			self.__y_mean = np.dot(
+					self.voxel_weights, self.y) / self.weighted_size
 
 	def set_constraint(self, constr_id, threshold=None, relop=None, dose=None):
 		"""
@@ -496,7 +511,7 @@ class Structure(object):
 					'size of dose vector ({}) incompatible with size '
 					'of structure ({})'.format(y.size, self.size))
 		self.__y = y
-		self.__y_mean = np.mean(y)
+		self.__y_mean = np.dot(self.voxel_weights, y) / self.weighted_size
 		self.dvh.data = self.__y
 
 	def calc_y(self, x):

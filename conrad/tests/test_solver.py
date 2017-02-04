@@ -20,6 +20,9 @@ You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
+
+import numpy as np
+
 from conrad.medicine import Structure, Anatomy
 from conrad.medicine.dose import D, Gy
 from conrad.optimization.solver_base import *
@@ -63,12 +66,13 @@ class SolverTestCase(ConradTestCase):
 
 		s = Solver()
 		structures = []
-		structures.append(Structure(0, 'tumor', True, A=rand(m0, n)))
-		structures.append(Structure(1, 'OAR', False, A=rand(m1, n)))
+		structures.append(Structure(0, 'tumor', True, A=np.random.rand(m0, n)))
+		structures.append(Structure(1, 'OAR', False, A=np.random.rand(m1, n)))
 
 		self.assertEqual( s._Solver__check_dimensions(structures), n )
 
-		structures[0] = Structure(0, 'tumor', True, A=rand(m0, n_mismatch))
+		structures[0] = Structure(
+				0, 'tumor', True, A=np.random.rand(m0, n_mismatch))
 
 		with self.assertRaises(ValueError):
 			s._Solver__check_dimensions(structures)
@@ -96,8 +100,8 @@ class SolverGenericTestCase(ConradTestCase):
 
 	def setUp(self):
 		# Construct dose matrix
-		self.A_targ = 1.2 * rand(self.m_target, self.n)
-		self.A_oar = 0.3 * rand(self.m_oar, self.n)
+		self.A_targ = 1.2 * np.random.rand(self.m_target, self.n)
+		self.A_oar = 0.3 * np.random.rand(self.m_oar, self.n)
 		self.anatomy['tumor'].A_full = self.A_targ
 		self.anatomy['oar'].A_full = self.A_oar
 

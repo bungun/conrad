@@ -21,6 +21,8 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
+import numpy as np
+
 from conrad.defs import vec
 from conrad.physics.units import Gy
 from conrad.medicine import Anatomy, Structure, D
@@ -36,9 +38,14 @@ else:
 		def setUpClass(self):
 			self.beams = 50
 			self.anatomy = Anatomy([
-					Structure(0, 'PTV', True, A=rand(100, self.beams)),
-					Structure(1, 'OAR1', False, A=rand(300, self.beams)),
-					Structure(2, 'OAR2', False, A=rand(250, self.beams))
+					Structure(
+							0, 'PTV', True, A=np.random.rand(100, self.beams)),
+					Structure(
+							1, 'OAR1', False,
+							A=np.random.rand(300, self.beams)),
+					Structure(
+							2, 'OAR2', False,
+							A=np.random.rand(250, self.beams))
 				])
 			self.anatomy['PTV'].constraints += D(80) > 25 * Gy
 			self.anatomy['PTV'].constraints += D(30) < 28 * Gy
@@ -48,7 +55,7 @@ else:
 			self.case = Case(anatomy=self.anatomy)
 
 		def setUp(self):
-			self.anatomy.calculate_doses(rand(self.beams))
+			self.anatomy.calculate_doses(np.random.rand(self.beams))
 
 			# store function in cases when it is disabled
 			self.autoset_colors = CasePlotter.autoset_structure_colors
@@ -86,11 +93,13 @@ else:
 			# subset filtering
 			test_list = [0, 1, 2, 3, 4, 'PTV', 'OAR', 'OAR1', 'some string']
 			filtered_list = cp.filter_labels(test_list)
-			self.assertSetEqual( set(filtered_list), {i for i in xrange(n_struc)} )
+			self.assertSetEqual(
+					set(filtered_list), {i for i in xrange(n_struc)} )
 
 			test_dictionary = {item: item for item in test_list}
 			filtered_dict = cp.filter_data(test_dictionary)
-			self.assertDictEqual( filtered_dict, {i: i for i in xrange(n_struc)} )
+			self.assertDictEqual(
+					filtered_dict, {i: i for i in xrange(n_struc)} )
 
 			# add data
 			cp.dvh_set = self.case.anatomy.plotting_data()
@@ -209,15 +218,17 @@ else:
 
 		def test_caseplotter_plot(self):
 			cp = CasePlotter(self.case)
-			plan_data = self.case.plotting_data(x=rand(self.beams))
+			plan_data = self.case.plotting_data(x=np.random.rand(self.beams))
 			cp.plot(plan_data)
 
 		# 	# TODO: test options
 
 		def test_caseplotter_twopass(self):
 			cp = CasePlotter(self.case)
-			plan_data_pass1 = self.case.plotting_data(x=rand(self.beams))
-			plan_data_pass2 = self.case.plotting_data(x=rand(self.beams))
+			plan_data_pass1 = self.case.plotting_data(
+					x=np.random.rand(self.beams))
+			plan_data_pass2 = self.case.plotting_data(
+					x=np.random.rand(self.beams))
 			cp.plot_twopass([plan_data_pass1, plan_data_pass2])
 
 		# 	# TODO: test options
@@ -225,9 +236,10 @@ else:
 		def test_caseplotter_plotmulti(self):
 			cp = CasePlotter(self.case)
 
-			plan_data_ref = self.case.plotting_data(x=rand(self.beams))
+			plan_data_ref = self.case.plotting_data(
+					x=np.random.rand(self.beams))
 			plan_data_list = [
-				self.case.plotting_data(x=rand(self.beams))
+				self.case.plotting_data(x=np.random.rand(self.beams))
 						for i in xrange(3)]
 			plan_names = ['first', 'second', 'third']
 

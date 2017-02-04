@@ -40,18 +40,18 @@ class VoxelsTestCase(ConradTestCase):
 		self.assert_nan( g.total_volume.value )
 
 		g.set_scale(dx, dy, dz)
-		self.assertTrue( g.total_volume.value is not nan )
+		self.assert_not_nan( g.total_volume.value )
 		vol = g.voxels * dx.to_cm.value * dy.to_cm.value * dz.to_cm.value
 		self.assertEqual( g.total_volume.value, vol )
 
-		idx = int(m * rand())
+		idx = int(m * np.random.rand())
 		self.assertEqual( g.position2index(*g.index2position(idx)), idx )
 		g.set_order('zyx')
 		self.assertEqual( g.position2index(*g.index2position(idx)), idx )
 		g.set_order('yxz')
 		self.assertEqual( g.position2index(*g.index2position(idx)), idx )
 
-		indices = (m * rand(10)).astype(int)
+		indices = (m * np.random.rand(10)).astype(int)
 		idx_recovered = listmap(
 				lambda pos : g.position2index(*pos),
 				listmap(g.index2position, indices))

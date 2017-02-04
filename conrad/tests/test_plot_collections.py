@@ -21,6 +21,8 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
+import numpy as np
+
 from conrad.physics.units import Gy
 from conrad.medicine import D, Anatomy, Structure
 from conrad.case import Case
@@ -91,13 +93,18 @@ else:
 		def setUpClass(self):
 			self.beams = 50
 			self.anatomy = Anatomy([
-					Structure(0, 'PTV', True, A=rand(100, self.beams)),
-					Structure(1, 'OAR1', False, A=rand(300, self.beams)),
-					Structure(2, 'OAR2', False, A=rand(250, self.beams))
+					Structure(
+							0, 'PTV', True, A=np.random.rand(100, self.beams)),
+					Structure(
+							1, 'OAR1', False,
+							A=np.random.rand(300, self.beams)),
+					Structure(
+							2, 'OAR2', False,
+							A=np.random.rand(250, self.beams))
 				])
 
 		def setUp(self):
-			self.anatomy['PTV'].calculate_dose(rand(self.beams))
+			self.anatomy['PTV'].calculate_dose(np.random.rand(self.beams))
 			self.anatomy['PTV'].constraints += D(90) > 10 * Gy
 
 		def test_structure_dvh_graph_init_properties(self):
@@ -218,7 +225,8 @@ else:
 			self.assertTrue( all(map(lambda g: g.get_visible(), g_visible)) )
 
 			g_invisible = self.gather_graphs(sdvh, curve=False)
-			self.assertFalse( any(map(lambda g: g.get_visible(), g_invisible)) )
+			self.assertFalse(
+					any(map(lambda g: g.get_visible(), g_invisible)) )
 
 	class PlanGraphBaseTestCase(ConradTestCase):
 		@classmethod
@@ -290,9 +298,14 @@ else:
 		def setUpClass(self):
 			self.beams = 50
 			self.anatomy = Anatomy([
-					Structure(0, 'PTV', True, A=rand(100, self.beams)),
-					Structure(1, 'OAR1', False, A=rand(300, self.beams)),
-					Structure(2, 'OAR2', False, A=rand(250, self.beams))
+					Structure(
+							0, 'PTV', True, A=np.random.rand(100, self.beams)),
+					Structure(
+							1, 'OAR1', False,
+							A=np.random.rand(300, self.beams)),
+					Structure(
+							2, 'OAR2', False,
+							A=np.random.rand(250, self.beams))
 				])
 			self.anatomy['PTV'].constraints += D(80) > 40 * Gy
 			self.anatomy['PTV'].constraints += D(20) < 45 * Gy
@@ -319,7 +332,7 @@ else:
 				self.assertIsInstance(s_dvh, StructureDVHGraph )
 
 		def test_plandvh_graph_maxdose(self):
-			self.anatomy.calculate_doses(rand(self.beams))
+			self.anatomy.calculate_doses(np.random.rand(self.beams))
 			pd = self.anatomy.plotting_data()
 			dmax = dmaxdc = 0
 			for label in pd:
@@ -338,9 +351,14 @@ else:
 		def setUpClass(self):
 			self.beams = 50
 			self.anatomy = Anatomy([
-					Structure(0, 'PTV', True, A=rand(100, self.beams)),
-					Structure(1, 'OAR1', False, A=rand(300, self.beams)),
-					Structure(2, 'OAR2', False, A=rand(250, self.beams))
+					Structure(
+							0, 'PTV', True, A=np.random.rand(100, self.beams)),
+					Structure(
+							1, 'OAR1', False,
+							A=np.random.rand(300, self.beams)),
+					Structure(
+							2, 'OAR2', False,
+							A=np.random.rand(250, self.beams))
 				])
 			self.anatomy['PTV'].constraints += D(80) > 40 * Gy
 			self.anatomy['PTV'].constraints += D(20) < 45 * Gy
@@ -370,7 +388,7 @@ else:
 											StructureConstraintsGraph )
 
 		def test_plan_constraints_graph_maxdose(self):
-			self.anatomy.calculate_doses(rand(self.beams))
+			self.anatomy.calculate_doses(np.random.rand(self.beams))
 			pd = self.anatomy.plotting_data(constraints_only=True)
 			dmax = 0
 			for label in pd:

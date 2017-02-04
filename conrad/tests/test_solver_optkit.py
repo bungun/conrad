@@ -20,6 +20,9 @@ You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
+
+import numpy as np
+
 from conrad.medicine import Structure, D
 from conrad.physics import Gy
 from conrad.optimization.solver_optkit import *
@@ -143,8 +146,8 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 
 		# test incorporation of voxel weights into objective term weights,
 		# both full and collapsed matrix cases
-		voxel_weights0 = (1 + 10 * rand(self.m_target)).astype(int)
-		voxel_weights1 = (1 + 10 * rand(self.m_oar)).astype(int)
+		voxel_weights0 = (1 + 10 * np.random.rand(self.m_target)).astype(int)
+		voxel_weights1 = (1 + 10 * np.random.rand(self.m_oar)).astype(int)
 		self.anatomy[0].voxel_weights = voxel_weights0
 		self.anatomy[1].voxel_weights = voxel_weights1
 		s._SolverOptkit__build_voxel_objective(self.anatomy.list)
@@ -178,7 +181,7 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 
 		struc = self.anatomy['tumor']
 		struc.constraints += D(70) > 10 * Gy
-		struc.calculate_dose(rand(self.n))
+		struc.calculate_dose(np.random.rand(self.n))
 		cid = struc.constraints.last_key
 		for slack_flag in [True, False]:
 			with self.assertRaises(ValueError):

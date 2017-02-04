@@ -22,6 +22,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 from conrad.compat import *
 
 import os
+import numpy as np
 
 from conrad.physics import Gy
 from conrad.medicine import D, Structure
@@ -38,8 +39,8 @@ class CaseTestCase(ConradTestCase):
 				Structure(2, 'OAR2', False)
 			])
 		self.physics = Physics(
-				dose_matrix=rand(m, n),
-				voxel_labels=(3 * rand(m)).astype(int)
+				dose_matrix=np.random.rand(m, n),
+				voxel_labels=(3 * np.random.rand(m)).astype(int)
 			)
 
 		# let T = average value of target voxel rows of dose matrix
@@ -112,7 +113,7 @@ class CaseTestCase(ConradTestCase):
 		self.assertFalse( c1.plannable )
 
 		# dose matrix...
-		p.dose_matrix = rand(voxels, beams)
+		p.dose_matrix = np.random.rand(voxels, beams)
 		self.assertIsNotNone( c1.A )
 		self.assertEqual( c1.A.shape, (voxels, beams) )
 		self.assertFalse( c1.physics.plannable )
@@ -122,7 +123,7 @@ class CaseTestCase(ConradTestCase):
 		# ...and voxel labels makes physics plannable, rendering
 		# the case object plannable upon data transfer from physics to
 		# anatomy (invoked by checking property "plannable")
-		p.voxel_labels = (2 * rand(m)).astype(int)
+		p.voxel_labels = (2 * np.random.rand(m)).astype(int)
 		self.assertTrue( c1.physics.plannable )
 		self.assertFalse( c1.anatomy.plannable )
 		self.assertTrue( c1.plannable )
@@ -135,8 +136,8 @@ class CaseTestCase(ConradTestCase):
 						Structure(1, 'tumor', True)
 				]),
 				Physics(
-						dose_matrix=rand(voxels, beams),
-						voxel_labels=(2 * rand(voxels)).astype(int)
+						dose_matrix=np.random.rand(voxels, beams),
+						voxel_labels=(2 * np.random.rand(voxels)).astype(int)
 				))
 
 		self.assertEqual( c2.n_structures, 2 )
@@ -334,7 +335,7 @@ class CaseTestCase(ConradTestCase):
 	def test_calculate_doses(self):
 		case = Case(self.anatomy, self.physics)
 		case.load_physics_to_anatomy()
-		x = rand(case.n_beams)
+		x = np.random.rand(case.n_beams)
 		case.calculate_doses(x)
 
 		for structure in case.anatomy:

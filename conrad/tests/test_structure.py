@@ -332,7 +332,7 @@ class StructureTestCase(ConradTestCase):
 
 	def test_assign_dose(self):
 		m, n = 400, 50
-		y = rand(m)
+		y = np.random.rand(m)
 		s = Structure('LABEL', 'NAME', True, A=np.random.rand(m, n))
 
 		s.assign_dose(y)

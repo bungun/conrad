@@ -246,7 +246,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		#
 		constr = D(80) >= 10 * Gy
 		dose = constr.dose.value
-		y = rand(self.m_target)
+		y = np.random.rand(self.m_target)
 
 		m_exact = int(np.ceil(self.m_target * constr.percentile.fraction))
 		# ensure constraint is met by vector y
@@ -269,7 +269,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		#
 		constr = D(80) <= 10 * Gy
 		dose = constr.dose.value
-		y = rand(self.m_target)
+		y = np.random.rand(self.m_target)
 
 		m_exact = int(np.ceil(self.m_target * (1 - constr.percentile.fraction)))
 		# ensure constraint is met by vector y
@@ -354,7 +354,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		self.assertIsNone( self.anatomy['tumor'].y )
 		with self.assertRaises(ValueError):
 			s._SolverCVXPY__add_constraints(self.anatomy['tumor'], True)
-		self.anatomy['tumor'].calculate_dose(rand(self.n))
+		self.anatomy['tumor'].calculate_dose(np.random.rand(self.n))
 		self.assertIsNotNone( self.anatomy['tumor'].y )
 		s._SolverCVXPY__add_constraints(self.anatomy['tumor'])
 		s.clear()

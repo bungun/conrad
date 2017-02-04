@@ -38,8 +38,9 @@ class PlanningProblemTestCase(ConradTestCase):
 		self.m_target = m_target = 100
 		self.m_oar = m_oar = m - m_target
 		self.anatomy = Anatomy()
-		self.anatomy += Structure(0, 'tumor', True, A=rand(m_target, n))
-		self.anatomy += Structure(1, 'oar', True, A=rand(m_oar, n))
+		self.anatomy += Structure(
+				0, 'tumor', True, A=np.random.rand(m_target, n))
+		self.anatomy += Structure(1, 'oar', True, A=np.random.rand(m_oar, n))
 
 	def tearDown(self):
 		for struc in self.anatomy:
@@ -83,7 +84,7 @@ class PlanningProblemTestCase(ConradTestCase):
 		if p.solver_pogs is not None:
 			self.anatomy.clear_constraints()
 			p._PlanningProblem__solver = p.solver_pogs
-			x_rand = rand(self.n)
+			x_rand = np.random.rand(self.n)
 			p.solver_pogs.build(self.anatomy.list)
 			p.solver_pogs.pogs_solver.output.x[:] = x_rand
 			p._PlanningProblem__update_constraints(struc)

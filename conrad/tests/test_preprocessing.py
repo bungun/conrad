@@ -2,7 +2,7 @@
 Unit tests for :mod:`conrad.optimization.preprocessing`.
 """
 """
-Copyright 2016 Baris Ungun, Anqi Fu
+Copyright 2016--2017 Baris Ungun, Anqi Fu
 
 This file is part of CONRAD.
 
@@ -162,12 +162,14 @@ class ObjectiveMethodsTestCase(ConradTestCase):
 		# nontarget
 		# unweighted, weighted: collapsed vs. full
 		y_mean_var = cvxpy.Variable(1)
-		y_mean_var.save_value(np.mean(self.y))
 		self.oar.A_full = self.A
 
 		for wt in [None, self.voxel_weights]:
 			if wt is not None:
 				self.oar.voxel_weights = wt
+				y_mean_var.save_value(np.dot(wt, self.y) / np.sum(wt))
+			else:
+				y_mean_var.save_value(np.mean(self.y))
 
 			self.oar.constraints.clear()
 			f_col_y = cvxpy.Minimize(ObjectiveMethods.expr(self.oar, y_mean_var))
@@ -176,6 +178,7 @@ class ObjectiveMethodsTestCase(ConradTestCase):
 			f_full = cvxpy.Minimize(ObjectiveMethods.expr(self.oar, y_var))
 			self.assert_scalar_equal( f_col_y.value, f_col_Ax.value )
 			self.assert_scalar_equal( f_col_y.value, f_full.value, 1e-3, 1e-3 )
+			# TODO: WHY IS THIS LINE A PROBLEM???????
 
 	def test_dual_expr(self):
 		nu_var = cvxpy.Variable(self.m)
@@ -247,7 +250,6 @@ class ObjectiveMethodsTestCase(ConradTestCase):
 			f_collapse = ObjectiveMethods.primal_expr_pogs(self.oar)
 			self.oar.constraints += self.constraints[1]
 			f_full = ObjectiveMethods.primal_expr_pogs(self.oar)
-			print f_collapse.eval([self.oar.y_mean]), f_full.eval(self.oar.y)
 			self.assert_scalar_equal(
 					f_collapse.eval(np.array([self.oar.y_mean])),
 					f_full.eval(self.oar.y), 1e-3, 1e-3 )

@@ -22,6 +22,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 from conrad.compat import *
 
 import os
+import numpy as np
 
 from conrad.physics.units import Gy
 from conrad.medicine import Anatomy, Structure, D
@@ -137,9 +138,12 @@ else:
 		def setUpClass(self):
 			self.beams = 50
 			self.anatomy = Anatomy([
-					Structure(0, 'PTV', True, A=rand(100, self.beams)),
-					Structure(1, 'OAR1', False, A=rand(300, self.beams)),
-					Structure(2, 'OAR2', False, A=rand(250, self.beams))
+					Structure(
+							0, 'PTV', True, A=np.random.rand(100, self.beams)),
+					Structure(
+							1, 'OAR1', False, A=np.random.rand(300, self.beams)),
+					Structure(
+							2, 'OAR2', False, A=np.random.rand(250, self.beams))
 				])
 			self.panel_assignments = {0: 0, 1: 0, 2: 0}
 			self.names = {0: 'PTV', 1: 'OAR1', 2: 'OAR2'}
@@ -429,7 +433,7 @@ else:
 			d.layout = 'horizontal'
 
 			LABEL = 0
-			self.anatomy.calculate_doses(rand(self.beams))
+			self.anatomy.calculate_doses(np.random.rand(self.beams))
 			self.anatomy[LABEL].constraints += D(30) < 20 * Gy
 			pd = PlanDVHGraph(self.anatomy.plotting_data())
 

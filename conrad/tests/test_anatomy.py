@@ -21,6 +21,8 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
+import numpy as np
+
 from conrad.medicine.structure import Structure
 from conrad.medicine.anatomy import *
 from conrad.tests.base import *
@@ -28,15 +30,15 @@ from conrad.tests.base import *
 class AnatomyTestCase(ConradTestCase):
 	@classmethod
 	def setUpClass(self):
-		self.A0 = A0 = rand(500, 50)
-		self.A1 = A1 = rand(200, 50)
+		self.A0 = A0 = np.random.rand(500, 50)
+		self.A1 = A1 = np.random.rand(200, 50)
 		self.structures = [
 				Structure(0, 'oar', False, A=A0),
 				Structure(1, 'ptv', True, A=A1)
 		]
 
 	def setUp(self):
-		self.x_random = rand(50)
+		self.x_random = np.random.rand(50)
 
 	def test_anatomy_init(self):
 		a = Anatomy()
@@ -57,13 +59,13 @@ class AnatomyTestCase(ConradTestCase):
 		self.assertFalse( a.plannable )
 
 		self.assert_nan( a.size )
-		a['label1'].A_full = rand(500, 100)
+		a['label1'].A_full = np.random.rand(500, 100)
 		self.assertEqual( a.size, 500 )
 		self.assertFalse( a.plannable )
 
 		a += Structure('label2', 'ptv', True)
 		self.assertFalse( a.plannable )
-		a['label2'].A_full = rand(500, 100)
+		a['label2'].A_full = np.random.rand(500, 100)
 		self.assertEqual( a.n_structures, 2 )
 		self.assertEqual( a.size, 1000 )
 		self.assertTrue( a.plannable )

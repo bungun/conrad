@@ -88,13 +88,13 @@ class RunOutputTestCase(ConradTestCase):
 		self.assert_nan( ro.solvetime )
 		self.assert_nan( ro.solvetime_exact )
 
-		ro.optimal_variables['x'] = rand(100)
-		ro.optimal_variables['x_exact'] = rand(100)
+		ro.optimal_variables['x'] = np.random.rand(100)
+		ro.optimal_variables['x_exact'] = np.random.rand(100)
 		self.assertIsInstance( ro.x, np.ndarray )
 		self.assertIsInstance( ro.x_exact, np.ndarray )
 
-		ro.solver_info['time'] = rand()
-		ro.solver_info['time_exact'] = rand()
+		ro.solver_info['time'] = np.random.rand()
+		ro.solver_info['time_exact'] = np.random.rand()
 		self.assertIsInstance( ro.solvetime, float )
 		self.assertIsInstance( ro.solvetime_exact, float )
 
@@ -119,13 +119,15 @@ class RunRecordTestCase(ConradTestCase):
 		self.assertIsInstance( rr.info, dict )
 		self.assertIsNone( rr.x )
 		self.assertIsNone( rr.x_exact )
-		self.assertEqual( rr.nonzero_beam_count, 0 )
-		self.assertEqual( rr.nonzero_beam_count_exact, 0 )
+		with self.assertRaises(ValueError):
+			rr.nonzero_beam_count
+		with self.assertRaises(ValueError):
+			rr.nonzero_beam_count_exact
 		self.assert_nan( rr.solvetime )
 		self.assert_nan( rr.solvetime_exact )
 
-		x_rand = rand(100)
-		xe_rand = rand(100)
+		x_rand = np.random.rand(100)
+		xe_rand = np.random.rand(100)
 
 		x_rand = x_rand * (x_rand >= 0.5) + (1e-6 * x_rand) * (x_rand < 0.5)
 		xe_rand = xe_rand * (xe_rand >= 0.5) + (1e-6 * xe_rand) * (xe_rand < 0.5)

@@ -380,14 +380,10 @@ if module_installed('optkit'):
 
 		def __update_voxel_objective(self, structures):
 			ptr = 0
-
 			for s in structures:
 				obj_sub = ObjectiveMethods.primal_expr_pogs(s)
-				step = 1 if s.collapsable else s.size
-				self.objective_voxels.set(
-						start=ptr, end=ptr + step, h=obj_sub.h, a=obj_sub.a,
-						b=obj_sub.b, c=obj_sub.c, d=obj_sub.d, e=obj_sub.e)
-				ptr += step
+				self.objective_voxels.copy_from(obj_sub, ptr)
+				ptr += 1 if s.collapsable else s.size
 
 		def __build_beam_objective(self, structures):
 			cols = self._Solver__check_dimensions(structures)
