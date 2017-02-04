@@ -21,7 +21,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import ceil
+import numpy as np
 
 from conrad.defs import module_installed
 from conrad.medicine import Structure, D
@@ -37,13 +37,13 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		if s is None:
 			return
 
-		self.assertTrue( s.problem is None )
-		self.assertTrue( isinstance(s._SolverCVXPY__x, cvxpy.Variable) )
-		self.assertTrue( isinstance(s._SolverCVXPY__constraint_indices, dict) )
-		self.assertTrue( len(s._SolverCVXPY__constraint_indices) == 0 )
-		self.assertTrue( isinstance(s.constraint_dual_vars, dict) )
-		self.assertTrue( len(s.constraint_dual_vars) == 0 )
-		self.assertTrue( s.n_beams == 0 )
+		self.assertIsNone( s.problem )
+		self.assertIsInstance( s._SolverCVXPY__x, cvxpy.Variable )
+		self.assertIsInstance( s._SolverCVXPY__constraint_indices, dict )
+		self.assertEqual( len(s._SolverCVXPY__constraint_indices), 0 )
+		self.assertIsInstance( s.constraint_dual_vars, dict )
+		self.assertEqual( len(s.constraint_dual_vars), 0 )
+		self.assertEqual( s.n_beams, 0 )
 
 	def test_solver_cvxpy_problem_init(self):
 		n_beams = self.n
@@ -54,17 +54,17 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		s.init_problem(n_beams)
 		self.assertTrue( s.use_slack )
 		self.assertFalse( s.use_2pass )
-		self.assertTrue( s.n_beams == n_beams )
-		self.assertTrue( s.problem is not None )
-		self.assertTrue( s.problem.objective is not None )
-		self.assertTrue( len(s.problem.constraints) == 1 )
+		self.assertEqual( s.n_beams, n_beams )
+		self.assertIsNotNone( s.problem  )
+		self.assertIsNotNone( s.problem.objective  )
+		self.assertEqual( len(s.problem.constraints), 1 )
 
 		for slack_flag in (True, False):
 			for two_pass_flag in (True, False):
 				s.init_problem(n_beams, use_slack=slack_flag,
 							   use_2pass=two_pass_flag)
-				self.assertTrue( s.use_slack == slack_flag )
-				self.assertTrue( s.use_2pass == two_pass_flag )
+				self.assertEqual( s.use_slack, slack_flag )
+				self.assertEqual( s.use_2pass, two_pass_flag )
 
 		s.init_problem(n_beams, gamma=1.2e-3)
 		self.assert_scalar_equal( s.gamma, 1.2e-3 )
@@ -73,8 +73,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		pd1 = p1.get_problem_data('ECOS')
 		pd2 = p2.get_problem_data('ECOS')
 
-		self.assertTrue( sum(pd1['c'] - pd2['c']) == 0 )
-		self.assertTrue( len((pd1['G'] - pd2['G']).data) == 0 )
+		self.assert_vector_equal( pd1['c'], pd2['c'] )
+		# self.assertTrue( sum(pd1['c'] - pd2['c']) == 0 )
+		self.assertEqual( len((pd1['G'] - pd2['G']).data), 0 )
 
 		return pd1['c'].shape, pd1['G'].shape
 
@@ -126,9 +127,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		var_count = self.m_target + self.n + 1
 		constr_count = 2 * self.m_target + 1
 
-		self.assertTrue( obj_shape[0] == mat_shape[1] )
-		self.assertTrue( obj_shape[0] == var_count )
-		self.assertTrue( mat_shape[0] == constr_count )
+		self.assertEqual( obj_shape[0], mat_shape[1] )
+		self.assertEqual( obj_shape[0], var_count )
+		self.assertEqual( mat_shape[0], constr_count )
 
 		# upper dose limit
 		#
@@ -168,9 +169,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		var_count = self.m_target + self.n + 1
 		constr_count = 2 * self.m_target + 1
 
-		self.assertTrue( obj_shape[0] == mat_shape[1] )
-		self.assertTrue( obj_shape[0] == var_count )
-		self.assertTrue( mat_shape[0] == constr_count )
+		self.assertEqual( obj_shape[0], mat_shape[1] )
+		self.assertEqual( obj_shape[0], var_count )
+		self.assertEqual( mat_shape[0], constr_count )
 
 		# lower dose limit, with slack allowing dose threshold to be lower
 		#
@@ -197,9 +198,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		var_count = self.m_target + self.n + 2
 		constr_count = 2 * self.m_target + 1
 
-		self.assertTrue( obj_shape[0] == mat_shape[1] )
-		self.assertTrue( obj_shape[0] == var_count )
-		self.assertTrue( mat_shape[0] == constr_count )
+		self.assertEqual( obj_shape[0], mat_shape[1] )
+		self.assertEqual( obj_shape[0], var_count )
+		self.assertEqual( mat_shape[0], constr_count )
 
 		# upper dose limit, with slack allowing dose theshold to be higher
 		#
@@ -224,9 +225,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		var_count = self.m_target + self.n + 2
 		constr_count = 2 * self.m_target + 1
 
-		self.assertTrue( obj_shape[0] == mat_shape[1] )
-		self.assertTrue( obj_shape[0] == var_count )
-		self.assertTrue( mat_shape[0] == constr_count )
+		self.assertEqual( obj_shape[0], mat_shape[1] )
+		self.assertEqual( obj_shape[0], var_count )
+		self.assertEqual( mat_shape[0], constr_count )
 
 	def test_percentile_constraint_exact(self):
 		n_beams = self.n
@@ -245,9 +246,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		#
 		constr = D(80) >= 10 * Gy
 		dose = constr.dose.value
-		y = rand(self.m_target)
+		y = np.random.rand(self.m_target)
 
-		m_exact = int(ceil(self.m_target * constr.percentile.fraction))
+		m_exact = int(np.ceil(self.m_target * constr.percentile.fraction))
 		# ensure constraint is met by vector y
 		y[:m_exact] += 10
 		A_exact = A[constr.get_maxmargin_fulfillers(y), :]
@@ -258,9 +259,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		obj_shape, mat_shape = self.assert_problems_equivalent(
 				cvxpy.Problem(cvxpy.Minimize(0), [c]),
 				cvxpy.Problem(cvxpy.Minimize(0), [c_direct]) )
-		self.assertTrue( obj_shape[0] == mat_shape[1] )
-		self.assertTrue( obj_shape[0] == self.n )
-		self.assertTrue( mat_shape[0] == m_exact )
+		self.assertEqual( obj_shape[0], mat_shape[1] )
+		self.assertEqual( obj_shape[0], self.n )
+		self.assertEqual( mat_shape[0], m_exact )
 
 		# upper dose limit, exact
 		#
@@ -268,9 +269,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		#
 		constr = D(80) <= 10 * Gy
 		dose = constr.dose.value
-		y = rand(self.m_target)
+		y = np.random.rand(self.m_target)
 
-		m_exact = int(ceil(self.m_target * (1 - constr.percentile.fraction)))
+		m_exact = int(np.ceil(self.m_target * (1 - constr.percentile.fraction)))
 		# ensure constraint is met by vector y
 		y[m_exact:] += 10
 		A_exact = A[constr.get_maxmargin_fulfillers(y), :]
@@ -281,9 +282,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		obj_shape, mat_shape = self.assert_problems_equivalent(
 				cvxpy.Problem(cvxpy.Minimize(0), [c]),
 				cvxpy.Problem(cvxpy.Minimize(0), [c_direct]) )
-		self.assertTrue( obj_shape[0] == mat_shape[1] )
-		self.assertTrue( obj_shape[0] == self.n )
-		self.assertTrue( mat_shape[0] == m_exact )
+		self.assertEqual( obj_shape[0], mat_shape[1] )
+		self.assertEqual( obj_shape[0], self.n )
+		self.assertEqual( mat_shape[0], m_exact )
 
 	def test_add_constraints(self):
 		s = SolverCVXPY()
@@ -350,19 +351,18 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 			s.use_slack = False
 
 		# exact constraint flag=True not allowed when structure.y is None
-		self.assertTrue( self.anatomy['tumor'].y is None )
-		self.assert_exception( call=s._SolverCVXPY__add_constraints,
-							   args=[self.anatomy['tumor']] )
-		self.anatomy['tumor'].calculate_dose(rand(self.n))
-		self.assertTrue( self.anatomy['tumor'].y is not None )
-		self.assert_no_exception( call=s._SolverCVXPY__add_constraints,
-								  args=[self.anatomy['tumor']] )
+		self.assertIsNone( self.anatomy['tumor'].y )
+		with self.assertRaises(ValueError):
+			s._SolverCVXPY__add_constraints(self.anatomy['tumor'], True)
+		self.anatomy['tumor'].calculate_dose(np.random.rand(self.n))
+		self.assertIsNotNone( self.anatomy['tumor'].y )
+		s._SolverCVXPY__add_constraints(self.anatomy['tumor'])
 		s.clear()
 
 		# exact constraint flag=True not allowed when use_2pass flag not set
 		s.use_2pass = False
-		self.assert_exception( call=s._SolverCVXPY__add_constraints,
-							   args=[self.anatomy['tumor'], True] )
+		with self.assertRaises(ValueError):
+			s._SolverCVXPY__add_constraints(self.anatomy['tumor'], True)
 		s.clear()
 
 		# set slack flag, but set conditions that don't allow for slack
@@ -452,21 +452,28 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		self.anatomy['tumor'].constraints.clear()
 		self.anatomy['oar'].constraints.clear()
 		structure_list = self.anatomy.list
-		A, dose, weight_abs, weight_lin = s._Solver__gather_matrix_and_coefficients(
-				structure_list)
+
+		A = self.anatomy['tumor'].A
+		weight_abs = self.anatomy['tumor'].objective.weight_abs
+		weight_lin = self.anatomy['tumor'].objective.weight_linear
+		dose = float(self.anatomy['tumor'].dose)
+		A_mean = self.anatomy['oar'].A_mean
+		weight_oar = self.anatomy['oar'].objective.weight_raw
 
 		x = cvxpy.Variable(self.n)
 		p = cvxpy.Problem(cvxpy.Minimize(0), [])
 		p.constraints += [ x >= 0 ]
 		p.objective += cvxpy.Minimize(
-				weight_abs.T * cvxpy.abs(A * x) +
-				weight_lin.T * (A * x) )
+				weight_abs * cvxpy.norm(A * x - dose, 1) +
+				weight_lin * cvxpy.sum_entries(A * x - dose) )
+		p.objective += cvxpy.Minimize(
+				weight_oar * cvxpy.sum_entries(A_mean.T * x))
 
 		s.use_slack = False
 		s.build(structure_list, exact=False)
-		self.assertTrue( len(s.slack_vars) == 0 )
-		self.assertTrue( len(s.dvh_vars) == 0 )
-		self.assertTrue( len(s._SolverCVXPY__constraint_indices) == 0 )
+		self.assertEqual( len(s.slack_vars), 0 )
+		self.assertEqual( len(s.dvh_vars), 0 )
+		self.assertEqual( len(s._SolverCVXPY__constraint_indices), 0 )
 		self.assert_problems_equivalent( p, s.problem )
 
 		structure_list[0].constraints += D('mean') >= 10 * Gy
@@ -474,31 +481,31 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 
 		s.use_slack = False
 		s.build(structure_list, exact=False)
-		self.assertTrue( len(s.slack_vars) == 1 )
-		self.assertTrue( cid in s.slack_vars )
-		self.assertTrue( s.get_slack_value(cid) == 0 )
-		self.assertTrue( len(s.dvh_vars) == 0 )
-		self.assertTrue( len(s._SolverCVXPY__constraint_indices) == 1 )
-		self.assertTrue( cid in s._SolverCVXPY__constraint_indices )
+		self.assertEqual( len(s.slack_vars), 1 )
+		self.assertIn( cid, s.slack_vars )
+		self.assertEqual( s.get_slack_value(cid), 0 )
+		self.assertEqual( len(s.dvh_vars), 0 )
+		self.assertEqual( len(s._SolverCVXPY__constraint_indices), 1 )
+		self.assertIn( cid, s._SolverCVXPY__constraint_indices )
 		# constraint 0: x >= 0; constraint 1: this
-		self.assertTrue( s._SolverCVXPY__constraint_indices[cid] == 1 )
+		self.assertEqual( s._SolverCVXPY__constraint_indices[cid], 1 )
 		# dual is none since unsolved, not populated by cvxpy
-		self.assertTrue( s.get_dual_value(cid) is None )
+		self.assertIsNone( s.get_dual_value(cid) )
 
 		s.use_slack = True
 		s.build(structure_list, exact=False)
-		self.assertTrue( len(s.slack_vars) == 1 )
-		self.assertTrue( cid in s.slack_vars )
+		self.assertEqual( len(s.slack_vars), 1 )
+		self.assertIn( cid, s.slack_vars )
 		# slack is None since unsolved, not populated by cvxpy
-		self.assertTrue( s.get_slack_value(cid) is None )
+		self.assertIsNone( s.get_slack_value(cid) )
 		# set slack value, as if cvxpy solve called
 		s.slack_vars[cid].value = 1
-		self.assertTrue( s.get_slack_value(cid) == 1. )
-		self.assertTrue( len(s.dvh_vars) == 0 )
-		self.assertTrue( len(s._SolverCVXPY__constraint_indices) == 1 )
-		self.assertTrue( cid in s._SolverCVXPY__constraint_indices )
+		self.assertEqual( s.get_slack_value(cid), 1. )
+		self.assertEqual( len(s.dvh_vars), 0 )
+		self.assertEqual( len(s._SolverCVXPY__constraint_indices), 1 )
+		self.assertIn( cid, s._SolverCVXPY__constraint_indices )
 		# constraint 0: x >= 0; constraint 1: slack >= 0; cosntraint 2: this
-		self.assertTrue( s._SolverCVXPY__constraint_indices[cid] == 2 )
+		self.assertEqual( s._SolverCVXPY__constraint_indices[cid], 2 )
 
 		# add percentile constraint, test slope retrieval
 		structure_list[0].constraints += D(20) >= 10 * Gy
@@ -506,16 +513,15 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 
 		s.use_slack = False
 		s.build(structure_list, exact=False)
-		self.assertTrue( cid not in s.dvh_vars )
-		self.assertTrue( cid2 in s.dvh_vars )
-		self.assertTrue( s.dvh_vars[cid2].value is None )
-		self.assertTrue( s.get_dvh_slope(cid2) is nan )
+		self.assertNotIn( cid, s.dvh_vars )
+		self.assertIn( cid2, s.dvh_vars )
+		self.assertIsNone( s.dvh_vars[cid2].value, None )
+		self.assert_nan( s.get_dvh_slope(cid2) )
 
 		# artificially set value of DVH slope variable
 		BETA = 2.
 		s.dvh_vars[cid2].value = BETA
-		self.assertTrue( s.get_dvh_slope(cid2) == 1. / BETA )
-
+		self.assert_scalar_equal( s.get_dvh_slope(cid2), 1. / BETA )
 
 	def test_solve(self):
 		s = SolverCVXPY()
@@ -531,25 +537,24 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		structure_list = self.anatomy.list
 		s.build(structure_list, exact=False)
 
-		self.assertTrue( s.x.size == 1 )
-		self.assertTrue( s.x_dual.size == 1 )
-		self.assertTrue( s.status is None )
-		self.assertTrue( s.solveiters == 'n/a' )
-		self.assertTrue( s.solvetime is nan )
-		self.assertTrue( len(s.slack_vars) == 0 )
-		self.assertTrue( len(s.dvh_vars) == 0 )
-		self.assertTrue( len(s._SolverCVXPY__constraint_indices) == 0 )
+		self.assertEqual( s.x.size, 1 )
+		self.assertEqual( s.x_dual.size, 1 )
+		self.assertIsNone( s.status )
+		self.assertEqual( s.solveiters, 'n/a' )
+		self.assert_nan( s.solvetime )
+		self.assertEqual( len(s.slack_vars), 0 )
+		self.assertEqual( len(s.dvh_vars), 0 )
+		self.assertEqual( len(s._SolverCVXPY__constraint_indices), 0 )
 
 		solver_status = s.solve(verbose=0)
-		self.assertTrue( solver_status )
-		self.assertTrue( s.x.size == self.n )
-		self.assertTrue( s.x_dual.size == self.n )
-		self.assertTrue( s.status == 'optimal' )
-		self.assertTrue( s.solveiters == 'n/a' )
-		self.assertTrue( isinstance(s.solvetime, float) )
-		self.assertTrue( len(s.slack_vars) == 0 )
-		self.assertTrue( len(s.dvh_vars) == 0 )
-		self.assertTrue( len(s._SolverCVXPY__constraint_indices) == 0 )
+		self.assertEqual( s.x.size, self.n )
+		self.assertEqual( s.x_dual.size, self.n )
+		self.assertEqual( s.status, 'optimal' )
+		self.assertEqual( s.solveiters, 'n/a' )
+		self.assertIsInstance( s.solvetime, float )
+		self.assertEqual( len(s.slack_vars), 0 )
+		self.assertEqual( len(s.dvh_vars), 0 )
+		self.assertEqual( len(s._SolverCVXPY__constraint_indices), 0 )
 
 		#	(2) mean-constrained
 		# test constraint dual value retrieval
@@ -558,10 +563,10 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		s.build(structure_list, exact=False)
 		solver_status = s.solve(verbose=0)
 		self.assertTrue( solver_status )
-		self.assertTrue( s.get_slack_value(cid) == 0 )
+		self.assertEqual( s.get_slack_value(cid), 0 )
 
 		# constraint is active:
-		self.assertTrue( s.get_dual_value(cid) > 0 )
+		self.assertGreater( s.get_dual_value(cid), 0 )
 
 		# redundant constraint
 		structure_list[0].constraints += D('mean') >= 10 * Gy
@@ -569,11 +574,11 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		s.build(structure_list, exact=False)
 		solver_status = s.solve(verbose=0)
 		self.assertTrue( solver_status )
-		self.assertTrue( s.status == 'optimal' )
-		self.assertTrue( s.get_slack_value(cid) == 0 )
+		self.assertEqual( s.status, 'optimal' )
+		self.assertEqual( s.get_slack_value(cid), 0 )
 
 		# constraint is active:
-		self.assertTrue( s.get_dual_value(cid) > 0 )
+		self.assertGreater( s.get_dual_value(cid), 0 )
 		# constraint is inactive:
 		self.assert_scalar_equal( s.get_dual_value(cid2), 0 )
 
@@ -583,7 +588,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		s.build(structure_list, exact=False)
 		solver_status = s.solve(verbose=0)
 		self.assertFalse( solver_status )
-		self.assertTrue( s.status == 'infeasible' )
+		self.assertEqual( s.status, 'infeasible' )
 
 		# remove infeasible constraint from structure
 		structure_list[0].constraints -= cid3
@@ -595,8 +600,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		solver_status = s.solve(verbose=0)
 		self.assertTrue( solver_status )
 		# assert dual variable is vector
-		self.assertTrue( len(s.get_dual_value(cid_min)) ==
-						 structure_list[0].A_full.shape[0]  )
+		self.assertEqual(
+				len(s.get_dual_value(cid_min)),
+				structure_list[0].A_full.shape[0]  )
 
 		# #	(4) +max constrained
 		structure_list[0].constraints += D('max') <= 50 * Gy
@@ -605,8 +611,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		solver_status = s.solve(verbose=0)
 		self.assertTrue( solver_status )
 		# assert dual variable is vector
-		self.assertTrue( len(s.get_dual_value(cid_max)) ==
-						 structure_list[0].A_full.shape[0]  )
+		self.assertEqual(
+				len(s.get_dual_value(cid_max)),
+				structure_list[0].A_full.shape[0]  )
 
 		#	(5) +percentile constrained
 		structure_list[0].constraints += D(10) >= 0.1 * Gy
@@ -616,9 +623,9 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		self.assertTrue( solver_status )
 
 		# retrieve percentile constraint slope
-		self.assertTrue( isinstance(s.get_dvh_slope(cid_dvh), float) )
-		self.assertTrue( s.get_dvh_slope(cid_dvh) > 0 )
-		self.assertTrue( isinstance(s.get_dual_value(cid_dvh), float) )
+		self.assertIsInstance( s.get_dvh_slope(cid_dvh), float )
+		self.assertGreater( s.get_dvh_slope(cid_dvh), 0 )
+		self.assertIsInstance( s.get_dual_value(cid_dvh), float )
 
 		#	(6) percentile constrained, two-pass
 		for structure in structure_list:
@@ -634,11 +641,11 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		frac = structure_list[0].constraints[cid_dvh].percentile.fraction
 		if structure_list[0].constraints[cid_dvh].upper:
 			frac = 1. - frac
-		constr_size = int(ceil(structure_list[0].size * frac))
+		constr_size = int(np.ceil(structure_list[0].size * frac))
 		if constr_size > 1:
-			self.assertTrue( len(s.get_dual_value(cid_dvh)) == constr_size )
+			self.assertEqual( len(s.get_dual_value(cid_dvh)), constr_size )
 		else:
-			self.assertTrue( isinstance(s.get_dual_value(cid_dvh), float) )
+			self.assertIsInstance( s.get_dual_value(cid_dvh), float )
 		s.use_2pass = False
 
 		#	(7) with slack
@@ -656,8 +663,8 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		s.build(structure_list, exact=False)
 		solver_status = s.solve(verbose=0)
 		self.assertTrue( solver_status )
-		self.assertTrue( s.get_slack_value(cid) == 0 )
-		self.assertTrue( s.get_slack_value(cid4) > 0 )
+		self.assertEqual( s.get_slack_value(cid), 0 )
+		self.assertGreater( s.get_slack_value(cid4), 0 )
 
 	def test_solver_options(self):
 		s = SolverCVXPY()

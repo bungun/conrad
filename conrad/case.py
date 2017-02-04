@@ -21,9 +21,8 @@ Define :class:`Case`, the top level interface for treatment planning.
 """
 from conrad.compat import *
 
-from operator import add
-from warnings import warn
-from numpy import ndarray, array, squeeze, zeros, nan
+import warnings
+import numpy as np
 
 from conrad.physics import Physics
 from conrad.medicine import Anatomy, Prescription
@@ -101,7 +100,10 @@ class Case(object):
 
 	@physics.setter
 	def physics(self, physics):
-		self.__physics = Physics(physics)
+		if isinstance(physics, dict):
+			self.__physics = Physics(**physics)
+		else:
+			self.__physics = Physics(physics)
 
 	@property
 	def anatomy(self):
@@ -144,9 +146,9 @@ class Case(object):
 		"""
 		Dose matrix from current planning frame of :attr:`Case.physics`.
 		"""
-		if self.physics is None:
+		if self.physics is None or self.physics.dose_matrix is None:
 			return None
-		return self.physics.dose_matrix
+		return self.physics.dose_matrix.data
 
 	@property
 	def n_structures(self):
@@ -158,7 +160,7 @@ class Case(object):
 		"""
 		Number of voxels in current planning frame of :attr:`Case.physics`.
 		"""
-		if self.physics.voxels is nan:
+		if self.physics.voxels is np.nan:
 			return None
 		return self.physics.voxels
 
@@ -167,7 +169,7 @@ class Case(object):
 		"""
 		Number of beams in current planning frame of :attr:`Case.physics`.
 		"""
-		if self.physics.beams is nan:
+		if self.physics.beams is np.nan:
 			return None
 		return self.physics.beams
 
@@ -274,30 +276,26 @@ class Case(object):
 				s.set_constraint(constr_id, threshold, direction, dose)
 				break
 
-	def change_objective(self, label, dose=None, w_under=None, w_over=None):
+	def change_objective(self, label, **objective_parameters):
 		"""
 		Modify objective for structure in :class:`Case`.
 
 		Arguments:
 			label: Label or name of a :class:`~conrad.medicine.Structure`
 				in :attr:`Case.anatomy`.
-			dose (:class:`~conrad.physics.units.DeliveredDose`, optional):
-				Set target dose for structure.
-			w_under (:obj:`float`, optional): Set underdose weight for
-				structure.
-			w_over (:obj:`float`, optional): Set overdose weight for
-				structure.
+			**options:
 
 		Returns:
 			None
 		"""
-		if self.anatomy[label].is_target:
-			if dose is not None:
-				self.anatomy[label].dose = dose
-			if w_under is not None:
-				self.anatomy[label].w_under = w_under
-		if w_over is not None:
-			self.anatomy[label].w_over = w_over
+		self.anatomy[label].objective.change_parameters(**objective_parameters)
+		# if self.anatomy[label].is_target:
+		# 	if dose is not None:
+		# 		self.anatomy[label].dose = dose
+		# 	if w_under is not None:
+		# 		self.anatomy[label].w_under = w_under
+		# if w_over is not None:
+		# 	self.anatomy[label].w_over = w_over
 
 	def load_physics_to_anatomy(self, overwrite=False):
 		"""
@@ -343,17 +341,50 @@ class Case(object):
 					label)
 		self.physics.mark_data_as_loaded()
 
+	def gather_physics_from_anatomy(self):
+		"""
+		Gather dose matrices from structures.
+
+		Arguments:
+			None
+
+		Returns:
+			None
+
+		Raises:
+			AttributeError: If :attr:`case.physics.dose_matrix` is
+				already set.
+		"""
+		if self.physics.dose_matrix is None:
+			data = {structure.label: structure.A for structure in self.anatomy}
+			self.physics.frame.data = data
+		else:
+			raise AttributeError(
+					'dose matrix for `Case.physics` is already set')
+
 	def calculate_doses(self, x):
 		"""
 		Calculate voxel doses for each structure in :attr:`Case.anatomy`.
 
 		Arguments:
-			x: Vector-like array of beam intensities.
+			x: Vector-like np.array of beam intensities.
 
 		Returns:
 			None
 		"""
 		self.anatomy.calculate_doses(x)
+
+	def propagate_doses(self, y):
+		"""
+		Split voxel dose vector ``y`` into doses for each structure in
+		:attr:`Case.anatomy`.
+
+		Arguments:
+			y: Vector-like np.array of voxel doses, or dictionary mapping
+				structure labels to voxel dose subvectors,
+		"""
+		self.anatomy.propagate_doses(
+				self.physics.split_dose_by_label(y, self.anatomy.labels))
 
 	@property
 	def plannable(self):
@@ -367,13 +398,10 @@ class Case(object):
 			:obj:`bool`: ``True`` if anatomy has one or more target
 			structures and dose matrices from the case physics.
 		"""
-		plannable = True
-		if not self.physics.plannable:
-			plannable &= False
-		elif not self.anatomy.plannable:
-			self.load_physics_to_anatomy()
-			plannable &= self.anatomy.plannable
-		return plannable
+		if not self.anatomy.plannable:
+			if self.physics.plannable:
+				self.load_physics_to_anatomy()
+		return self.anatomy.plannable
 
 	def plan(self, use_slack=True, use_2pass=False, **options):
 		"""
@@ -391,7 +419,8 @@ class Case(object):
 				method to enforce exact versions, rather than convex
 				restrictions of any percentile-type dose constraints
 				included in the plan.
-			**options: Arbitrary keyword arguments.
+			**options: Arbitrary keyword arguments. Passed through to
+				:meth:`Case.problem.solve`.
 
 		Returns:
 			:obj:`tuple`: Tuple with :obj:`bool` indicator of planning
@@ -431,19 +460,18 @@ class Case(object):
 								 slack=use_slack, exact_constraints=use_2pass,
 								 **options)
 
-
 		# update doses
 		if run.feasible:
 			run.plotting_data[0] = self.plotting_data(x=run.x)
 			if use_2pass:
 				run.plotting_data['exact'] = self.plotting_data(x=run.x_exact)
 		else:
-			warn('Problem infeasible as formulated')
+			warnings.warn('Problem infeasible as formulated')
 
 		status = (feas == int(1 + int(use_2pass)))
 		return status, run
 
-	def plotting_data(self, x=None):
+	def plotting_data(self, x=None, constraints_only=False, maxlength=None):
 		"""
 		Dictionary of :mod:`matplotlib`-compatible plotting data.
 
@@ -455,12 +483,20 @@ class Case(object):
 			x (optional): Vector of beam intensities from which to
 				calculate structure doses prior to emitting plotting
 				data.
+			constraints_only (:obj:`bool`, optional): If ``True``, only
+				include each structure's constraint data in returned
+				dictionary.
+			maxlength (:obj:`int`, optional): If specified, re-sample
+				each structure's DVH plotting data to have a maximum
+				series length of ``maxlength``.
 
 		Returns:
 			:obj:`dict`: Plotting data for each structure, keyed by
 			structure label.
 		"""
-		if x is not None:
-			self.calculate_doses(x)
-
-		return self.anatomy.plotting_data
+		if constraints_only:
+			return self.anatomy.plotting_data(constraints_only=True)
+		else:
+			if x is not None:
+				self.calculate_doses(x)
+			return self.anatomy.plotting_data(maxlength=maxlength)

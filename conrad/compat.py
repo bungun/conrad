@@ -9,8 +9,6 @@ Attributes:
 	listfilter: Wrap python3 :func: `filter` to match python2
 		implementation.
 	reduce: Import python3 :func:`functools.reduce` into namespace.
-	CONRAD_PY_VERSION: Constant, set to match
-		:attr:`sys.version_info.major`.
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu
@@ -30,18 +28,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
-from sys import version_info
+import six
+from six import add_metaclass
 
-if version_info.major > 2:
-	xrange = range
-	def listmap(f, *args):
-		return list(map(f, *args))
-	def listfilter(f, *args):
-		return list(filter(f, *args))
-	from functools import reduce
-	CONRAD_PY_VERSION = 3
-else:
-	listmap = map
-	listfilter = filter
-	CONRAD_PY_VERSION = 2
+def listmap(f, *args):
+	return list(six.moves.map(f, *args))
+def listfilter(f, *args):
+	return list(six.moves.filter(f, *args))
+
+if six.PY3:
+	from six.moves import xrange
+	from six.moves import reduce
 

@@ -63,9 +63,9 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from os import path
+import os
 import json, yaml
-from traceback import format_exc
+import traceback
 
 from conrad.physics.units import percent, Gy, cGy, cm3, Gray, DeliveredDose
 from conrad.physics.string import *
@@ -91,7 +91,7 @@ def d_strip(input_string):
 	"""
 	return input_string.replace('D', '').replace('d', '')
 
-def string2constraint(string_constraint, rx_dose=None):
+def eval_constraint(string_constraint, rx_dose=None):
 	"""
 	Parse input string to form a new :class:`Constraint` instance.
 
@@ -422,7 +422,7 @@ class Prescription(object):
 
 		# read presription data from file
 		if isinstance(prescription_data, str):
-			if path.exists(prescription_data):
+			if os.path.exists(prescription_data):
 				try:
 					f = open(prescription_data)
 					if '.json' in prescription_data:
@@ -432,7 +432,7 @@ class Prescription(object):
 					f.close
 					data_valid = True
 				except:
-					err = format_exc()
+					err = traceback.format_exc()
 
 		if not data_valid:
 			if err is not None:
@@ -460,7 +460,7 @@ class Prescription(object):
 				if 'constraints' in item:
 					if item['constraints'] is not None:
 						for string in item['constraints']:
-							self.constraint_dict[label] += string2constraint(
+							self.constraint_dict[label] += eval_constraint(
 									string, rx_dose=rx_dose)
 			self.rx_list = rx_list
 

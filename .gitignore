@@ -65,3 +65,5 @@ target/
 #test plots
 *.pdf
 
+#macOS
+*.DS_Store

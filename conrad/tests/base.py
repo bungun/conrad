@@ -21,10 +21,9 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
+import numpy as np
+import numpy.linalg as la
 import unittest
-from numpy import nan
-from numpy.linalg import norm
-from numpy.random import rand
 
 class ConradTestCase(unittest.TestCase):
 	"""
@@ -36,49 +35,32 @@ class ConradTestCase(unittest.TestCase):
 		Assert ``first`` and ``second`` equal, entrywise, within tolerance.
 		"""
 		atol *= len(first)**0.5
-		self.assertTrue( norm(first - second) <= atol + rtol * norm(second) )
+		self.assertLessEqual(
+				la.norm(first - second), atol + rtol * la.norm(second) )
 
 	def assert_vector_notequal(self, first, second, atol=1e-7, rtol=1e-7):
 		"""
 		Assert ``first`` and ``second`` not equal, entrywise, within tolerance.
 		"""
+		first = vec(first)
+		second = vec(second)
 		atol *= len(first)**0.5
-		self.assertTrue( norm(first - second) > atol + rtol * norm(second) )
+		self.assertGreater(
+				la.norm(first - second), atol + rtol * la.norm(second) )
 
 	def assert_scalar_equal(self, first, second, atol=1e-7, rtol=1e-7):
 		""" Assert ``first`` and ``second`` equal, within tolerance. """
-		self.assertTrue( abs(first - second) <= atol + rtol * abs(second) )
+		self.assertLessEqual( abs(first - second), atol + rtol * abs(second) )
 
 	def assert_scalar_notequal(self, first, second, atol=1e-7, rtol=1e-7):
 		""" Assert ``first`` and ``second`` not equal, within tolerance. """
-		self.assertTrue( abs(first - second) > atol + rtol * abs(second) )
+		self.assertGreater( abs(first - second), atol + rtol * abs(second) )
 
 	def assert_nan(self, value):
-		""" Assert ``value`` is :attr:``numpy.nan``. """
-		condition = value is nan
-		condition |= str(value) == 'nan'
-		self.assertTrue( condition )
+		""" Assert ``value`` is :attr:``numpy.np.nan``. """
+		self.assertTrue( value is np.nan or str(value) == 'nan' )
 
-	def assert_exception(self, call=None, args=None):
-		""" Assert ``call`` triggers exception, when supplied ``args``. """
-		try:
-			call(*args)
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
+	def assert_not_nan(self, value):
+		""" Assert ``value`` is not :attr:``numpy.np.nan``. """
+		self.assertTrue( value is not np.nan and str(value) != 'nan' )
 
-	def assert_no_exception(self, call=None, args=None):
-		""" Assert ``call`` is exception-free, when supplied ``args``. """
-		if call is None or args is None:
-			return
-
-		call(*args)
-		self.assertTrue( True )
-
-	def assert_property_exception(self, obj=None, property_name=None):
-		""" Assert ``obj``.``property_name`` triggers exception. """
-		try:
-			val = obj.__dict__[str(property_name)]
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )

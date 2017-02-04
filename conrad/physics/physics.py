@@ -22,11 +22,14 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import ndarray, ones, nan
+import numpy as np
+import scipy.sparse as sp
 
-from conrad.defs import vec, sparse_or_dense, CONRAD_MATRIX_TYPES
+from conrad.defs import vec
+from conrad.abstract.mapping import DiscreteMapping, map_type_to_string
 from conrad.physics.beams import BeamSet
 from conrad.physics.voxels import VoxelGrid
+from conrad.physics.containers import WeightVector, DoseMatrix
 
 class DoseFrame(object):
 	r"""
@@ -67,7 +70,8 @@ class DoseFrame(object):
 	"""
 
 	def __init__(self, voxels=None, beams=None, data=None, voxel_labels=None,
-				 beam_labels=None, voxel_weights=None, beam_weights=None):
+				 beam_labels=None, voxel_weights=None, beam_weights=None,
+				 frame_name=None):
 		"""
 		Initialize :class:`DoseFrame`.
 
@@ -90,32 +94,33 @@ class DoseFrame(object):
 			ValueError: If dimensions implied by arguments are
 				inconsistent.
 		"""
-		self.__voxels = nan
-		self.__beams = nan
-		self.__data = None
+		self.__voxels = np.nan
+		self.__beams = np.nan
+		self.__dose_matrix = None
 		self.__voxel_labels = None
 		self.__beam_labels = None
 		self.__voxel_weights = None
 		self.__beam_weights = None
+		self.__name = 'unnamed_frame'
 
 		if isinstance(beams, BeamSet):
 			beams = beams.count
 
 		if data is not None:
-			self.data = data
+			self.dose_matrix = data
 			if voxels is not None:
 				if self.voxels != voxels:
-					raise ValueError('when arguments "voxels" and "data"'
+					raise ValueError('when arguments `voxels` and `data`'
 									 ' are both provided, the size'
-									 ' specified by "voxels" must match '
-									 ' first dimension of "data"\n'
+									 ' specified by `voxels` must match '
+									 ' first dimension of `data`\n'
 									 ' {} != {}'.format(voxels, self.voxels))
 			if beams is not None:
 				if self.beams != beams:
-					raise ValueError('when arguments "beams" and "data"'
+					raise ValueError('when arguments `beams` and `data`'
 									 ' are both provided, the size'
-									 ' specified by "beams" must match '
-									 ' second dimension of "data"\n'
+									 ' specified by `beams` must match '
+									 ' second dimension of `data`\n'
 									 ' {} != {}'.format(beams, self.beams))
 		else:
 			self.voxels = voxels
@@ -131,10 +136,22 @@ class DoseFrame(object):
 		if beam_weights is not None:
 			self.beam_weights = beam_weights
 
+		if frame_name is not None:
+			self.name = frame_name
+
 	@property
 	def plannable(self):
-		""" True if dose matrix and voxel labels assigned to frame. """
-		return self.data is not None and self.voxel_labels is not None
+		"""
+		True if both dose matrix and voxel label data loaded.
+
+		This can be achieved by having a contiguous matrix and a vector
+		of voxel labels indicating the identity of each row of the
+		matrix, or a dictionary of submatrices that map label keys to
+		submatrix values.
+		"""
+		return bool(
+				self.dose_matrix is not None and
+				self.dose_matrix.contiguous <= (self.voxel_labels is not None))
 
 	@property
 	def shape(self):
@@ -147,7 +164,7 @@ class DoseFrame(object):
 			return self.voxels, self.beams
 
 	@property
-	def data(self):
+	def dose_matrix(self):
 		"""
 		Dose matrix.
 
@@ -161,30 +178,27 @@ class DoseFrame(object):
 			ValueError: If provided matrix dimensions inconsistent with
 				known frame dimensions.
 		"""
-		return self.__data
+		return self.__dose_matrix
 
-	@data.setter
-	def data(self, data):
-		if not sparse_or_dense(data):
-			raise TypeError('argument "data" must be a dense or sparse '
-							'matrix, in the form of a {}, {}, or {}'
-							''.format(*CONRAD_MATRIX_TYPES))
+	@dose_matrix.setter
+	def dose_matrix(self, data):
+		mat = DoseMatrix(data)
 
-		if self.voxels not in (None, nan):
-			if data.shape[0] != self.voxels:
-				raise ValueError('argument "data" must be a matrix '
+		if self.voxels not in (None, np.nan):
+			if mat.voxel_dim != self.voxels:
+				raise ValueError('argument `data` must be a matrix '
 								 'with {} rows'.format(self.voxels))
 		else:
-			self.voxels = data.shape[0]
+			self.voxels = mat.voxel_dim
 
-		if self.beams not in (None, nan):
-			if data.shape[1] != self.beams:
-				raise ValueError('argument "data" must be a matrix '
+		if self.beams not in (None, np.nan):
+			if mat.beam_dim != self.beams:
+				raise ValueError('argument `data` must be a matrix '
 								 'with {} columns'.format(self.beams))
 		else:
-			self.beams = data.shape[1]
+			self.beams = mat.beam_dim
 
-		self.__data = data
+		self.__dose_matrix = mat
 
 	@property
 	def voxels(self):
@@ -202,13 +216,13 @@ class DoseFrame(object):
 
 	@voxels.setter
 	def voxels(self, voxels):
-		if self.voxels not in (None, nan):
-			raise ValueError('{} property "voxels" cannot be changed '
+		if self.voxels not in (None, np.nan):
+			raise ValueError('{} property `voxels` cannot be changed '
 							 'once set'.format(DoseFrame))
 		if voxels is not None:
 			self.__voxels = int(voxels)
 			if self.voxel_weights is None:
-				self.voxel_weights = ones(self.voxels, dtype=int)
+				self.voxel_weights = np.ones(self.voxels, dtype=int)
 
 	@property
 	def beams(self):
@@ -226,14 +240,14 @@ class DoseFrame(object):
 
 	@beams.setter
 	def beams(self, beams):
-		if self.beams not in (None, nan):
-			raise ValueError('{} property "beams" cannot be changed '
+		if self.beams not in (None, np.nan):
+			raise ValueError('{} property `beams` cannot be changed '
 							 'once set'.format(DoseFrame))
 		if beams is not None:
 			beams = beams.count if isinstance(beams, BeamSet) else beams
 			self.__beams = int(beams)
 			if self.beam_weights is None:
-				self.beam_weights = ones(self.beams, dtype=int)
+				self.beam_weights = np.ones(self.beams, dtype=int)
 
 	@property
 	def voxel_labels(self):
@@ -252,7 +266,7 @@ class DoseFrame(object):
 
 	@voxel_labels.setter
 	def voxel_labels(self, voxel_labels):
-		if self.voxels in (None, nan):
+		if self.voxels in (None, np.nan):
 			self.voxels = len(voxel_labels)
 		if len(voxel_labels) != self.voxels:
 			raise ValueError('length of "voxel labels" ({}) must match '
@@ -277,10 +291,10 @@ class DoseFrame(object):
 
 	@beam_labels.setter
 	def beam_labels(self, beam_labels):
-		if self.beams in (None, nan):
+		if self.beams in (None, np.nan):
 			self.beams = len(beam_labels)
 		if len(beam_labels) != self.beams:
-			raise ValueError('length of "beam labels" ({}) must match '
+			raise ValueError('length of `beam labels` ({}) must match '
 							 'number of beams in frame ({})'
 							 ''.format(len(beam_labels), self.beams))
 		self.__beam_labels = vec(beam_labels).astype(int)
@@ -298,17 +312,21 @@ class DoseFrame(object):
 			ValueError: If provided vector dimensions inconsistent with
 				known frame dimensions.
 		"""
-		return self.__voxel_weights
+		if not isinstance(self.__voxel_weights, WeightVector):
+			return None
+		else:
+			return self.__voxel_weights
 
 	@voxel_weights.setter
 	def voxel_weights(self, voxel_weights):
-		if self.voxels in (None, nan):
-			self.voxels = len(voxel_weights)
-		if len(voxel_weights) != self.voxels:
-			raise ValueError('length of "voxel_weights" ({}) must match '
+		weights = WeightVector(voxel_weights)
+		if self.voxels in (None, np.nan):
+			self.voxels = weigths.size
+		if weights.size != self.voxels:
+			raise ValueError('length of `voxel_weights` ({}) must match '
 							 'number of voxels in frame ({})'
-							 ''.format(len(voxel_weights), self.voxels))
-		self.__voxel_weights = vec(voxel_weights).astype(float)
+							 ''.format(voxel_weights.size, self.voxels))
+		self.__voxel_weights = weights
 
 	@property
 	def beam_weights(self):
@@ -323,17 +341,31 @@ class DoseFrame(object):
 			ValueError: If provided vector dimensions inconsistent with
 				known frame dimensions.
 		"""
-		return self.__beam_weights
+		if not isinstance(self.__beam_weights, WeightVector):
+			return None
+		else:
+			return self.__beam_weights
 
 	@beam_weights.setter
 	def beam_weights(self, beam_weights):
-		if self.beams in (None, nan):
-			self.beams = len(beam_weights)
-		if len(beam_weights) != self.beams:
-			raise ValueError('length of "beam_weights" ({}) must match '
+		beam_weights = WeightVector(beam_weights)
+		if self.beams in (None, np.nan):
+			self.beams = beam_weights.size
+		if beam_weights.size != self.beams:
+			raise ValueError('length of `beam_weights` ({}) must match '
 							 'number of beams in frame ({})'
-							 ''.format(len(beam_weights), self.beams))
-		self.__beam_weights = vec(beam_weights).astype(float)
+							 ''.format(beam_weights.size, self.beams))
+		self.__beam_weights = beam_weights
+
+	@property
+	def name(self):
+		return self.__name
+
+	@name.setter
+	def name(self, name):
+		if name is not None:
+			self.__name = str(name)
+
 
 	@staticmethod
 	def indices_by_label(label_vector, label, vector_name):
@@ -372,22 +404,91 @@ class DoseFrame(object):
 		"""
 		Get indices of voxels labeled ``label`` in this :class:`DoseFrame`.
 		"""
-		indices = self.indices_by_label(
-				self.voxel_labels, label, 'voxel_labels')
-		return indices
+		return self.indices_by_label(self.voxel_labels, label, 'voxel_labels')
 
 	def beam_lookup_by_label(self, label):
 		"""
 		Get indices of beam labeled ``label`` in this :class:`DoseFrame`.
 		"""
-		indices = self.indices_by_label(self.beam_labels, label, 'beam_labels')
-		return indices
+		return self.indices_by_label(self.beam_labels, label, 'beam_labels')
 
+	def submatrix(self, voxel_label=None, beam_label=None):
+		if self.dose_matrix is None:
+			raise AttributeError(
+					'`{}.dose_matrix` must be set tp slice into '
+					'submatrices'.format(DoseFrame))
+		return self.dose_matrix.slice(
+				voxel_label, beam_label, self.voxel_lookup_by_label,
+				self.beam_lookup_by_label)
 
 	def __str__(self):
 		""" String of :class:`DoseFrame` dimensions. """
 		return str('Dose Frame: {} VOXELS by {} BEAMS'.format(
 				self.voxels, self.beams))
+
+class DoseFrameMapping(object):
+	def __init__(self, source_name, target_name, voxel_map=None, beam_map=None):
+		self.__source = str(source_name)
+		self.__target = str(target_name)
+		self.__voxel_map = None
+		self.__beam_map = None
+
+		if voxel_map is not None:
+			self.voxel_map = voxel_map
+		if beam_map is not None:
+			self.beam_map = beam_map
+
+	@property
+	def source(self):
+		return self.__source
+
+	@property
+	def target(self):
+		return self.__target
+
+	@property
+	def voxel_map(self):
+		return self.__voxel_map
+
+	@voxel_map.setter
+	def voxel_map(self, voxel_map):
+		if not isinstance(voxel_map, DiscreteMapping):
+			voxel_map = DiscreteMapping(voxel_map)
+
+		if not isinstance(voxel_map, DiscreteMapping):
+			raise TypeError(
+					'`voxel_map` must be of type (or castable as) {}'
+					''.format(DiscreteMapping))
+		else:
+			self.__voxel_map = voxel_map
+
+	@property
+	def voxel_map_type(self):
+		if self.voxel_map is None:
+			return None
+		return map_type_to_string(self.voxel_map)
+
+	@property
+	def beam_map(self):
+		return self.__beam_map
+
+	@beam_map.setter
+	def beam_map(self, beam_map):
+		if not isinstance(beam_map, DiscreteMapping):
+			beam_map = DiscreteMapping(beam_map)
+
+		if not isinstance(beam_map, DiscreteMapping):
+			raise TypeError(
+					'`beam_map` must be of type (or castable as) {}'
+					''.format(DiscreteMapping))
+		else:
+			self.__beam_map = beam_map
+
+	@property
+	def beam_map_type(self):
+		if self.beam_map is None:
+			return None
+		return map_type_to_string(self.beam_map)
 
 class Physics(object):
 	"""
@@ -431,6 +532,7 @@ class Physics(object):
 				of initial :attr:`Physics.frame`.
 		"""
 		self.__frames = {}
+		self.__frame_mappings = []
 		self.__dose_grid = None
 		self.__dose_frame = None
 		self.__beams = None
@@ -453,20 +555,24 @@ class Physics(object):
 		if voxels is None and self.dose_grid is not None:
 			voxels = self.dose_grid.voxels
 
-		f = DoseFrame(voxels, beams, dose_matrix, voxel_labels=voxel_labels,
-					  **options)
+		f = options.pop('dose_frame', None)
+		if not isinstance(f, DoseFrame):
+			f = DoseFrame(
+					voxels, beams, dose_matrix, voxel_labels=voxel_labels,
+					**options)
 
 		if self.__beams is None and isinstance(f.beams, int):
 			self.__beams = BeamSet(f.beams)
 		elif isinstance(beams, BeamSet):
 			self.__beams = beams
 
+		if 'unnamed' in f.name:
+			f.name = options.pop('frame0_name', DEFAULT_FRAME0_NAME)
 		self.__dose_frame = f
-		self.__frames[0] = f
-		self.__frames['full'] = f
+		self.__frames[f.name] = f
 
 		if self.dose_grid is not None:
-			if self.dose_grid.voxels == self.voxels:
+			if self.dose_grid.voxels == f.voxels:
 				self.__frames['geometric'] = f
 
 	@property
@@ -475,6 +581,13 @@ class Physics(object):
 		Handle to :class:`DoseFrame` representing current dosing configuration.
 		"""
 		return self.__dose_frame
+
+	@property
+	def plannable(self):
+		"""
+		True if current frame has both dose matrix and voxel label data
+		"""
+		return self.frame.plannable
 
 	@property
 	def data_loaded(self):
@@ -504,9 +617,15 @@ class Physics(object):
 				:class:`Physics` object's dictionary of dose frames.
 		"""
 		if key in self.__frames:
-			raise ValueError('key "{}" already exists in {} frame '
+			raise ValueError('key `{}` already exists in {} frame '
 							 'dictionary'.format(key, Physics))
-		self.__frames[key] = DoseFrame()
+
+		f = frame_args.pop('dose_frame', None)
+		if not isinstance(f, DoseFrame):
+			f = DoseFrame(**frame_args)
+
+		self.__frames[key] = f
+		self.__frames[key].name = key
 
 	def change_dose_frame(self, key):
 		"""
@@ -525,9 +644,11 @@ class Physics(object):
 		return self.__frames.keys()
 
 	@property
-	def plannable(self):
-		""" True if current :attr:`Physics.frame.plannable`. """
-		return self.frame.plannable
+	def unique_frames(self):
+		"""
+		List of unique dose frames attached to :class:`Physics`.
+		"""
+		return list(set(self.__frames.values()))
 
 	@property
 	def beams(self):
@@ -551,11 +672,11 @@ class Physics(object):
 	@property
 	def dose_matrix(self):
 		""" Dose influence matrix for current :attr:`Physics.frame`. """
-		return self.frame.data
+		return self.frame.dose_matrix
 
 	@dose_matrix.setter
 	def dose_matrix(self, dose_matrix):
-		self.frame.data = dose_matrix
+		self.frame.dose_matrix = dose_matrix
 		if self.__beams is None and isinstance(self.frame.beams, int):
 			self.__beams = BeamSet(self.frame.beams)
 
@@ -594,24 +715,62 @@ class Physics(object):
 			:attr:`Physics.frame.beam_labels` matches the queried
 			``beam_label``.
 		"""
-		if voxel_label is not None:
-			v_indices = self.frame.voxel_lookup_by_label(voxel_label)
-		else:
-			v_indices = xrange(self.frame.voxels)
-
-		if beam_label is not None:
-			b_indices = self.frame.beam_lookup_by_label(beam_label)
-		else:
-			b_indices = xrange(self.frame.beams)
-
-		return self.dose_matrix[v_indices, :][:, b_indices]
+		return self.frame.submatrix(voxel_label, beam_label)
 
 	def voxel_weights_by_label(self, label):
 		""" Subvector of voxel weights, filtered by ``label``. """
-		indices = self.frame.voxel_lookup_by_label(label)
-		return self.frame.voxel_weights[indices]
+		if label not in self.frame.voxel_weights:
+			indices = self.frame.voxel_lookup_by_label(label)
+		else:
+			indices = None
+		return self.frame.voxel_weights.slice(label, indices)
 
 	def beam_weights_by_label(self, label):
 		""" Subvector of beam weights, filtered by ``label``. """
-		indices = self.frame.beam_lookup_by_label(label)
-		return self.frame.beam_weights[indices]
+		if label not in self.frame.beam_weights:
+			indices = self.frame.beam_lookup_by_label(label)
+		else:
+			indices = None
+		return self.frame.beam_weights.slice(label, indices)
+
+	def split_dose_by_label(self, dose_vector, labels):
+		if isinstance(dose_vector, dict):
+			doses = dose_vector
+		else:
+			y = vec(dose_vector)
+			if y.size != self.voxels:
+				raise ValueError(
+						'input vector must match voxel dimension of '
+						'current dose frame')
+			doses = {label: y[self.frame.voxel_lookup_by_label(label)]}
+
+	@property
+	def available_frame_mappings(self):
+		return [(fm.source, fm.target) for fm in self.__frame_mappings]
+
+	def add_frame_mapping(self, mapping):
+		if not isinstance(mapping, DoseFrameMapping):
+			raise TypeError(
+					'argument `mapping` must be of type {}'
+					''.format(DoseFrameMapping))
+		for fm in self.__frame_mappings:
+			if fm.source == mapping.source and fm.target == mapping.target:
+				raise ValueError(
+						'frame mapping for source=`{}`, target=`{}` '
+						'already attached to {}'
+						''.format(fm.source, fm.target, Physics))
+		self.__frame_mappings.append(mapping)
+
+	def retrieve_frame_mapping(self, source_frame, target_frame):
+		if source_frame == target_frame:
+			raise ValueError(
+					'arguments `source_frame` and `target_frame` are '
+					'identical, no frame mapping retrieved')
+		for fm in self.__frame_mappings:
+			if fm.source == source_frame and fm.target == target_frame:
+				return fm
+		raise ValueError(
+				'no frame mapping found for source=`{}`, target=`{}`'
+				''.format(source_frame, target_frame))
+
+DEFAULT_FRAME0_NAME = 'frame0'

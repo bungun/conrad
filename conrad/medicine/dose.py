@@ -39,9 +39,9 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from time import clock
-from hashlib import sha1
-from numpy import zeros, linspace, nan, ceil
+import time
+import hashlib
+import numpy as np
 
 from conrad.defs import vec
 from conrad.physics.units import DeliveredDose, cGy, Gy, Percent, Volume, cm3
@@ -75,19 +75,19 @@ class Constraint(object):
 		Arguments:
 			None
 		"""
-		self.__dose = nan
+		self.__dose = np.nan
 		self.__threshold = None
 		self.__relop = RELOPS.INDEFINITE
 		self.__slack = 0.
 		self.__priority = 1
-		self.__prescription_dose = nan * Gy
-		self.__dual = nan
+		self.__prescription_dose = np.nan * Gy
+		self.__dual = np.nan
 
 	@property
 	def resolved(self):
 		""" Indicator that constraint is complete and well-formed. """
 		if isinstance(self.dose, (DeliveredDose, Percent)):
-			dose_resolved = self.dose.value is not nan
+			dose_resolved = self.dose.value is not np.nan
 		else:
 			dose_resolved = False
 		relop_resolved = self.relop != RELOPS.INDEFINITE
@@ -177,7 +177,7 @@ class Constraint(object):
 			TypeError: If ``dose`` not of allowed types.
 		"""
 		if isinstance(self.__dose, Percent):
-			if self.__prescription_dose.value is nan:
+			if self.__prescription_dose.value is np.nan:
 				return self.__prescription_dose
 			else:
 				return self.__dose * self.__prescription_dose
@@ -531,7 +531,7 @@ class PercentileConstraint(Constraint):
 		"""
 		fraction = self.percentile.fraction
 		non_viol = (1 - fraction) if self.upper else fraction
-		n_returned = int(ceil(non_viol * len(y)))
+		n_returned = int(np.ceil(non_viol * len(y)))
 
 		start = 0 if self.upper else -n_returned
 		end = n_returned if self.upper else None
@@ -549,8 +549,8 @@ class PercentileConstraint(Constraint):
 # 		if volume is not None:
 # 			self.volume = volume
 # 		else:
-# 			self.volume = nan * cm3
-# 		self.__total_volume = nan * cm3
+# 			self.volume = np.nan * cm3
+# 		self.__total_volume = np.nan * cm3
 
 # 	# overload property Constraint.resolved to always be false:
 # 	# force conversion to PercentileConstraint for planning
@@ -586,7 +586,7 @@ class PercentileConstraint(Constraint):
 # 	def to_percentile_constraint(self, total_volume=None):
 # 		if total_volume is not None:
 # 			self.total_volume = total_volume
-# 		if self.total_volume.value in (nan, None):
+# 		if self.total_volume.value in (np.nan, None):
 # 			raise ValueError('field "total_volume" of {} object must be set '
 # 							 'for conversion to {} to be possible'.format(
 # 							 AbsoluteVolumeConstraint, PercentileConstraint))
@@ -824,12 +824,18 @@ class ConstraintList(object):
 		Returns:
 			:obj:`str`: Seven character key.
 		"""
-		return sha1(str(
-				str(clock()) +
+		return hashlib.sha1(str(
+				str(time.clock()) +
 				str(constraint.dose) +
 				str(constraint.threshold) +
 				str(constraint.relop)
 			).encode('utf-8')).hexdigest()[:7]
+
+	def __contains__(self, comparator):
+		if isinstance(comparator, Constraint):
+			return self.contains(comparator)
+		else:
+			return comparator in self.items
 
 	def __getitem__(self, key):
 		""" Overload operator []. """
@@ -838,22 +844,6 @@ class ConstraintList(object):
 	def __iter__(self):
 		""" Python3-compatible iterator implementation. """
 		return self.items.__iter__()
-
-	def __next__(self):
-		""" Python3-compatible iterator implementation. """
-		return self.items.__next__()
-
-	def next(self):
-		""" Python2-compatible iterator implementation. """
-		return self.items.next()
-
-	def iteritems(self):
-		""" Python2-compatible iterator implementation. """
-		return self.items.items()
-
-	def itervalues(self):
-		""" Python2-compatible iterator implementation. """
-		return self.items.values()
 
 	def __iadd__(self, other):
 		"""
@@ -938,8 +928,7 @@ class ConstraintList(object):
 		"""
 		:obj:`list` of :class:`Constraint` objects in :class:`ConstraintList`.
 		"""
-		return self.items.values()
-
+		return list(self.items.values())
 
 	@property
 	def mean_only(self):
@@ -948,7 +937,7 @@ class ConstraintList(object):
 		if self.size == 0:
 			return True
 		else:
-			return all(listmap(meantest, self.itervalues()))
+			return all(listmap(meantest, self.items.values()))
 
 	def contains(self, constr):
 		"""
@@ -1035,17 +1024,18 @@ class DVH(object):
 		Raises:
 			ValueError: If ``n_voxels`` is not an :obj:`int` >= `1`.
 		"""
-		if n_voxels is None or n_voxels is nan or n_voxels < 1:
+		if n_voxels is None or n_voxels is np.nan or n_voxels < 1:
 			raise ValueError('argument "n_voxels" must be an integer > 0')
 
-		self.__dose_buffer = zeros(int(n_voxels))
+		self.__dose_buffer = np.zeros(int(n_voxels))
 		self.__stride = 1 * (n_voxels < maxlength) + int(n_voxels / maxlength)
 		length = len(self.__dose_buffer[::self.__stride]) + 1
-		self.__doses = zeros(length)
-		self.__percentiles = zeros(length)
+		self.__doses = np.zeros(length)
+		self.__percentiles = np.zeros(length)
 		self.__percentiles[0] = 100.
-		self.__percentiles[1:] = linspace(100, 0, length - 1)
+		self.__percentiles[1:] = np.linspace(100, 0, length - 1)
 		self.__DATA_ENTERED = False
+
 
 	@property
 	def populated(self):
@@ -1125,6 +1115,29 @@ class DVH(object):
 			# alpha = (p_des - p2) / (p1 - p2)
 			return float(p_des - p2) / float(p1 - p2)
 
+	def percentile_at_dose(self, dose):
+		"""
+		Read off DVH curve to get precentile value at ``dose``.
+
+		Arguments:
+			dose (:obj:`int`, :obj:`float`, or :class:`DeliveredDose`):
+				Quertied dose for which to retrieve the corresponding
+				percentile. Assumed to have same units as DVH data.
+
+		Returns:
+			Percentile value from DVH curve corresponding to queried
+			dose, or :attr:`~numpy.np.nan` if the curve has not been
+			populated with data.
+		"""
+		if isinstance(dose, DeliveredDose):
+			dose = dose.value
+
+		if self.__doses is None: return np.nan
+
+		return 100. * (
+				sum(self.__dose_buffer < dose) /
+				float(self.__dose_buffer.size))
+
 	def dose_at_percentile(self, percentile):
 		"""
 		Read off DVH curve to get dose value at ``percentile``.
@@ -1139,22 +1152,24 @@ class DVH(object):
 		dose at the queried percentile by linear interpolation.
 
 		Arguments:
-			Percentile (:obj:`int`, :obj:`float` or :class:`Percent`):
+			percentile (:obj:`int`, :obj:`float` or :class:`Percent`):
 				Queried percentile for which to retrieve corresponding
 				dose level.
 
 		Returns:
 			Dose value from DVH curve corresponding to queried
-			percentile, or :attr:`~numpy.nan` if the curve has not been
+			percentile, or :attr:`~numpy.np.nan` if the curve has not been
 			populated with data.
 		"""
 		if isinstance(percentile, Percent):
 			percentile = percentile.value
 
-		if self.__doses is None: return nan
+		if self.__doses is None: return np.nan
 
-		if percentile == 100: return self.min_dose
-		if percentile == 0: return self.max_dose
+		if percentile == 100:
+			return self.min_dose
+		if percentile == 0:
+			return self.max_dose
 
 		# bisection retrieval of index @ percentile
 		# ----------------------------------------
@@ -1199,16 +1214,36 @@ class DVH(object):
 	@property
 	def min_dose(self):
 		""" Smallest dose value in DVH curve. """
-		if self.__doses is None: return nan
+		if self.__doses is None: return np.nan
 		return self.__dose_buffer[0]
 
 	@property
 	def max_dose(self):
 		""" Largest dose value in DVH curve. """
-		if self.__doses is None: return nan
+		if self.__doses is None: return np.nan
 		return self.__dose_buffer[-1]
 
 	@property
 	def plotting_data(self):
 		""" Dictionary of :mod:`matplotlib`-compatible plotting data. """
-		return {'percentile' : self.__percentiles, 'dose' : self.__doses}
+		return {'percentile' : self.__percentiles, 'dose' : self.__doses.copy()}
+
+	def resample(self, maxlength):
+		"""
+		Re-sampled copy of this :class`DVH`
+
+		Args:
+			maxlength (:obj:`int`): Maximum length at which to series
+				re-sample data.
+
+		Returns:
+			:class:`DVH`: Re-sampled DVH curve; return original curve
+			if ``maxlength`` is ``None``.
+
+		"""
+		if maxlength is None:
+			return self
+
+		dvh = DVH(self.__dose_buffer.size, maxlength=int(maxlength))
+		dvh.data = self.__dose_buffer
+		return dvh

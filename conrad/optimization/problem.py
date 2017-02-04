@@ -22,8 +22,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from os import getenv
-from numpy import inf, array, squeeze, ones, zeros, copy as np_copy
+import os
 
 from conrad.medicine.dose import PercentileConstraint
 from conrad.optimization.solver_cvxpy import SolverCVXPY
@@ -70,7 +69,7 @@ class PlanningProblem(object):
 		else:
 			return self.__solver
 
-	def __update_constraints(self, structure, slack_tol=1e-3):
+	def __update_constraints(self, structure, slack_tol=5e-3):
 		"""
 		Pull solver results pertaining to constraint slacks.
 
@@ -218,7 +217,7 @@ class PlanningProblem(object):
 			None
 
 		Raises:
-			AttributeError: If neither a CVXPY solver nor an OPTKIT/POGS
+			ValueError: If neither a CVXPY solver nor an OPTKIT/POGS
 				solver is available.
 		"""
 		if self.solver_pogs is not None:
@@ -229,7 +228,7 @@ class PlanningProblem(object):
 			self.__solver = self.solver_cvxpy
 			return
 
-		raise AttributeError('no solvers available')
+		raise ValueError('no solvers available')
 
 	def __verify_2pass_applicable(self, structures):
 		"""
@@ -272,7 +271,9 @@ class PlanningProblem(object):
 				using convex restrictions of the percentile constraints
 				on the firstpass,  and exact versions of the constraints
 				on the second pass.
-			**options: Abitrary keyword arguments.
+			**options: Abitrary keyword arguments, passed through to
+				:meth:`PlanningProblem.solver.init_problem` and
+				:meth:`PlanningProblem.solver.build`.
 
 		Returns:
 			:obj:`int`: Number of feasible solver runs performed: ``0``
@@ -280,16 +281,16 @@ class PlanningProblem(object):
 			``2`` if two-pass method requested and both passes feasible.
 
 		Raises:
-			AttributeError: If no solvers avaialable.
+			ValueError: If no solvers avaialable.
 		"""
 		if self.solver_cvxpy is None and self.solver_pogs is None:
-			raise AttributeError('at least one of packages\n-cvxpy\n'
-								 '-optkit\nmust be installed to perform'
-								 ' optimization')
+			raise ValueError(
+					'at least one of packages\n-cvxpy\n-optkit\nmust '
+					'be installed to perform optimization')
 		if 'print_construction' in options:
 			PRINT_PROBLEM_CONSTRUCTION = bool(options['print_construction'])
 		else:
-			PRINT_PROBLEM_CONSTRUCTION = getenv('CONRAD_PRINT_CONSTRUCTION',
+			PRINT_PROBLEM_CONSTRUCTION = os.getenv('CONRAD_PRINT_CONSTRUCTION',
 												False)
 
 		# get number of beams from dose matrix
@@ -306,7 +307,7 @@ class PlanningProblem(object):
 								 use_2pass=use_2pass, **options)
 
 		# build problem
-		construction_report = self.solver.build(structures)
+		construction_report = self.solver.build(structures, **options)
 
 		if PRINT_PROBLEM_CONSTRUCTION:
 			print('\nPROBLEM CONSTRUCTION:')

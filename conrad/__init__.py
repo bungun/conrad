@@ -18,7 +18,6 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 __version__ = "0.0.1"
 
-
 from conrad.medicine import *
 from conrad.physics import *
 from conrad.optimization import *

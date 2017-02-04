@@ -40,7 +40,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import nan
+import numpy as np
 
 class AbstractNonnegativeUnit(object):
 	""" Base class for physical units """
@@ -53,7 +53,7 @@ class AbstractNonnegativeUnit(object):
 			value (:obj:`float`): Initial value, as multiple of the
 				object's unit type.
 		"""
-		self.__value = nan
+		self.__value = np.nan
 		self.value = value
 
 	@property
@@ -77,6 +77,9 @@ class AbstractNonnegativeUnit(object):
 			raise ValueError('argument "value" must be nonnegative')
 		else:
 			self.__value = float(value)
+
+	def __float__(self):
+		return self.value
 
 class Percent(AbstractNonnegativeUnit):
 	""" Specialize :obj:`AbstractNonnegativeUnit` to percent units. """
@@ -109,12 +112,12 @@ class Percent(AbstractNonnegativeUnit):
 		"""
 		ret = Percent(self.value)
 		if isinstance(other, Percent):
-			if ret.value is nan:
+			if ret.value is np.nan:
 				other = other.value
 			else:
 				other = other.fraction
 
-		ret.value = other if ret.value is nan else ret.fraction * other
+		ret.value = other if ret.value is np.nan else ret.fraction * other
 		return ret
 
 	def __add__(self, other):
@@ -236,7 +239,7 @@ class MM(Length):
 			other = other.fraction
 
 		ret = MM(self.value)
-		ret.value = other if ret.value is nan else ret.value * other
+		ret.value = other if ret.value is np.nan else ret.value * other
 		return ret
 
 	def __eq__(self, other):
@@ -325,7 +328,7 @@ class CM(Length):
 			other = other.fraction
 
 		ret = CM(self.value)
-		ret.value = other if ret.value is nan else ret.value * other
+		ret.value = other if ret.value is np.nan else ret.value * other
 		return ret
 
 	def __eq__(self, other):
@@ -425,7 +428,7 @@ class MM2(Area):
 			other = other.fraction
 
 		ret = MM2(self.value)
-		ret.value = other if ret.value is nan else ret.value * other
+		ret.value = other if ret.value is np.nan else ret.value * other
 		return ret
 
 	def __eq__(self, other):
@@ -508,7 +511,7 @@ class CM2(Area):
 			other = other.fraction
 
 		ret = CM2(self.value)
-		ret.value = other if ret.value is nan else ret.value * other
+		ret.value = other if ret.value is np.nan else ret.value * other
 		return ret
 
 	def __eq__(self, other):
@@ -587,7 +590,7 @@ class MM3(Volume):
 			other = other.fraction
 
 		ret = MM3(self.value)
-		ret.value = other if ret.value is nan else ret.value * other
+		ret.value = other if ret.value is np.nan else ret.value * other
 		return ret
 
 	def __eq__(self, other):
@@ -650,7 +653,7 @@ class CM3(Volume):
 			other = other.fraction
 
 		ret = CM3(self.value)
-		ret.value = other if ret.value is nan else ret.value * other
+		ret.value = other if ret.value is np.nan else ret.value * other
 		return ret
 
 	def __eq__(self, other):
@@ -741,7 +744,7 @@ class Gray(DeliveredDose):
 			other = other.fraction
 
 		ret = Gray(self.value)
-		ret.value = other if ret.value is nan else ret.value * other
+		ret.value = other if ret.value is np.nan else ret.value * other
 		return ret
 
 	def __add__(self, other):
@@ -846,7 +849,7 @@ class centiGray(DeliveredDose):
 			other = other.fraction
 
 		ret = centiGray(self.value)
-		ret.value = other if ret.value is nan else ret.value * other
+		ret.value = other if ret.value is np.nan else ret.value * other
 		return ret
 
 	def __add__(self, other):

@@ -38,8 +38,9 @@ class PlanningProblemTestCase(ConradTestCase):
 		self.m_target = m_target = 100
 		self.m_oar = m_oar = m - m_target
 		self.anatomy = Anatomy()
-		self.anatomy += Structure(0, 'tumor', True, A=rand(m_target, n))
-		self.anatomy += Structure(1, 'oar', True, A=rand(m_oar, n))
+		self.anatomy += Structure(
+				0, 'tumor', True, A=np.random.rand(m_target, n))
+		self.anatomy += Structure(1, 'oar', True, A=np.random.rand(m_oar, n))
 
 	def tearDown(self):
 		for struc in self.anatomy:
@@ -49,17 +50,17 @@ class PlanningProblemTestCase(ConradTestCase):
 		p = PlanningProblem()
 
 		if module_installed('cvxpy'):
-			self.assertTrue( p.solver_cvxpy is not None )
+			self.assertIsNotNone( p.solver_cvxpy )
 		else:
-			self.assertTrue( p.solver_cvxpy is None )
+			self.assertIsNone( p.solver_cvxpy )
 
 		if module_installed('optkit'):
-			self.assertTrue( p.solver_pogs is not None )
+			self.assertIsNotNone( p.solver_pogs )
 		else:
-			self.assertTrue( p.solver_pogs is None )
+			self.assertIsNone( p.solver_pogs )
 
-		self.assertTrue( p._PlanningProblem__solver is None )
-		self.assertTrue( p.solver is not None )
+		self.assertIsNone( p._PlanningProblem__solver )
+		self.assertIsNotNone( p.solver )
 
 	def test_updates(self):
 		p = PlanningProblem()
@@ -81,10 +82,9 @@ class PlanningProblemTestCase(ConradTestCase):
 
 		# OPKIT
 		if p.solver_pogs is not None:
-			# don't call build/solve since constrained structure will
-			# raise exception
+			self.anatomy.clear_constraints()
 			p._PlanningProblem__solver = p.solver_pogs
-			x_rand = rand(self.n)
+			x_rand = np.random.rand(self.n)
 			p.solver_pogs.build(self.anatomy.list)
 			p.solver_pogs.pogs_solver.output.x[:] = x_rand
 			p._PlanningProblem__update_constraints(struc)
@@ -108,30 +108,30 @@ class PlanningProblemTestCase(ConradTestCase):
 
 			# gather solver info
 			p._PlanningProblem__gather_solver_info(ro)
-			self.assertTrue( ro.solver_info['status'] == p.solver.status )
-			self.assertTrue( ro.solver_info['time'] == p.solver.solvetime )
-			self.assertTrue(
-					ro.solver_info['objective'] == p.solver.objective_value )
-			self.assertTrue( ro.solver_info['iters'] == p.solver.solveiters )
+			self.assertEqual( ro.solver_info['status'], p.solver.status )
+			self.assertEqual( ro.solver_info['time'], p.solver.solvetime )
+			self.assertEqual(
+					ro.solver_info['objective'], p.solver.objective_value )
+			self.assertEqual( ro.solver_info['iters'], p.solver.solveiters )
 
 			# gather solver info, exact
 			p._PlanningProblem__gather_solver_info(ro, exact=True)
-			self.assertTrue(
-					ro.solver_info['status_exact'] == p.solver.status )
-			self.assertTrue(
-					ro.solver_info['time_exact'] == p.solver.solvetime )
-			self.assertTrue(
-					ro.solver_info['objective_exact'] ==
+			self.assertEqual(
+					ro.solver_info['status_exact'], p.solver.status )
+			self.assertEqual(
+					ro.solver_info['time_exact'], p.solver.solvetime )
+			self.assertEqual(
+					ro.solver_info['objective_exact'],
 					p.solver.objective_value )
-			self.assertTrue(
-					ro.solver_info['iters_exact'] == p.solver.solveiters )
+			self.assertEqual(
+					ro.solver_info['iters_exact'], p.solver.solveiters )
 
 			# gather solver variables
 			p._PlanningProblem__gather_solver_vars(ro)
 			self.assert_vector_equal( ro.optimal_variables['x'], p.solver.x )
 			self.assert_vector_equal(
 					ro.optimal_variables['mu'], p.solver.x_dual )
-			self.assertTrue( ro.optimal_variables['nu'] is None )
+			self.assertIsNone( ro.optimal_variables['nu'] )
 
 			# gather solver variables, exact
 			p._PlanningProblem__gather_solver_vars(ro, exact=True)
@@ -139,7 +139,7 @@ class PlanningProblemTestCase(ConradTestCase):
 					ro.optimal_variables['x_exact'],p.solver.x )
 			self.assert_vector_equal(
 					ro.optimal_variables['mu_exact'], p.solver.x_dual )
-			self.assertTrue( ro.optimal_variables['nu_exact'] is None )
+			self.assertIsNone( ro.optimal_variables['nu_exact'] )
 
 			# gather DVH slopes
 			p._PlanningProblem__gather_dvh_slopes(ro, self.anatomy.list)
@@ -147,6 +147,7 @@ class PlanningProblemTestCase(ConradTestCase):
 					slope > 0 for slope in ro.optimal_dvh_slopes.values()]) )
 		# OPKIT
 		if p.solver_pogs is not None:
+			self.anatomy.clear_constraints()
 			p._PlanningProblem__solver = p.solver_pogs
 			p.solver.build(self.anatomy.list)
 			p.solver.solve(verbose=0)
@@ -154,23 +155,23 @@ class PlanningProblemTestCase(ConradTestCase):
 
 			# gather solver info
 			p._PlanningProblem__gather_solver_info(ro)
-			self.assertTrue( ro.solver_info['status'] == p.solver.status )
-			self.assertTrue( ro.solver_info['time'] == p.solver.solvetime )
-			self.assertTrue(
-					ro.solver_info['objective'] == p.solver.objective_value )
-			self.assertTrue( ro.solver_info['iters'] == p.solver.solveiters )
+			self.assertEqual( ro.solver_info['status'], p.solver.status )
+			self.assertEqual( ro.solver_info['time'], p.solver.solvetime )
+			self.assertEqual(
+					ro.solver_info['objective'], p.solver.objective_value )
+			self.assertEqual( ro.solver_info['iters'], p.solver.solveiters )
 
 			# gather solver info, exact
 			p._PlanningProblem__gather_solver_info(ro, exact=True)
-			self.assertTrue(
-					ro.solver_info['status_exact'] == p.solver.status )
-			self.assertTrue(
-					ro.solver_info['time_exact'] == p.solver.solvetime )
-			self.assertTrue(
-					ro.solver_info['objective_exact'] ==
+			self.assertEqual(
+					ro.solver_info['status_exact'], p.solver.status )
+			self.assertEqual(
+					ro.solver_info['time_exact'], p.solver.solvetime )
+			self.assertEqual(
+					ro.solver_info['objective_exact'],
 					p.solver.objective_value )
-			self.assertTrue(
-					ro.solver_info['iters_exact'] == p.solver.solveiters )
+			self.assertEqual(
+					ro.solver_info['iters_exact'], p.solver.solveiters )
 
 			# gather solver variables
 			p._PlanningProblem__gather_solver_vars(ro)
@@ -201,14 +202,14 @@ class PlanningProblemTestCase(ConradTestCase):
 		# unconstrained problem: OPTKIT is fastest, if available
 		p._PlanningProblem__set_solver_fastest_available(self.anatomy.list)
 		if p.solver_pogs is not None:
-			self.assertTrue( p.solver == p.solver_pogs )
+			self.assertEqual( p.solver, p.solver_pogs )
 		elif p.solver_cvxpy is not None:
-			self.assertTrue( p.solver == p.solver_cvxpy )
+			self.assertEqual( p.solver, p.solver_cvxpy )
 
 		self.anatomy['tumor'].constraints += D('mean') < 15 * Gy
 		p._PlanningProblem__set_solver_fastest_available(self.anatomy.list)
 		if p.solver_cvxpy is not None:
-			self.assertTrue( p.solver == p.solver_cvxpy )
+			self.assertEqual( p.solver, p.solver_cvxpy )
 
 		# constrained problem: CVXPY is only solver that can handle it
 		self.anatomy['tumor'].constraints -= self.anatomy[
@@ -216,21 +217,21 @@ class PlanningProblemTestCase(ConradTestCase):
 		self.anatomy['tumor'].constraints += D('min') > 5 * Gy
 		p._PlanningProblem__set_solver_fastest_available(self.anatomy.list)
 		if p.solver_cvxpy is not None:
-			self.assertTrue( p.solver == p.solver_cvxpy )
+			self.assertEqual( p.solver, p.solver_cvxpy )
 		self.anatomy['tumor'].constraints -= self.anatomy[
 				'tumor'].constraints.last_key
 
 		self.anatomy['tumor'].constraints += D('max') < 20 * Gy
 		p._PlanningProblem__set_solver_fastest_available(self.anatomy.list)
 		if p.solver_cvxpy is not None:
-			self.assertTrue( p.solver == p.solver_cvxpy )
+			self.assertEqual( p.solver, p.solver_cvxpy )
 		self.anatomy['tumor'].constraints -= self.anatomy[
 				'tumor'].constraints.last_key
 
 		self.anatomy['tumor'].constraints += D(2) < 20 * Gy
 		p._PlanningProblem__set_solver_fastest_available(self.anatomy.list)
 		if p.solver_cvxpy is not None:
-			self.assertTrue( p.solver == p.solver_cvxpy )
+			self.assertEqual( p.solver, p.solver_cvxpy )
 		self.anatomy['tumor'].constraints -= self.anatomy[
 				'tumor'].constraints.last_key
 
@@ -264,16 +265,16 @@ class PlanningProblemTestCase(ConradTestCase):
 		p.solver_cvxpy = None
 		p.solver_pogs = None
 		ro = RunOutput()
-		self.assert_exception( call=p.solve, args=[self.anatomy.list, ro] )
+		with self.assertRaises(ValueError):
+			p.solve(self.anatomy.list, ro)
 
 		p = PlanningProblem()
-
 		# unconstrained, no slack (slack irrelevant)
 		#	- return code = 1 (1 feasible problem solved)
 		ro = RunOutput()
 		feasible = p.solve(self.anatomy.list, ro, slack=False, verbose=0)
-		self.assertTrue( feasible == 1 )
-		self.assertTrue( ro.solvetime > 0 )
+		self.assertEqual( feasible, 1 )
+		self.assertGreater( ro.solvetime, 0 )
 		self.assert_nan( ro.solvetime_exact )
 
 		# constrained, no slack
@@ -282,8 +283,8 @@ class PlanningProblemTestCase(ConradTestCase):
 		self.anatomy['tumor'].constraints += D('mean') > 10 * Gy
 		cid1 = self.anatomy['tumor'].constraints.last_key
 		feasible = p.solve(self.anatomy.list, ro, slack=False, verbose=0)
-		self.assertTrue( feasible == 1 )
-		self.assertTrue( ro.solvetime > 0 )
+		self.assertEqual( feasible, 1 )
+		self.assertGreater( ro.solvetime, 0 )
 		self.assert_nan( ro.solvetime_exact )
 
 		# add infeasible constraint
@@ -291,8 +292,8 @@ class PlanningProblemTestCase(ConradTestCase):
 		ro = RunOutput()
 		self.anatomy['tumor'].constraints += D('mean') < 8 * Gy
 		feasible = p.solve(self.anatomy.list, ro, slack=False, verbose=0)
-		self.assertTrue( feasible == 0 )
-		self.assertTrue( ro.solvetime > 0 )
+		self.assertEqual( feasible, 0 )
+		self.assertGreater( ro.solvetime, 0 )
 		self.assert_nan( ro.solvetime_exact )
 		self.anatomy['tumor'].constraints -= self.anatomy[
 			'tumor'].constraints.last_key
@@ -303,8 +304,8 @@ class PlanningProblemTestCase(ConradTestCase):
 		ro = RunOutput()
 		feasible = p.solve(self.anatomy.list, ro, slack=False, verbose=0,
 						   exact_constraints=True)
-		self.assertTrue( feasible == 1 )
-		self.assertTrue( ro.solvetime > 0 )
+		self.assertEqual( feasible, 1 )
+		self.assertGreater( ro.solvetime, 0 )
 		self.assert_nan( ro.solvetime_exact )
 
 		# 	- +DVH constraint: request *and* perform 2-pass method
@@ -314,9 +315,9 @@ class PlanningProblemTestCase(ConradTestCase):
 		cid2 = self.anatomy['tumor'].constraints.last_key
 		feasible = p.solve(self.anatomy.list, ro, slack=False, verbose=0,
 						   exact_constraints=True)
-		self.assertTrue( feasible == 2 )
-		self.assertTrue( ro.solvetime > 0 )
-		self.assertTrue( ro.solvetime_exact > 0 )
+		self.assertEqual( feasible, 2 )
+		self.assertGreater( ro.solvetime, 0 )
+		self.assertGreater( ro.solvetime_exact, 0 )
 
 		# slack
 		#	- infeasible constraint, problem feasible with slack
@@ -330,8 +331,8 @@ class PlanningProblemTestCase(ConradTestCase):
 		self.anatomy['tumor'].constraints[cid3].priority = 1
 
 		feasible = p.solve(self.anatomy.list, ro, slack=True, verbose=0)
-		self.assertTrue( feasible == 1 )
-		self.assertTrue( ro.solvetime > 0 )
+		self.assertEqual( feasible, 1 )
+		self.assertGreater( ro.solvetime, 0 )
 		self.assert_nan( ro.solvetime_exact )
 
 		# slack, 2-pass
@@ -339,6 +340,6 @@ class PlanningProblemTestCase(ConradTestCase):
 		ro = RunOutput()
 		feasible = p.solve(self.anatomy.list, ro, slack=True, verbose=0,
 						   exact_constraints=True)
-		self.assertTrue( feasible == 2 )
-		self.assertTrue( ro.solvetime > 0 )
-		self.assertTrue( ro.solvetime_exact > 0 )
+		self.assertEqual( feasible, 2 )
+		self.assertGreater( ro.solvetime, 0 )
+		self.assertGreater( ro.solvetime_exact, 0 )

@@ -29,14 +29,17 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import ndarray, array, squeeze, zeros, ones, nan
-from scipy.sparse import csr_matrix, csc_matrix
+import numpy as np
+import scipy.sparse as sp
 
 from conrad.defs import CONRAD_DEBUG_PRINT, positive_real_valued, \
 						sparse_or_dense, vec
 from conrad.physics.units import cm3, Gy, DeliveredDose
 from conrad.medicine.dose import Constraint, MeanConstraint, ConstraintList, \
 								 PercentileConstraint, DVH, RELOPS
+from conrad.optimization.objectives import TreatmentObjective, \
+										   NontargetObjectiveLinear, \
+										   TargetObjectivePWL
 
 W_UNDER_DEFAULT = 1.
 W_OVER_DEFAULT = 0.05
@@ -104,30 +107,35 @@ class Structure(object):
 		self.name = str(name)
 		self.is_target = bool(is_target)
 		self.__size = None
+		self.__weighted_size = None
+		self.__objective = None
 		self.__dose = 0. * Gy
 		self.__boost = 1.
-		self.__w_under = nan
-		self.__w_over = nan
 		self.__A_full = None
 		self.__A_mean = None
 		self.__voxel_weights = None
 		self.__y = None
-		self.__y_mean = nan
+		self.__y_mean = np.nan
 		self.dvh = None
 		self.constraints = ConstraintList()
 
+		objective = options.pop('objective', None)
+		if objective is not None:
+			self.objective = objective
+		else:
+			objective_constructor = options.pop(
+					'objective_constructor', TargetObjectivePWL if is_target
+					else NontargetObjectiveLinear)
+			self.objective = objective_constructor(**options)
+
 		if size is not None:
 			self.size = size
+
 		if is_target:
-			self.dose = options.pop('dose', 1. * Gy)
+			self.dose = self.objective.dose
+
 		self.A_full = options.pop('A', None)
 		self.A_mean = options.pop('A_mean', None)
-
-		WU_DEFAULT = W_UNDER_DEFAULT if is_target else 0.
-		WO_DEFAULT = W_OVER_DEFAULT if is_target else W_NONTARG_DEFAULT
-
-		self.w_under = options.pop('w_under', WU_DEFAULT)
-		self.w_over = options.pop('w_over', WO_DEFAULT)
 
 	@property
 	def plannable(self):
@@ -139,16 +147,16 @@ class Structure(object):
 			- Dose matrix assigned, *or*
 			- Structure collapsable and mean dose matrix assigned.
 		"""
-		size_set = positive_real_valued(self.size)
+		size_determined = positive_real_valued(self.size)
 		full_mat_usable = sparse_or_dense(self.A_full)
 		if full_mat_usable:
 			full_mat_usable &= self.size == self.A_full.shape[0]
 
 		collapsed_mat_usable = bool(
-				isinstance(self.A_mean, ndarray) and self.collapsable)
+				isinstance(self.A_mean, np.ndarray) and self.collapsable)
 
 		usable_matrix_loaded = full_mat_usable or collapsed_mat_usable
-		return size_set and usable_matrix_loaded
+		return size_determined and usable_matrix_loaded
 
 	@property
 	def size(self):
@@ -169,7 +177,35 @@ class Structure(object):
 			self.dvh = DVH(self.size)
 
 			# default to uniformly weighted voxels
-			self.voxel_weights = ones(self.size)
+			self.voxel_weights = np.ones(self.size)
+
+	@property
+	def weighted_size(self):
+		if self.voxel_weights is None:
+			return self.size
+		return self.__weighted_size
+
+	@property
+	def objective(self):
+		return self.__objective
+
+	@objective.setter
+	def objective(self, objective):
+		if not isinstance(objective, TreatmentObjective):
+			raise TypeError(
+					'objective must be of type {}'.format(TreatmentObjective))
+		compatible = self.is_target and objective.is_target_objective
+		compatible |= self.is_target < objective.is_nontarget_objective
+		if not compatible:
+			raise ValueError(
+					'objective incompatible with structure:\n'
+					'structure is target? {}\n'
+					'objective target-compatible? {}\n'
+					'objective nontarget-compatible? {}'
+					''.format(
+							self.is_target, objective.is_target_objective,
+							objective.is_nontarget_objective))
+		self.__objective = objective
 
 	def reset_matrices(self):
 		""" Reset structure's dose and mean dose matrices to ``None`` """
@@ -179,7 +215,8 @@ class Structure(object):
 	@property
 	def collapsable(self):
 		""" ``True`` if optimization can be performed with mean dose only. """
-		return self.constraints.mean_only and not self.is_target
+		return self.constraints.mean_only and isinstance(
+				self.objective, NontargetObjectiveLinear)
 
 	@property
 	def A_full(self):
@@ -194,8 +231,8 @@ class Structure(object):
 
 		Raises:
 			TypeError: If ``A_full`` is not a matrix in
-				:class:`ndarray`, :class:`csc_matrix`, or
-				:class:`csr_matrix` formats.
+				:class:`np.ndarray`, :class:`sp.csc_matrix`, or
+				:class:`sp.csr_matrix` formats.
 			ValueError: If :attr:`Structure.size` is set, and the number
 				of rows in ``A_full`` does not match
 				:attr:`Structure.size`.
@@ -231,14 +268,14 @@ class Structure(object):
 		"""
 		Mean dose matrix (dimensions = ``1`` x ``beams``).
 
-		Setter expects a one dimensional :class:`ndarray` representing
-		the mean dose matrix for the structure. If this optional
-		argument is not provided, the method will attempt to calculate
-		the mean dose from :attr:`Structure.A_full`.
+		Setter expects a one dimensional :class:`np.ndarray`
+		representing the mean dose matrix for the structure. If this
+		optional argument is not provided, the method will attempt to
+		calculate the mean dose from :attr:`Structure.A_full`.
 
 		Raises:
 			TypeError: If ``A_mean`` provided and not of type
-				:class:`ndarray`, *or* if mean dose matrix is to be
+				:class:`np.ndarray`, *or* if mean dose matrix is to be
 				calculated from :attr:`Structure.A_full`, but full dose
 				matrix is not a :mod:`conrad`-recognized matrix type.
 			ValueError: If ``A_mean`` is not dimensioned as a row or
@@ -251,33 +288,40 @@ class Structure(object):
 	@A_mean.setter
 	def A_mean(self, A_mean=None):
 		if A_mean is not None:
-			if not isinstance(A_mean, ndarray):
-				raise TypeError('if argument "A_mean" is provided, it '
-								'must be of type {}'.format(ndarray))
+			if not isinstance(A_mean, np.ndarray):
+				raise TypeError(
+						'if argument "A_mean" is provided, it must be '
+						'of type {}'.format(np.ndarray))
 			elif not A_mean.size in A_mean.shape:
-				raise ValueError('if argument "A_mean" is provided, it must be'
-								 ' a row or column vector. shape of argument: '
-								 '{}'.format(A_mean.shape))
+				raise ValueError(
+						'if argument "A_mean" is provided, it must be '
+						'a row or column vector. shape of argument: {}'
+						''.format(A_mean.shape))
 			else:
 				if self.__A_full is not None:
 					if len(A_mean) != self.__A_full.shape[1]:
-						raise ValueError('field "A_full" already set; '
-										 'proposed value for "A_mean" '
-										 'must have same number of entries '
-										 '({}) as columns in A_full ({})'
-										 ''.format(len(A_mean),
-										 self.__A_full.shape[1]))
-				self.__A_mean = vec(A_mean)
+						raise ValueError(
+								'field "A_full" already set; proposed '
+								'value for "A_mean" must have same '
+								'number of entries ({}) as columns in '
+								'A_full ({})'.format(
+										len(A_mean),
+										self.__A_full.shape[1]))
+			self.__A_mean = vec(A_mean)
 		elif self.__A_full is not None:
 			if not sparse_or_dense(self.A_full):
-				raise TypeError('cannot calculate structure.A_mean from'
-								'structure.A_full: A_full must be one of'
-								' ({},{},{})'.format(ndarray, csc_matrix,
-								csr_matrix))
+				raise TypeError(
+						'cannot calculate structure.A_mean from'
+						'structure.A_full: A_full must be one of '
+						'({},{},{})'.format(
+								np.ndarray, sp.csc_matrix,
+								sp.csr_matrix))
 			else:
-				self.__A_mean = self.A_full.sum(0) / self.A_full.shape[0]
-				if not isinstance(self.A_full, ndarray):
-					self.__A_mean = vec(self.__A_mean)
+				if isinstance(self.A_full, np.ndarray):
+					self.__A_mean = np.dot(self.voxel_weights, self.A_full)
+				else:
+					self.__A_mean = vec(self.voxel_weights * self.A_full)
+				self.__A_mean /= float(self.weighted_size)
 
 	@property
 	def A(self):
@@ -303,7 +347,7 @@ class Structure(object):
 
 	@voxel_weights.setter
 	def voxel_weights(self, weights):
-		if self.size in (None, nan, 0):
+		if self.size in (None, np.nan, 0):
 			raise ValueError('structure size must be defined to add '
 							 'voxel weights')
 		if len(weights) != self.size:
@@ -314,6 +358,15 @@ class Structure(object):
 		if any(weights < 0):
 			raise ValueError('negative voxel weights not allowed')
 		self.__voxel_weights = vec(weights)
+		self.__weighted_size = np.sum(self.__voxel_weights)
+		self.objective.normalization = 1. / self.weighted_size
+		if self.weighted_size != self.size and self.A_full is not None:
+			# Pass "None" to self.A_mean setter to trigger calculation of
+			# mean dose matrix from full dose matrix.
+			self.A_mean = None
+		if self.y is not None:
+			self.__y_mean = np.dot(
+					self.voxel_weights, self.y) / self.weighted_size
 
 	def set_constraint(self, constr_id, threshold=None, relop=None, dose=None):
 		"""
@@ -380,21 +433,26 @@ class Structure(object):
 				:class:`DeliveredDose`.
 			ValueError: If zero dose is requested to a target structure.
 		"""
-		return self.boost * self.__dose
+		if hasattr(self.objective, 'dose'):
+			return self.objective.dose
+		else:
+			return self.__dose
 
 	@dose.setter
 	def dose(self, dose):
-		if not self.is_target: return
+		if not self.is_target:
+			return
 		if not isinstance(dose, DeliveredDose):
 			raise TypeError('argument "dose" must be of type {}'
 							''.format(DeliveredDose))
 		if dose.value == 0:
 			raise ValueError('zero dose invalid for target structure')
 		if self.__dose.value == 0:
-			self.__dose = dose
 			self.__boost = 1.
+			self.__dose = dose
 		else:
 			self.__boost = dose.to_Gy.value / self.__dose.to_Gy.value
+		self.objective.dose = self.boost * self.__dose
 
 	@property
 	def boost(self):
@@ -427,85 +485,39 @@ class Structure(object):
 		u.value = 1
 		return u
 
-	@property
-	def w_under(self):
-		"""
-		Underdose weight for structure's optimization objective.
-
-		Getter returns weight normalized by structure size. Setter sets
-		raw weight.
-
-		Raises:
-			TypeError: If ``w_under`` not :obj:`int` or :obj:`float`.
-			ValueError: If ``w_under`` negative.
-		"""
-		if not positive_real_valued(self.size):
-			return nan
-
-		if isinstance(self.__w_under, (float, int)):
-		    return self.__w_under / float(self.size)
-		else:
-			return None
-
-	@w_under.setter
-	def w_under(self, weight):
-		if not self.is_target:
-			self.__w_under = 0.
-			return
-
-		if isinstance(weight, (int, float)):
-			self.__w_under = max(0., float(weight))
-			if weight < 0:
-				raise ValueError('negative objective weights not allowed')
-		else:
-			raise TypeError('argument "weight" must be a float >= 0')
-
-	@property
-	def w_under_raw(self):
-		""" Raw underdose weight, not normalized for structure size. """
-		return self.__w_under
-
-	@property
-	def w_over(self):
-		"""
-		Overdose weight for structure's optimization objective.
-
-		Getter returns weight normalized by structure size. Setter sets
-		raw weight.
-
-		Raises:
-			TypeError: If ``w_over`` not :obj:`int` or :obj:`float`.
-			ValueError: If ``w_over`` negative.
-		"""
-		if not positive_real_valued(self.size):
-			return nan
-
-		if isinstance(self.__w_over, (float, int)):
-			return self.__w_over / float(self.size)
-		else:
-			return None
-
-	@w_over.setter
-	def w_over(self, weight):
-		if isinstance(weight, (int, float)):
-			self.__w_over = max(0., float(weight))
-			if weight < 0:
-				raise ValueError('negative objective weights not allowed')
-		else:
-			raise TypeError('argument "weight" must be a float >= 0')
-
-	@property
-	def w_over_raw(self):
-		""" Raw overdose weight, not normalized for structure size. """
-		return self.__w_over
-
 	def calculate_dose(self, beam_intensities):
 		""" Alias for :meth:`Structure.calc_y`. """
 		self.calc_y(beam_intensities)
 
+	def assign_dose(self, y):
+		"""
+		Assign dose vector to structure.
+
+		Arguments:
+			y: Vector-like input of voxel doses.
+
+		Returns:
+			None
+
+		Raises:
+			ValueError: if structure size is known and incompatible with
+				length of ``y``.
+		"""
+		y = vec(y)
+		if self.size is None:
+			self.size = y.size
+		elif self.size != y.size:
+			raise ValueError(
+					'size of dose vector ({}) incompatible with size '
+					'of structure ({})'.format(y.size, self.size))
+		self.__y = y
+		self.__y_mean = np.dot(self.voxel_weights, y) / self.weighted_size
+		self.dvh.data = self.__y
+
 	def calc_y(self, x):
 		"""
-		Calculate voxel doses as :attr:`Structure.y` = :attr:`Structure.A` * ``x``.
+		Calculate voxel doses as:
+		attr:`Structure.y` = :attr:`Structure.A` * ``x``.
 
 		Arguments:
 			x: Vector-like input of beam intensities.
@@ -517,13 +529,13 @@ class Structure(object):
 		# calculate dose from input vector x:
 		# 	y = Ax
 		x = vec(x)
-		if isinstance(self.A, (csr_matrix, csc_matrix)):
-			self.__y = squeeze(self.A * x)
-		elif isinstance(self.A, ndarray):
+		if isinstance(self.A, (sp.csr_matrix, sp.csc_matrix)):
+			self.__y = np.squeeze(self.A * x)
+		elif isinstance(self.A, np.ndarray):
 			self.__y = self.A.dot(x)
 
 		self.__y_mean = self.A_mean.dot(x)
-		if isinstance(self.__y_mean, ndarray):
+		if isinstance(self.__y_mean, np.ndarray):
 			self.__y_mean = self.__y_mean[0]
 
 		# make DVH curve from calculated dose
@@ -535,6 +547,11 @@ class Structure(object):
 		return self.__y
 
 	@property
+	def y_mean(self):
+		""" Value of structure's mean voxel dose. """
+		return self.__y_mean
+
+	@property
 	def mean_dose(self):
 		""" Average dose to structure's voxels. """
 		return self.__y_mean * self.dose_unit
@@ -543,14 +560,14 @@ class Structure(object):
 	def min_dose(self):
 		""" Minimum dose to structure's voxels. """
 		if self.dvh is None:
-			return nan * Gy
+			return np.nan * Gy
 		return self.dvh.min_dose * self.dose_unit
 
 	@property
 	def max_dose(self):
 		""" Maximum dose to structure's voxels. """
 		if self.dvh is None:
-			return nan * Gy
+			return np.nan * Gy
 		return self.dvh.max_dose * self.dose_unit
 
 	def satisfies(self, constraint):
@@ -608,17 +625,28 @@ class Structure(object):
 
 		return (status, dose_achieved)
 
-	@property
-	def plotting_data(self):
+	def plotting_data(self, constraints_only=False, maxlength=None):
 		"""
 		Dictionary of :mod:`matplotlib`-compatible plotting data.
 
 		Data includes DVH curve, constraints, and prescribed dose.
-	 	"""
-		return {'curve': self.dvh.plotting_data,
-				'constraints': self.constraints.plotting_data,
-				'rx': self.dose_rx.value,
-				'target': self.is_target}
+
+		Args:
+			constraints_only (:obj:`bool`, optional): If ``True``,
+				return only the constraints associated with the
+				structure.
+			maxlength (:obj:`int`, optional): If specified, re-sample
+				the structure's DVH plotting data to have a maximum
+				series length of ``maxlength``.
+		"""
+		if constraints_only:
+			return self.constraints.plotting_data
+		else:
+			return {'curve': self.dvh.resample(maxlength).plotting_data,
+					'constraints': self.constraints.plotting_data,
+					'rx': self.dose_rx.value,
+					'target': self.is_target,
+					'name': self.name}
 
 	@property
 	def __header_string(self):
@@ -631,27 +659,23 @@ class Structure(object):
 		out += ' (label = {})\n'.format(self.label)
 		return out
 
-	@property
-	def objective(self):
-		""" Dictionary of objective data. """
-		return {
-				'is_target': self.is_target,
-				'dose': self.dose,
-				'weight_under': self.__w_under,
-				'weight_over': self.__w_over
-				}
+	# @property
+	# def objective(self):
+	# 	""" Dictionary of objective data. """
+	# 	return {
+	# 			'is_target': self.is_target,
+	# 			'dose': self.dose,
+	# 			'weight_under': self.__w_under,
+	# 			'weight_over': self.__w_over
+	# 			}
 
 	@property
 	def __obj_string(self):
 		""" String of objective data. """
-		out = 'target? {}\n'.format(self.is_target)
-		out += 'rx dose: {}\n'.format(self.dose)
-		if self.is_target:
-			out += 'weight_under: {}\n'.format(self.__w_under)
-			out += 'weight_over: {}\n'.format(self.__w_over)
-		else:
-			out += 'weight: {}\n'.format(self.__w_over)
-		out += "\n"
+		out = 'target? %s\n' %self.is_target
+		out += 'rx dose: %s\n' %self.dose_rx
+		out += 'objective:\n%s' %self.objective.string(offset=1)
+		out += '\n'
 		return out
 
 	@property

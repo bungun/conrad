@@ -1,7 +1,7 @@
 """
 Define solver using the :mod:`cvxpy` module, if available.
 
-For information on :mod:`cvxpy`, see:
+For np.information on :mod:`cvxpy`, see:
 http://www.cvxpy.org/en/latest/
 
 If :func:`conrad.defs.module_installed` routine does not find the module
@@ -34,13 +34,14 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from time import clock
-from numpy import copy as np_copy, inf, nan
+import time
+import numpy as np
 
 from conrad.defs import vec as conrad_vec, module_installed, println
 from conrad.medicine.dose import Constraint, MeanConstraint, MinConstraint, \
 								 MaxConstraint, PercentileConstraint
 from conrad.medicine.anatomy import Anatomy
+from conrad.optimization.preprocessing import ObjectiveMethods
 from conrad.optimization.solver_base import *
 
 if module_installed('cvxpy'):
@@ -93,7 +94,7 @@ if module_installed('cvxpy'):
 			self.__x = cvxpy.Variable(0)
 			self.__constraint_indices = {}
 			self.constraint_dual_vars = {}
-			self.__solvetime = nan
+			self.__solvetime = np.nan
 
 			if isinstance(n_beams, int):
 				self.init_problem(n_beams, **options)
@@ -230,7 +231,7 @@ if module_installed('cvxpy'):
 			sign = 1 if constr.upper else -1
 			dose = constr.dose_achieved if had_slack else constr.dose
 			idx_exact = constr.get_maxmargin_fulfillers(y, had_slack)
-			A_exact = np_copy(A[idx_exact, :])
+			A_exact = np.copy(A[idx_exact, :])
 			return sign * (A_exact * x - dose.value) <= 0
 
 		def __add_constraints(self, structure, exact=False):
@@ -398,14 +399,14 @@ if module_installed('cvxpy'):
 
 			Returns:
 				``None`` if ``constr_id`` does not correspond to a
-				registered slope variable. 'NaN' (as :attr:`numpy.nan`)
+				registered slope variable. 'NaN' (as :attr:`numpy.np.nan`)
 				if constraint built as exact. Reciprocal of slope
 				variable otherwise.
 			"""
 			if constr_id in self.dvh_vars:
 				beta =  self.dvh_vars[constr_id].value
 				if beta is None:
-					return nan
+					return np.nan
 				return 1. / beta
 			else:
 				return None
@@ -443,7 +444,15 @@ if module_installed('cvxpy'):
 			""" Number of solver iterations performed. """
 			return 'n/a'
 
-		def build(self, structures, exact=False):
+		def __objective_expression(self, structure):
+			structure.normalize_objective()
+			if structure.collapsable:
+				return structure.objective.expr(structure.A_mean.T * self.__x)
+			else:
+				return structure.objective.expr(
+						structure.A * self.x, structure.voxel_weights)
+
+		def build(self, structures, exact=False, **options):
 			"""
 			Update :mod:`cvxpy` optimization based on structure data.
 
@@ -469,16 +478,21 @@ if module_installed('cvxpy'):
 			self.clear()
 			if isinstance(structures, Anatomy):
 				structures = structures.list
+			# A, dose, weight_abs, weight_lin = \
+					# self._Solver__gather_matrix_and_coefficients(structures)
 
-			A, dose, weight_abs, weight_lin = \
-					self._Solver__gather_matrix_and_coefficients(structures)
-
-			self.problem.objective = cvxpy.Minimize(
-					weight_abs.T * cvxpy.abs(A * self.__x - dose) +
-					weight_lin.T * (A * self.__x - dose))
-
+			self.problem.objective = cvxpy.Minimize(0)
 			for s in structures:
+				self.problem.objective += cvxpy.Minimize(
+						ObjectiveMethods.expr(s, self.__x))
 				self.__add_constraints(s, exact=exact)
+
+			# self.problem.objective = cvxpy.Minimize(
+			# 		weight_abs.T * cvxpy.abs(A * self.__x - dose) +
+			# 		weight_lin.T * (A * self.__x - dose))
+
+			# for s in structures:
+				# self.__add_constraints(s, exact=exact)
 
 			return self._Solver__construction_report(structures)
 
@@ -511,7 +525,7 @@ if module_installed('cvxpy'):
 
 			# solve
 			PRINT('running solver...')
-			start = clock()
+			start = time.clock()
 			if solver == cvxpy.ECOS:
 				ret = self.problem.solve(
 						solver=cvxpy.ECOS,
@@ -539,13 +553,13 @@ if module_installed('cvxpy'):
 			else:
 				raise ValueError('invalid solver specified: {}\n'
 								 'no optimization performed'.format(solver))
-			self.__solvetime = clock() - start
+			self.__solvetime = time.clock() - start
 
 
 			PRINT("status: {}".format(self.problem.status))
 			PRINT("optimal value: {}".format(self.problem.value))
 
-			return ret != inf and not isinstance(ret, str)
+			return ret != np.inf and not isinstance(ret, str)
 
 else:
 	SOLVER_DEFAULT = 'CVXPY_UNAVAILABLE'

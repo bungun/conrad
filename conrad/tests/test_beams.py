@@ -21,6 +21,8 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
+import numpy as np
+
 from conrad.physics.units import cm, mm
 from conrad.physics.beams import *
 from conrad.tests.base import *
@@ -35,20 +37,20 @@ class BeamsTestCase(ConradTestCase):
 		dy = 0.5 * cm
 
 		g = BixelGrid(nx, ny)
-		self.assertEqual(g.bixels, n)
+		self.assertEqual( g.bixels, n )
 
-		idx = int(n * rand())
+		idx = int(n * np.random.rand())
 		g.set_order('xy')
-		self.assertEqual(g.position2index(*g.index2position(idx)), idx)
+		self.assertEqual( g.position2index(*g.index2position(idx)), idx )
 		g.set_order('yx')
-		self.assertEqual(g.position2index(*g.index2position(idx)), idx)
+		self.assertEqual( g.position2index(*g.index2position(idx)), idx )
 
-		indices = (n * rand(10)).astype(int)
+		indices = (n * np.random.rand(10)).astype(int)
 		idx_recovered = listmap(
 				lambda pos : g.position2index(*pos),
 				listmap(g.index2position, indices))
 		self.assertTrue(
-				all(listmap(lambda a, b : a == b, indices, idx_recovered)))
+				all(listmap(lambda a, b : a == b, indices, idx_recovered)) )
 
 	def test_beam_set(self):
 		pass

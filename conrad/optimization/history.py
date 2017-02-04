@@ -22,7 +22,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import nan
+import numpy as np
 
 class RunProfile(object):
 	"""
@@ -90,12 +90,11 @@ class RunProfile(object):
 			None
 		"""
 		for _, s in enumerate(structures):
+			obj = s.objective
 			self.objectives[s.label] = {
 				'label' : s.label,
 				'name' : s.name,
-				'dose' : s.dose,
-				'w_under' : s.w_under_raw,
-				'w_over' : s.w_over_raw
+				'objective' : obj.dict if obj is not None else None
 			}
 
 	def pull_constraints(self, structures):
@@ -147,7 +146,7 @@ class RunOutput(object):
 
 		self.optimal_variables = {'x': None, 'x_exact': None}
 		self.optimal_dvh_slopes = {}
-		self.solver_info = {'time': nan, 'time_exact': nan}
+		self.solver_info = {'time': np.nan, 'time_exact': np.nan}
 		self.feasible = False
 
 	@property
@@ -246,12 +245,18 @@ class RunRecord(object):
 	@property
 	def nonzero_beam_count(self, tol=1e-6):
 		""" Number of active beams in first-pass solution. """
-		return sum(self.x > tol)
+		if self.x is None:
+			raise ValueError('no beam data assigned')
+		return np.sum(self.x > tol)
 
 	@property
 	def nonzero_beam_count_exact(self, tol=1e-6):
 		""" Number of active beams in second-pass solution. """
-		return sum(self.x_exact > tol)
+		if self.x_exact is None:
+			raise ValueError(
+					'no beam data assigned for exact solution '
+					'intensities')
+		return np.sum(self.x_exact > tol)
 
 	@property
 	def solvetime(self):
@@ -354,13 +359,13 @@ class PlanningHistory(object):
 			None
 
 		Raises:
-			AttributeError: If no treatment plans exist in history,
+			ValueError: If no treatment plans exist in history,
 				i.e., :attr:`PlanningHistory.runs` has length zero.
 		"""
 		if len(self.runs) == 0:
-			raise AttributeError('no optimization runs performed, '
-								 'cannot retrieve {} for most recent '
-								 'plan'.format(property_name))
+			raise ValueError(
+					'no optimization runs performed, cannot retrieve '
+					'{} for most recent plan'.format(property_name))
 
 	@property
 	def last_feasible(self):
@@ -413,10 +418,10 @@ class PlanningHistory(object):
 			None
 
 		Raises:
-			AttributeError: If no treatment plans exist in history.
+			ValueError: If no treatment plans exist in history.
 		"""
 		if len(self.runs) == 0:
-			raise AttributeError(
+			raise ValueError(
 					'no optimization runs performed, cannot apply tag '
 					'"{}" to most recent plan'.format(tag))
 		self.run_tags[tag] = len(self.runs) - 1

@@ -31,29 +31,30 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from os import getenv
-from pip import get_installed_distributions
-from numpy import nan, squeeze, array, ndarray
-from scipy.sparse import csr_matrix, csc_matrix
+import os
+import pip
+import operator as op
+import numpy as np
+import scipy.sparse as sp
 
 def println(*args):
 	print(args)
 
-CONRAD_DEBUG = getenv('CONRAD_DEBUG', False)
+CONRAD_DEBUG = os.getenv('CONRAD_DEBUG', False)
 CONRAD_DEBUG_PRINT = println if CONRAD_DEBUG else lambda x : None
 
 SOLVER_OPTIONS = ['ECOS', 'SCS']
 
-CONRAD_MATRIX_TYPES = (ndarray, csr_matrix, csc_matrix)
+CONRAD_MATRIX_TYPES = (np.ndarray, sp.csr_matrix, sp.csc_matrix)
 
 def vec(vectorlike):
 	""" Convert input to one-dimensional :class:`~numpy.ndarray`. """
-	return squeeze(array(vectorlike))
+	return np.reshape(np.array(vectorlike), (np.size(vectorlike),))
 
 def is_vector(vectorlike):
 	""" ``True`` if input is one-dimensional :class:`~numpy.ndarray`. """
-	if isinstance(vectorlike, ndarray):
-		return len(vectorlike) == vectorlike.shape[0]
+	if isinstance(vectorlike, np.ndarray):
+		return vectorlike.size == vectorlike.shape[0]
 	return False
 
 def sparse_or_dense(matrixlike):
@@ -61,24 +62,43 @@ def sparse_or_dense(matrixlike):
 	``True`` if input is a :mod:`conrad`-recognized matrix type.
 
 	Accepted types include: two-dimensional :class:`ndarray`,
-	:class:`csr_matrx` and :class:`csc_matrix`.
+	:class:`sp.csr_matrx` and :class:`sp.csc_matrix`.
 	"""
 	if matrixlike is None:
 		return False
 
-	dense = isinstance(matrixlike, ndarray)
+	dense = isinstance(matrixlike, np.ndarray)
 	if dense:
 		dense &= len(matrixlike.shape) == 2
-	sparse = isinstance(matrixlike, (csr_matrix, csc_matrix))
+	sparse = isinstance(matrixlike, (sp.csr_matrix, sp.csc_matrix))
 	return sparse or dense
+
+def vec_or_mat_formatted(arraylike):
+	return is_vector(arraylike) or sparse_or_dense(arraylike)
 
 def positive_real_valued(val):
 	""" ``True`` if input is a positive scalar. """
-	if val is not None and val is not nan and isinstance(val, (int, float)):
+	if val is not None and val is not np.nan and isinstance(val, (int, float)):
 		if val > 0:
 			return True
 	else:
 		return False
+
+def cvxpy_var_size(cvxpy_var):
+	if hasattr(cvxpy_var, 'size'):
+		size = cvxpy_var.size
+	elif hasattr(cvxpy_var, 'shape'):
+		size = cvxpy_var.shape
+
+	if isinstance(size, tuple):
+		size = reduce(op.mul, size)
+	return size
+
+def cvxpy_var_shape(cvxpy_var):
+	if hasattr(cvxpy_var, 'shape'):
+		return cvxpy_var.shape
+	else:
+		return cvxpy_var.size
 
 def module_installed(name, version_string=None):
 	"""
@@ -94,7 +114,7 @@ def module_installed(name, version_string=None):
 		dictionary values returned by
 		:func:`pip.get_installed_distributions`.
 	"""
-	modules = get_installed_distributions()
+	modules = pip.get_installed_distributions()
 	index = -1
 
 	installed = False

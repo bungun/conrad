@@ -33,210 +33,159 @@ class StructureTestCase(ConradTestCase):
 	def test_create_structure_minimal(self):
 		# declare target structure
 		s1 = Structure('LABEL', 'STRUCTURE NAME', True)
-		self.assertTrue( s1.label == 'LABEL')
-		self.assertTrue( s1.name == 'STRUCTURE NAME' )
+		self.assertEqual( s1.label, 'LABEL')
+		self.assertEqual( s1.name, 'STRUCTURE NAME' )
 		self.assertTrue( s1.is_target )
+		self.assertIsInstance( s1.objective, TargetObjectivePWL )
 
-		self.assertTrue( s1.size is None )
+		self.assertIsNone( s1.size )
 		self.assertFalse( s1.collapsable )
-		self.assertTrue( s1.A_full is None )
-		self.assertTrue( s1.A_mean is None )
-		self.assertTrue( s1.A is None )
-		self.assertTrue( s1.dose_rx == 1. * Gy )
-		self.assertTrue( s1.dose == 1. * Gy )
-		self.assert_nan( s1.w_under )
-		self.assert_nan( s1.w_over )
-		self.assertTrue( s1.w_under_raw == W_UNDER_DEFAULT )
-		self.assertTrue( s1.w_over_raw == W_OVER_DEFAULT )
-		self.assertTrue( s1.y is None )
+		self.assertIsNone( s1.A_full )
+		self.assertIsNone( s1.A_mean )
+		self.assertIsNone( s1.A )
+		self.assertEqual( s1.dose_rx, 1. * Gy )
+		self.assertEqual( s1.dose, 1. * Gy )
+		self.assertIsNone( s1.y )
 		self.assert_nan( s1.mean_dose.value )
 		self.assert_nan( s1.min_dose.value )
 		self.assert_nan( s1.max_dose.value )
-		self.assertTrue( s1.dvh is None )
-		self.assertTrue( isinstance(s1.constraints, ConstraintList) )
+		self.assertIsNone( s1.dvh )
+		self.assertIsInstance( s1.constraints, ConstraintList )
 		self.assertFalse( s1.plannable )
 
 		# declare non-target structure
 		s2 = Structure('NEXT LABEL', 'NEXT NAME', False)
-		self.assertTrue( s2.label == 'NEXT LABEL')
-		self.assertTrue( s2.name == 'NEXT NAME' )
+		self.assertEqual( s2.label, 'NEXT LABEL')
+		self.assertEqual( s2.name, 'NEXT NAME' )
 		self.assertFalse( s2.is_target )
+		self.assertIsInstance( s2.objective, NontargetObjectiveLinear )
 
-		self.assertTrue( s2.size is None )
+		self.assertIsNone( s2.size )
 		self.assertTrue( s2.collapsable )
-		self.assertTrue( s2.A_full is None )
-		self.assertTrue( s2.A_mean is None )
-		self.assertTrue( s2.A is None )
-		self.assertTrue( s2.dose_rx.value == 0. )
-		self.assertTrue( s2.dose.value == 0. )
-		self.assert_nan( s2.w_under )
-		self.assert_nan( s2.w_over )
-		self.assertTrue( s2.w_under_raw == 0. )
-		self.assertTrue( s2.w_over_raw == W_NONTARG_DEFAULT )
-		self.assertTrue( s2.y is None )
+		self.assertIsNone( s2.A_full )
+		self.assertIsNone( s2.A_mean )
+		self.assertIsNone( s2.A )
+		self.assertEqual( s2.dose_rx.value, 0. )
+		self.assertEqual( s2.dose.value, 0. )
+		self.assertIsNone( s2.y )
 		self.assert_nan( s2.mean_dose.value )
 		self.assert_nan( s2.min_dose.value )
 		self.assert_nan( s2.max_dose.value )
-		self.assertTrue( s2.dvh is None )
-		self.assertTrue( isinstance(s2.constraints, ConstraintList) )
+		self.assertIsNone( s2.dvh )
+		self.assertIsInstance( s2.constraints, ConstraintList )
 		self.assertFalse( s2.plannable )
 
 	def test_set_size(self):
 		s = Structure('LABEL', 'STRUCTURE NAME', True)
-		self.assertTrue( s.size is None )
+		self.assertIsNone( s.size )
 		s.size = 500
-		self.assertTrue( s.size == 500 )
-		self.assert_scalar_notequal(s.w_under, s.w_under_raw, 1e-3, 1e-3)
-		self.assert_scalar_notequal(s.w_over, s.w_over_raw, 1e-3, 1e-3)
+		self.assertEqual( s.size, 500 )
+		self.assert_scalar_notequal(
+				s.objective.w_under, s.objective.w_under_raw, 1e-3, 1e-3)
+		self.assert_scalar_notequal(
+				s.objective.w_over, s.objective.w_over_raw, 1e-3, 1e-3)
 		self.assertFalse( s.plannable )
-		self.assertTrue( isinstance(s.dvh, DVH) )
+		self.assertIsInstance( s.dvh, DVH )
 
 		# test exception handling
-		try:
+		with self.assertRaises(ValueError):
 			s.size = 0
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
-		try:
+		with self.assertRaises(ValueError):
 			s.size = -3
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
-		try:
+		with self.assertRaises(ValueError):
 			s.size = 'random_string'
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
 	def test_change_weights(self):
 		s = Structure('LABEL', 'STRUCTURE NAME', True)
-		s.w_under = 3.
-		s.w_over = 5
-		self.assertTrue( s.w_under_raw == 3. )
-		self.assertTrue( s.w_over_raw == 5. )
+		s.objective.w_under = 3.
+		s.objective.w_over = 5
+
+		self.assertEqual( s.objective.w_under_raw, 3. )
+		self.assertEqual( s.objective.w_over_raw, 5. )
 
 		# test exception handling
-		try:
-			s.w_under = -3
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
+		with self.assertRaises(ValueError):
+			s.objective.w_under = -3
 
-		try:
-			s.w_over = -3
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
+		with self.assertRaises(ValueError):
+			s.objective.w_over = -3
 
-		try:
-			s.w_under = 'random_string'
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
+		with self.assertRaises(ValueError):
+			s.objective.w_under = 'random_string'
 
-		try:
-			s.w_over = 'random_string'
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
+		with self.assertRaises(ValueError):
+			s.objective.w_over = 'random_string'
 
 	def test_change_dose(self):
 		target = Structure('LABEL', 'STRUCTURE NAME', True)
 		target.dose = 17. * Gy
-		self.assertTrue( target.dose.value == 17. )
-		self.assertTrue( target.dose_rx.value == 1. )
+		self.assertEqual( target.dose.value, 17. )
+		self.assertEqual( target.dose_rx.value, 1. )
 		target.dose_rx = 17. * Gy
-		self.assertTrue( target.dose.value == 17. )
-		self.assertTrue( target.dose_rx.value == 17. )
+		self.assertEqual( target.dose.value, 17. )
+		self.assertEqual( target.dose_rx.value, 17. )
+		self.assertEqual( target.dose, target.objective.dose )
 
 		nontarget = Structure('LABEL', 'STRUCTURE NAME', False)
 		nontarget.dose = 17. * Gy
-		self.assertTrue( nontarget.dose.value == 0. )
-		self.assertTrue( nontarget.dose_rx.value == 0. )
+		self.assertEqual( nontarget.dose.value, 0. )
+		self.assertEqual( nontarget.dose_rx.value, 0. )
 		nontarget.dose_rx = 17. * Gy
-		self.assertTrue( nontarget.dose.value == 0. )
-		self.assertTrue( nontarget.dose_rx.value == 0. )
+		self.assertEqual( nontarget.dose.value, 0. )
+		self.assertEqual( nontarget.dose_rx.value, 0. )
 
 		# test exception handling
-		try:
+		with self.assertRaises(ValueError):
 			target.dose = 0 * Gy
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
-		try:
+		with self.assertRaises(ValueError):
 			target.dose = -3 * Gy
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
-		try:
+		with self.assertRaises(TypeError):
 			target.dose = 3
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
-		try:
+		with self.assertRaises(TypeError):
 			target.dose = 'random_string'
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
 	def test_add_matrix(self):
 		s = Structure('LABEL', 'STRUCTURE NAME', True)
 		self.assertFalse( s.plannable )
 		s.A_full = np.random.rand(100, 300)
-		self.assertTrue( s.size == 100 )
-		self.assertTrue( isinstance(s.dvh, DVH) )
+		self.assertEqual( s.size, 100 )
+		self.assertIsInstance( s.dvh, DVH )
 		self.assertTrue( s.plannable )
-		self.assertTrue( s.A_mean is not None )
-		self.assertTrue( len(s.A_mean) == 300 )
+		self.assertIsNotNone( s.A_mean )
+		self.assertEqual( len(s.A_mean), 300 )
 		s.size = 120 # inconsistent size, no longer plannable
 		self.assertFalse( s.plannable )
 		s.size = 100
 		self.assertTrue( s.plannable )
 
 		# set CSR matrix
-		try:
-			s.reset_matrices()
-			s.A_full = sp.rand(100, 50, 0.3, 'csr')
-			self.assertTrue( s.A_mean is not None )
-			self.assertTrue( len(s.A_mean) == 50 )
-		except:
-			self.assertTrue( False )
 
-		# set CSC matrix
-		try:
-			s.reset_matrices()
-			s.A_full = sp.rand(100, 70, 0.3, 'csc')
-			self.assertTrue( s.A_mean is not None )
-			self.assertTrue( len(s.A_mean) == 70 )
-		except:
-			self.assertTrue( False )
+		s.reset_matrices()
+		s.A_full = sp.rand(100, 50, 0.3, 'csr')
+		self.assertIsNotNone( s.A_mean )
+		self.assertEqual( len(s.A_mean), 50 )
 
-		# test exception handling
-		try:
+		s.reset_matrices()
+		s.A_full = sp.rand(100, 70, 0.3, 'csc')
+		self.assertIsNotNone( s.A_mean )
+		self.assertEqual( len(s.A_mean), 70 )
+
+		with self.assertRaises(TypeError):
 			s.reset_matrices()
 			s.A_full = np.random.rand()
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
-		try:
+		with self.assertRaises(TypeError):
 			s.reset_matrices()
 			s.A_full = 'random_string'
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
-		try:
+		with self.assertRaises(ValueError):
 			s.reset_matrices()
 			s.A_full = np.random.rand(50, 300)
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
 	def test_add_mean_matrix(self):
 		s = Structure('LABEL', 'STRUCTURE NAME', True)
@@ -255,91 +204,88 @@ class StructureTestCase(ConradTestCase):
 		# NON-TARGETS ARE COLLAPSABLE, MEAN MATRIX SUFFICES FOR PLANNING
 		self.assertTrue( s.plannable )
 
-		# test exception handling
-		try:
+	# 	# test exception handling
+		with self.assertRaises(TypeError):
 			s.A_mean = np.random.rand()
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
-		try:
+		with self.assertRaises(TypeError):
 			s.A_mean = 'random_string'
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
 	def test_reset_matrices(self):
 		s = Structure('LABEL', 'STRUCTURE NAME', True)
 		s.A_full = np.random.rand(50, 300)
-		self.assertTrue( s.A_full is not None )
-		self.assertTrue( s.A_mean is not None )
+		self.assertIsNotNone( s.A_full )
+		self.assertIsNotNone( s.A_mean )
 		s.reset_matrices()
-		self.assertTrue( s.A_full is None )
-		self.assertTrue( s.A_mean is None )
+		self.assertIsNone( s.A_full )
+		self.assertIsNone( s.A_mean )
 
 	def test_create_structure_options(self):
 		# dense
 		s = Structure('LABEL', 'NAME', True, size=400, dose=17 * Gy,
 					  A=np.random.rand(400, 50), w_under=12, w_over=2)
-		self.assertTrue( s.size == 400 )
-		self.assertTrue( s.dose.value == 17. )
-		self.assertTrue( s.dose_rx.value == 17. )
-		self.assertTrue( s.A_full is not None )
-		self.assertTrue( s.A_mean is not None )
-		self.assertTrue( s.w_under_raw == 12. )
-		self.assertTrue( s.w_over_raw == 2. )
+		self.assertEqual( s.size, 400 )
+		self.assertEqual( s.dose.value, 17. )
+		self.assertEqual( s.objective.dose, s.dose )
+		self.assertEqual( s.dose_rx.value, 17. )
+		self.assertIsNotNone( s.A_full )
+		self.assertIsNotNone( s.A_mean )
+		self.assertEqual( s.objective.w_under_raw, 12. )
+		self.assertEqual( s.objective.w_over_raw, 2. )
 		self.assertTrue( s.plannable )
 		del s
 
 		# sparse CSR
 		s = Structure('LABEL', 'NAME', True, size=400, dose=16 * Gy,
 					  A=sp.rand(400, 50, 0.3, 'csr'), w_under=13, w_over=3)
-		self.assertTrue( s.size == 400 )
-		self.assertTrue( s.dose.value == 16. )
-		self.assertTrue( s.dose_rx.value == 16. )
-		self.assertTrue( s.A_full is not None )
-		self.assertTrue( s.A_mean is not None )
-		self.assertTrue( s.w_under_raw == 13. )
-		self.assertTrue( s.w_over_raw == 3. )
+		self.assertEqual( s.size, 400 )
+		self.assertEqual( s.dose.value, 16. )
+		self.assertEqual( s.objective.dose, s.dose )
+		self.assertEqual( s.dose_rx.value, 16. )
+		self.assertIsNotNone( s.A_full )
+		self.assertIsNotNone( s.A_mean )
+		self.assertEqual( s.objective.w_under_raw, 13. )
+		self.assertEqual( s.objective.w_over_raw, 3. )
 		self.assertTrue( s.plannable )
 		del s
 
 		# sparse CSC
 		s = Structure('LABEL', 'NAME', True, size=400, dose=15 * Gy,
 					  A=sp.rand(400, 50, 0.3, 'csc'), w_under=14, w_over=4)
-		self.assertTrue( s.size == 400 )
-		self.assertTrue( s.dose.value == 15. )
-		self.assertTrue( s.dose_rx.value == 15. )
-		self.assertTrue( s.A_full is not None )
-		self.assertTrue( s.A_mean is not None )
-		self.assertTrue( s.w_under_raw == 14. )
-		self.assertTrue( s.w_over_raw == 4. )
+		self.assertEqual( s.size, 400 )
+		self.assertEqual( s.dose.value, 15. )
+		self.assertEqual( s.objective.dose, s.dose )
+		self.assertEqual( s.dose_rx.value, 15. )
+		self.assertIsNotNone( s.A_full )
+		self.assertIsNotNone( s.A_mean )
+		self.assertEqual( s.objective.w_under_raw, 14. )
+		self.assertEqual( s.objective.w_over_raw, 4. )
 		self.assertTrue( s.plannable )
 		del s
 
 		# mean only, target
 		s = Structure('LABEL', 'NAME', True, size=400, dose=14 * Gy,
 					  A_mean=np.random.rand(50), w_under=15, w_over=5)
-		self.assertTrue( s.size == 400 )
-		self.assertTrue( s.dose.value == 14. )
-		self.assertTrue( s.dose_rx.value == 14. )
-		self.assertTrue( s.A_full is None )
-		self.assertTrue( s.A_mean is not None )
-		self.assertTrue( s.w_under_raw == 15. )
-		self.assertTrue( s.w_over_raw == 5. )
+		self.assertEqual( s.size, 400 )
+		self.assertEqual( s.dose.value, 14. )
+		self.assertEqual( s.objective.dose, s.dose )
+		self.assertEqual( s.dose_rx.value, 14. )
+		self.assertIsNone( s.A_full )
+		self.assertIsNotNone( s.A_mean )
+		self.assertEqual( s.objective.w_under_raw, 15. )
+		self.assertEqual( s.objective.w_over_raw, 5. )
 		self.assertFalse( s.plannable )
 		del s
 
 		# mean only, non-target
 		s = Structure('LABEL', 'NAME', False, size=400, dose=13 * Gy,
-					  A_mean=np.random.rand(50), w_under=15, w_over=5)
-		self.assertTrue( s.size == 400 )
-		self.assertTrue( s.dose.value == 0. )
-		self.assertTrue( s.dose_rx.value == 0. )
-		self.assertTrue( s.A_full is None )
-		self.assertTrue( s.A_mean is not None )
-		self.assertTrue( s.w_under_raw == 0. )
-		self.assertTrue( s.w_over_raw == 5. )
+					  A_mean=np.random.rand(50), w_over=5)
+		self.assertEqual( s.size, 400 )
+		self.assertEqual( s.dose.value, 0. )
+		self.assertEqual( s.dose_rx.value, 0. )
+		self.assertIsNone( s.A_full )
+		self.assertIsNotNone( s.A_mean )
+		self.assertEqual( s.objective.w_over_raw, 5. )
 		self.assertTrue( s.plannable )
 		del s
 
@@ -347,33 +293,28 @@ class StructureTestCase(ConradTestCase):
 		s = Structure('LABEL', 'NAME', True, size=400, dose=12 * Gy,
 					  A=np.random.rand(400, 50), A_mean=np.random.rand(50),
 					  w_under=16, w_over=6)
-		self.assertTrue( s.size == 400 )
-		self.assertTrue( s.dose.value == 12. )
-		self.assertTrue( s.dose_rx.value == 12. )
-		self.assertTrue( s.A_full is not None )
-		self.assertTrue( s.A_mean is not None )
-		self.assertTrue( s.w_under_raw == 16. )
-		self.assertTrue( s.w_over_raw == 6. )
+		self.assertEqual( s.size, 400 )
+		self.assertEqual( s.dose.value, 12. )
+		self.assertEqual( s.objective.dose, s.dose )
+		self.assertEqual( s.dose_rx.value, 12. )
+		self.assertIsNotNone( s.A_full )
+		self.assertIsNotNone( s.A_mean )
+		self.assertEqual( s.objective.w_under_raw, 16. )
+		self.assertEqual( s.objective.w_over_raw, 6. )
 		self.assertTrue( s.plannable )
 		del s
 
 		# test exception handling:
 		# incompatible size and matrix row #
-		try:
+		with self.assertRaises(ValueError):
 			s = Structure('LABEL', 'NAME', True, size=401, dose=17 * Gy,
 						  A=np.random.rand(400, 50), w_under=12, w_over=2)
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
 		# incompatible compatible full and mean
-		try:
+		with self.assertRaises(ValueError):
 			s = Structure('LABEL', 'NAME', True, size=400, dose=13 * Gy,
 						  A=np.random.rand(400, 50), A_mean=np.random.rand(40),
 						  w_under=16, w_over=6)
-			self.assertTrue( False )
-		except:
-			self.assertTrue( True )
 
 	def test_calculate_dose(self):
 		m, n = 400, 50
@@ -389,29 +330,40 @@ class StructureTestCase(ConradTestCase):
 		self.assert_scalar_equal(Ax.max(), s.max_dose.value, 1e-7, 1e-7)
 		self.assert_scalar_equal(Ax.min(), s.min_dose.value, 1e-7, 1e-7)
 
+	def test_assign_dose(self):
+		m, n = 400, 50
+		y = np.random.rand(m)
+		s = Structure('LABEL', 'NAME', True, A=np.random.rand(m, n))
+
+		s.assign_dose(y)
+		self.assert_vector_equal( y, s.y, 1e-7, 1e-7 )
+
+		with self.assertRaises(ValueError):
+			s.assign_dose(np.random.rand(m + 2))
+
 	def test_add_constraints(self):
 		s = Structure('LABEL', 'NAME', True)
 		s.constraints += D(80) > 30 * Gy
 		cid = s.constraints.last_key
-		self.assertTrue( isinstance(s.constraints[cid], PercentileConstraint) )
-		self.assertTrue( s.constraints[cid].threshold.value == 80 )
-		self.assertTrue( s.constraints[cid].dose.value == 30 )
-		self.assertTrue( s.constraints[cid].relop == RELOPS.GEQ )
+		self.assertIsInstance( s.constraints[cid], PercentileConstraint )
+		self.assertEqual( s.constraints[cid].threshold.value, 80 )
+		self.assertEqual( s.constraints[cid].dose.value, 30 )
+		self.assertEqual( s.constraints[cid].relop, RELOPS.GEQ )
 
 		# indirect syntax for constraint modification
 		s.set_constraint(cid, dose=40 * Gy)
-		self.assertTrue( s.constraints[cid].dose.value == 40 )
+		self.assertEqual( s.constraints[cid].dose.value, 40 )
 
 		s.set_constraint(cid, relop='<')
-		self.assertTrue( s.constraints[cid].relop == RELOPS.LEQ )
+		self.assertEqual( s.constraints[cid].relop, RELOPS.LEQ )
 
 		s.set_constraint(cid, threshold=70)
-		self.assertTrue( s.constraints[cid].threshold.value == 70 )
+		self.assertEqual( s.constraints[cid].threshold.value, 70 )
 
 		# operator overloaded (i.e., direct) syntax
 		s.constraints[cid] > 30 * Gy
-		self.assertTrue( s.constraints[cid].dose.value == 30 )
-		self.assertTrue( s.constraints[cid].relop == RELOPS.GEQ )
+		self.assertEqual( s.constraints[cid].dose.value, 30 )
+		self.assertEqual( s.constraints[cid].relop, RELOPS.GEQ )
 
 	def test_constraint_satisfaction(self):
 		m = 500
@@ -445,42 +397,39 @@ class StructureTestCase(ConradTestCase):
 
 		s.constraints += D(40) >= 30 * Gy
 		s.dose_rx = 42 * Gy
-		self.assertTrue( isinstance(s.plotting_data, dict) )
-		self.assertTrue( 'curve' in s.plotting_data )
-		self.assertTrue( 'constraints' in s.plotting_data )
-		self.assertTrue( 'rx' in s.plotting_data )
-		self.assertTrue( 'target' in s.plotting_data )
+		self.assertIsInstance( s.plotting_data(), dict )
+		self.assertIn( 'curve', s.plotting_data() )
+		self.assertIn( 'constraints', s.plotting_data() )
+		self.assertIn( 'rx', s.plotting_data() )
+		self.assertIn( 'target', s.plotting_data() )
+
+		maxlength = 25
+		self.assertLessEqual(
+				len(s.plotting_data(maxlength=25)['curve']['dose']),
+				maxlength + 2 )
 
 	def test_print_objective(self):
 		s = Structure('LABEL', 'NAME', True)
-		self.assertTrue(
-				'Structure: NAME (label = LABEL)' in s.objective_string )
-		self.assertTrue(
-				'target? True' in s.objective_string )
-		self.assertTrue(
-				'rx dose: 1.0 Gy' in s.objective_string )
-		self.assertTrue(
-				'weight_under: 1.0' in s.objective_string )
-		self.assertTrue(
-				'weight_over: 0.05' in s.objective_string )
+		self.assertIn( 'Structure: NAME (label = LABEL)', s.objective_string )
+		self.assertIn( 'target? True', s.objective_string )
+		self.assertIn( 'rx dose: 1.0 Gy', s.objective_string )
+		self.assertIn( 'weight_underdose: 1.0', s.objective_string )
+		self.assertIn( 'weight_overdose: 0.05', s.objective_string )
 
 		s = Structure('LABEL', 'NAME', False)
-		self.assertTrue(
-				'target? False' in s.objective_string )
-		self.assertTrue(
-				'rx dose: 0.0 Gy' in s.objective_string )
-		self.assertTrue(
-				'weight: 0.025' in s.objective_string )
+		self.assertIn( 'target? False', s.objective_string )
+		self.assertIn( 'rx dose: 0.0 Gy', s.objective_string )
+		self.assertIn( 'weight: 0.03', s.objective_string )
 
 	def test_print_constraints(self):
 		s = Structure('LABEL', 'NAME', True)
 		s.constraints += D(80) > 30 * Gy
 		s.constraints += D(99) < 50 * Gy
 
-		self.assertTrue(
-				'Structure: NAME (label = LABEL)' in s.constraints_string )
+		self.assertIn(
+				'Structure: NAME (label = LABEL)', s.constraints_string )
 		for k in s.constraints:
-			self.assertTrue(str(s.constraints[k]) in s.constraints_string )
+			self.assertIn( str(s.constraints[k]), s.constraints_string )
 
 	def test_print_summary(self):
 		m, n = 500, 30
@@ -489,10 +438,10 @@ class StructureTestCase(ConradTestCase):
 		A = np.random.rand(m, n)
 		s = Structure('LABEL', 'Name', True, A=A)
 		s.calc_y(x)
-		self.assertTrue( 'mean' in s.summary_string )
-		self.assertTrue( 'min' in s.summary_string )
-		self.assertTrue( 'max' in s.summary_string )
-		self.assertTrue( 'D98' in s.summary_string )
-		self.assertTrue( 'D75' in s.summary_string )
-		self.assertTrue( 'D25' in s.summary_string )
-		self.assertTrue( 'D2' in s.summary_string )
+		self.assertIn( 'mean', s.summary_string )
+		self.assertIn( 'min', s.summary_string )
+		self.assertIn( 'max', s.summary_string )
+		self.assertIn( 'D98', s.summary_string )
+		self.assertIn( 'D75', s.summary_string )
+		self.assertIn( 'D25', s.summary_string )
+		self.assertIn( 'D2', s.summary_string )

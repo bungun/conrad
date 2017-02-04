@@ -21,7 +21,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from numpy import nan
+import numpy as np
 
 from conrad.medicine.structure import Structure
 
@@ -75,6 +75,12 @@ class Anatomy(object):
 			self.__structures = structures._Anatomy__structures
 		elif structures:
 			self.structures = structures
+
+	def __contains__(self, comparator):
+		for s in self:
+			if comparator in (s.name, s.label):
+				return True
+		return False
 
 	def __getitem__(self, key):
 		for s in self:
@@ -168,7 +174,7 @@ class Anatomy(object):
 		if self.is_empty:
 			return 0
 		elif any([s.size is None for s in self]):
-			return nan
+			return np.nan
 		else:
 			return sum([s.size for s in self])
 
@@ -220,7 +226,22 @@ class Anatomy(object):
 		for s in self:
 			s.calculate_dose(beam_intensities)
 
-	def dose_summary_data(self, percentiles = [2, 98]):
+	def propagate_doses(self, voxel_doses):
+		"""
+		Assign pre-calculated voxel doses to each structure in
+		:class:`Anatomy`
+
+		Arguments:
+			voxel_doses (:obj:`dict`): Dictionary mapping structure
+				labels to voxel dose subvectors.
+
+		Returns:
+			None
+		"""
+		for s in self:
+			s.assign_dose(voxel_doses[s.label])
+
+	def dose_summary_data(self, percentiles=[2, 98]):
 		"""
 		Collimate dose summaries from each structure in :class:`Anatomy`.
 
@@ -310,12 +331,18 @@ class Anatomy(object):
 			ret_string += str(s)
 		return ret_string
 
-	@property
-	def plotting_data(self):
+	def plotting_data(self, constraints_only=False, maxlength=None):
 		"""
-		Dictionary of :mod:`matplotlib`-compatible plotting data for all structures.
+		Dictionary of :mod:`matplotlib`-compatible plotting data for all
+		structures.
+
+		Args:
+			constraints_only (:obj:`bool`, optional): If ``True``,
+				return only the constraints associated with each
+				structure.
+			maxlength (:obj:`int`, optional): If specified, re-sample
+				each structure's DVH plotting data to have a maximum
+				series length of ``maxlength``.
 		"""
-		d = {}
-		for structure in self:
-			d[structure.label] = structure.plotting_data
-		return d
+		return {s.label: s.plotting_data(constraints_only=constraints_only,
+										 maxlength=maxlength) for s in self}

@@ -20,6 +20,9 @@ You should have received a copy of the GNU General Public License
 along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
+
+import numpy as np
+
 from conrad.medicine import Structure, D
 from conrad.physics import Gy
 from conrad.optimization.solver_optkit import *
@@ -33,11 +36,142 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 		if s is None:
 			return
 
+		self.assertIsNone( s.objective_voxels )
+		self.assertIsNone( s.objective_beams )
+		self.assertIsNone( s.pogs_solver )
+		self.assertIsNone( s.n_beams )
+		self.assertIsNone( s._SolverOptkit__A_current )
+
+	def test_solver_build_matrix(self):
+		s = SolverOptkit()
+		if s is None:
+			return
+
+		# -structure 1 not collapsable (reason: target)
+		# -structure 2 collapsable
+		# expected matrix size: {m0 + 1 \times n}
+		A = s._SolverOptkit__build_matrix(self.anatomy.list)
+		self.assertEqual( A.shape, (self.m_target + 1, self.n) )
+		self.assert_vector_equal( A[:self.m_target, :], self.A_targ )
+		self.assert_vector_equal(
+				A[self.m_target, :], self.A_oar.sum(0) / self.m_oar )
+
+		self.anatomy[1].constraints += D('mean') < 5 * Gy
+		# -structure 1 not collapsable (reason: target)
+		# -structure 2 collapsable (reason: only mean constraint)
+		# expected matrix size: {m0 + 1 \times n}
+		A = s._SolverOptkit__build_matrix(self.anatomy.list)
+		self.assertEqual( A.shape, (self.m_target + 1, self.n) )
+		self.assert_vector_equal( A[:self.m_target, :], self.A_targ )
+		self.assert_vector_equal(
+				A[self.m_target, :], self.A_oar.sum(0) / self.m_oar )
+
+		self.anatomy[1].constraints += D(30) < 10 * Gy
+		# -structure 1 not collapsable (reason: target)
+		# -structure 2 not collapsable (reason: DVH constraint)
+		# expected matrix size: {m0 + m1 \times n}
+		A = s._SolverOptkit__build_matrix(self.anatomy.list)
+		self.assertEqual( A.shape, (self.m_target + self.m_oar, self.n) )
+		self.assert_vector_equal( A[:self.m_target, :], self.A_targ )
+		self.assert_vector_equal( A[self.m_target:, :], self.A_oar )
+
+	def __assert_voxel_objective_default(self, v_objective, compressed=True,
+										 weight_targ=1., weight_oar=1.):
+		size_expect = self.m_target
+		size_expect += 1 if compressed else self.m_oar
+		self.assertEqual( v_objective.size, size_expect )
+
+		w_over = self.anatomy[0].objective.weight_over_raw
+		w_under = self.anatomy[0].objective.w_under_raw
+		w_abs = 0.5 * (w_over + w_under) / self.anatomy[0].weighted_size
+		w_lin = 0.5 * (w_over - w_under) / self.anatomy[0].weighted_size
+		w = self.anatomy[1].objective.weight_raw
+		w_norm = w / self.anatomy[1].weighted_size
+
+		equality_assertion = self.assert_scalar_equal if compressed else \
+							 self.assert_vector_equal
+
+		# param 'a' == 1
+		self.assert_vector_equal( v_objective.a, 1)
+
+		# param 'b' == 	dose if target,
+		#				0 otherwise
+		self.assert_vector_equal(
+				v_objective.b[:self.m_target],
+				float(self.anatomy[0].objective.target_dose) )
+		equality_assertion( v_objective.b[self.m_target:], 0 )
+
+		# param 'c' == 	w_abs if target,
+		#				0 otherwise
+		self.assert_vector_equal(
+				v_objective.c[:self.m_target], w_abs * weight_targ )
+		equality_assertion( v_objective.c[self.m_target:], 0 )
+
+		# param 'd' == 	w_abs if target,
+		#				w otherwise
+		self.assert_vector_equal(
+				v_objective.d[:self.m_target], w_lin * weight_targ )
+		lhs = v_objective.d[self.m_target:]
+		rhs = w if compressed else w_norm * weight_oar
+		equality_assertion( lhs, rhs )
+
+		# param 'e' == 0
+		self.assert_vector_equal( v_objective.e, 0)
+
+	def test_solver_build_voxel_objective(self):
+		s = SolverOptkit()
+		if s is None:
+			return
+
 		self.assertTrue( s.objective_voxels is None )
-		self.assertTrue( s.objective_beams is None )
-		self.assertTrue( s.pogs_solver is None )
-		self.assertTrue( s.n_beams is None )
-		self.assertTrue( s._SolverOptkit__A_current is None )
+
+		# -structure 1 not collapsable (reason: target)
+		# -structure 2 collapsable
+		# expected matrix size: {m0 + 1 \times n}
+		s._SolverOptkit__build_voxel_objective(self.anatomy.list)
+		self.__assert_voxel_objective_default(s.objective_voxels)
+
+		self.anatomy[1].constraints += D('mean') < 5 * Gy
+		# -structure 1 not collapsable (reason: target)
+		# -structure 2 collapsable (reason: only mean constraint)
+		# expected matrix size: {m0 + 1 \times n}
+		s._SolverOptkit__build_voxel_objective(self.anatomy.list)
+		self.assertTrue( s.objective_voxels.size == self.m_target + 1 )
+		self.__assert_voxel_objective_default(s.objective_voxels)
+
+		self.anatomy[1].constraints += D(30) < 10 * Gy
+		# -structure 1 not collapsable (reason: target)
+		# -structure 2 not collapsable (reason: DVH constraint)
+		# expected matrix size: {m0 + m1 \times n}
+		s._SolverOptkit__build_voxel_objective(self.anatomy.list)
+		self.assertTrue(
+				s.objective_voxels.size == self.m_target + self.m_oar )
+		self.__assert_voxel_objective_default(
+				s.objective_voxels, compressed=False)
+
+		# test incorporation of voxel weights into objective term weights,
+		# both full and collapsed matrix cases
+		voxel_weights0 = (1 + 10 * np.random.rand(self.m_target)).astype(int)
+		voxel_weights1 = (1 + 10 * np.random.rand(self.m_oar)).astype(int)
+		self.anatomy[0].voxel_weights = voxel_weights0
+		self.anatomy[1].voxel_weights = voxel_weights1
+		s._SolverOptkit__build_voxel_objective(self.anatomy.list)
+		self.__assert_voxel_objective_default(
+				s.objective_voxels, compressed=False,
+				weight_targ=voxel_weights0, weight_oar=voxel_weights1)
+		self.anatomy[1].constraints.clear()
+		s._SolverOptkit__build_voxel_objective(self.anatomy.list)
+		self.__assert_voxel_objective_default(
+				s.objective_voxels, compressed=True,
+				weight_targ=voxel_weights0, weight_oar=voxel_weights1)
+
+	def test_solver_build_beam_objective(self):
+		s = SolverOptkit()
+		if s is None:
+			return
+
+		s._SolverOptkit__build_beam_objective(self.anatomy.list)
+		self.assertTrue( s.objective_beams.size == self.n )
 
 	def test_solver_optkit_problem_init(self):
 		s = SolverOptkit()
@@ -55,23 +189,22 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 
 		struc = self.anatomy['tumor']
 		struc.constraints += D(70) > 10 * Gy
-		struc.calculate_dose(rand(self.n))
+		struc.calculate_dose(np.random.rand(self.n))
 		cid = struc.constraints.last_key
 		for slack_flag in [True, False]:
-			self.assert_exception(
-					call=s._SolverOptkit__percentile_constraint_restricted,
-					args=[struc.A, struc.constraints[cid], slack_flag] )
-			self.assert_exception(
-					call=s._SolverOptkit__percentile_constraint_exact,
-					args=[struc.A, struc.y, struc.constraints[cid], slack_flag] )
+			with self.assertRaises(ValueError):
+				s._SolverOptkit__percentile_constraint_restricted(
+					struc.A, struc.constraints[cid], slack_flag)
+			with self.assertRaises(ValueError):
+				s._SolverOptkit__percentile_constraint_exact(
+					struc.A, struc.y, struc.constraints[cid], slack_flag)
 		for exact_flag in [True, False]:
-			self.assert_exception(
-					call=s._SolverOptkit__add_constraints,
-					args=[struc, exact_flag] )
+			with self.assertRaises(ValueError):
+				s._SolverOptkit__add_constraints(struc, exact_flag)
 
-		self.assertTrue( s.get_slack_value(cid) is nan )
-		self.assertTrue( s.get_dual_value(cid) is nan )
-		self.assertTrue( s.get_dvh_slope(cid) is nan )
+		self.assert_nan( s.get_slack_value(cid) )
+		self.assert_nan( s.get_dual_value(cid) )
+		self.assert_nan( s.get_dvh_slope(cid) )
 
 	def test_can_solve(self):
 		s = SolverOptkit()
@@ -110,13 +243,20 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 		if s is None:
 			return
 
-		self.assert_property_exception( obj=s, property_name='x' )
-		self.assert_property_exception( obj=s, property_name='x_dual' )
-		self.assert_property_exception( obj=s, property_name='y_dual' )
-		self.assert_property_exception( obj=s, property_name='solvetime' )
-		self.assert_property_exception( obj=s, property_name='status' )
-		self.assert_property_exception( obj=s, property_name='objective_value' )
-		self.assert_property_exception( obj=s, property_name='solveiters' )
+		with self.assertRaises(ValueError):
+			s.x
+		with self.assertRaises(ValueError):
+			s.x_dual
+		with self.assertRaises(ValueError):
+			s.y_dual
+		with self.assertRaises(ValueError):
+			s.solvetime
+		with self.assertRaises(ValueError):
+			s.status
+		with self.assertRaises(ValueError):
+			s.objective_value
+		with self.assertRaises(ValueError):
+			s.solveiters
 
 		s.build(self.anatomy.list)
 		size_A = 0
@@ -125,20 +265,21 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 				size_A += struc.size
 			else:
 				size_A += 1
-		self.assertTrue( s.objective_voxels.size == size_A )
-		self.assertTrue( s.objective_beams.size == self.n )
+		self.assertEqual( s.objective_voxels.size, size_A )
+		self.assertEqual( s.objective_beams.size, self.n )
 
-		self.assertTrue( s.x.size == self.n )
-		self.assertTrue( s.x_dual.size == self.n )
-		self.assertTrue( s.y_dual.size == size_A )
+		self.assertEqual( s.x.size, self.n )
+		self.assertEqual( s.x_dual.size, self.n )
+		self.assertEqual( s.y_dual.size, size_A )
 		self.assert_nan( s.solvetime )
-		self.assertTrue( s.status == 0 )
+		self.assertEqual( s.status, 0 )
 		self.assert_nan( s.objective_value )
-		self.assertTrue( s.solveiters == 0 )
+		self.assertEqual( s.solveiters, 0 )
 
 		# exception when not solvable
 		self.anatomy['tumor'].constraints += D('mean') > 10 * Gy
-		self.assert_exception( call=s.build, args=[self.anatomy.list] )
+		with self.assertRaises(ValueError):
+			s.build(self.anatomy.list)
 
 	def test_solve(self):
 		s = SolverOptkit()
@@ -148,7 +289,7 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 		s.build(self.anatomy.list)
 		converged = s.solve(verbose=0)
 		self.assertTrue( converged or s.pogs_solver.info.status != 0 )
-		self.assertTrue( isinstance(s.solvetime, float) )
-		self.assertTrue( isinstance(s.status, int) )
-		self.assertTrue( isinstance(s.objective_value, float) )
-		self.assertTrue( isinstance(s.solveiters, int) )
+		self.assertIsInstance( s.solvetime, float )
+		self.assertIsInstance( s.status, int )
+		self.assertIsInstance( s.objective_value, float )
+		self.assertIsInstance( s.solveiters, int )
