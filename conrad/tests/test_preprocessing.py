@@ -224,7 +224,7 @@ class ObjectiveMethodsTestCase(ConradTestCase):
 	def test_primal_expr_pogs(self):
 		if not OPTKIT_INSTALLED:
 			with self.assertRaises(NotImplementedError):
-				f.ObjectiveMethods.primal_expr_pogs(self.target)
+				ObjectiveMethods.primal_expr_pogs(self.target)
 			return
 
 		# target
@@ -257,7 +257,7 @@ class ObjectiveMethodsTestCase(ConradTestCase):
 	def test_dual_expr_pogs(self):
 		if not OPTKIT_INSTALLED:
 			with self.assertRaises(NotImplementedError):
-				f.ObjectiveMethods.primal_expr_pogs(self.target)
+				ObjectiveMethods.primal_expr_pogs(self.target)
 			return
 
 		# target

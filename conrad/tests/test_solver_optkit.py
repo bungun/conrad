@@ -44,6 +44,8 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 
 	def test_solver_build_matrix(self):
 		s = SolverOptkit()
+		if s is None:
+			return
 
 		# -structure 1 not collapsable (reason: target)
 		# -structure 2 collapsable
@@ -118,6 +120,9 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 
 	def test_solver_build_voxel_objective(self):
 		s = SolverOptkit()
+		if s is None:
+			return
+
 		self.assertTrue( s.objective_voxels is None )
 
 		# -structure 1 not collapsable (reason: target)
@@ -162,6 +167,9 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 
 	def test_solver_build_beam_objective(self):
 		s = SolverOptkit()
+		if s is None:
+			return
+
 		s._SolverOptkit__build_beam_objective(self.anatomy.list)
 		self.assertTrue( s.objective_beams.size == self.n )
 
