@@ -22,7 +22,7 @@ LONG_DESC = "TODO: LONG DESCRIPTION"
 
 setup(
     name='conrad',
-    version='0.0.1a',
+    version='0.0.2a',
     author='Baris Ungun, Anqi Fu, Stephen Boyd',
     author_email='ungun@stanford.edu',
     url='http://github.com/bungun/conrad/',
