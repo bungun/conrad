@@ -35,6 +35,7 @@ import scipy.sparse as sp
 from conrad.defs import CONRAD_DEBUG_PRINT, positive_real_valued, \
 						sparse_or_dense, vec
 from conrad.physics.units import cm3, Gy, DeliveredDose
+from conrad.physics.string import dose_from_string
 from conrad.medicine.dose import Constraint, MeanConstraint, ConstraintList, \
 								 PercentileConstraint, DVH, RELOPS
 from conrad.optimization.objectives import TreatmentObjective, \
@@ -348,13 +349,14 @@ class Structure(object):
 	@voxel_weights.setter
 	def voxel_weights(self, weights):
 		if self.size in (None, np.nan, 0):
-			raise ValueError('structure size must be defined to add '
-							 'voxel weights')
-		if len(weights) != self.size:
-			raise ValueError('length of input "weights" ({}) does not '
-							 'match structure size ({}) of this {} '
-							 'object'
-							 ''.format(len(weights), self.size, Structure))
+			raise ValueError(
+					'structure size must be defined to add voxel '
+					'weights')
+		if np.size(weights) != self.size and np.sum(weights) != self.size:
+			raise ValueError(
+					'size (or sum) of input "weights" ({}) does not '
+					'match structure size ({}) of this {} object'
+					''.format(len(weights), self.size, Structure))
 		if any(weights < 0):
 			raise ValueError('negative voxel weights not allowed')
 		self.__voxel_weights = vec(weights)
@@ -442,9 +444,12 @@ class Structure(object):
 	def dose(self, dose):
 		if not self.is_target:
 			return
+		if isinstance(dose, str):
+			dose = dose_from_string(dose)
 		if not isinstance(dose, DeliveredDose):
-			raise TypeError('argument "dose" must be of type {}'
-							''.format(DeliveredDose))
+			raise TypeError(
+					'argument `dose` must be of type {}'
+					''.format(DeliveredDose))
 		if dose.value == 0:
 			raise ValueError('zero dose invalid for target structure')
 		if self.__dose.value == 0:
