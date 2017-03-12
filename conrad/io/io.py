@@ -283,7 +283,8 @@ class CaseIO(object):
 		return self.accessor.load_solution(
 				self.active_meta.history, frame_name, solution_name)
 
-	def case_to_YAML(self, case, case_name, directory=None):
+	def case_to_YAML(self, case, case_name, directory=None,
+					 yaml_directory=None):
 		if self.working_directory is None and directory is None:
 			raise ValueError(
 					'no directory specified. please call with keyword '
@@ -293,7 +294,8 @@ class CaseIO(object):
 			directory = self.working_directory
 
 		return self.accessor.write_case_yaml(
-				case, case_name, directory, single_document=True)
+				case, case_name, directory, single_document=True,
+				yaml_directory=yaml_directory)
 
 	def YAML_to_case(self, yaml_file):
 		self.close_active_case()

@@ -206,13 +206,19 @@ class CaseAccessor(ConradDBAccessor):
 		# otherwise, return None
 		return None
 
-	def write_case_yaml(self, case, case_name, directory, single_document=False):
+	def write_case_yaml(self, case, case_name, directory,
+						single_document=False, yaml_directory=None):
 		self.FS.check_dir(directory)
+		if yaml_directory is not None:
+			self.FS.check_dir(yaml_directory)
+		else:
+			yaml_directory = directory
 		self.DB.clear_log()
+
 		ptr = self.save_case(case, case_name, directory)
 		if single_document:
 			if os.path.exists(directory):
-				filename = os.path.join(directory, case_name + '.yaml')
+				filename = os.path.join(yaml_directory, case_name + '.yaml')
 				f = open(filename, 'w')
 				entry = self.DB.get(ptr)
 				f.write(yaml.safe_dump(
@@ -224,5 +230,5 @@ class CaseAccessor(ConradDBAccessor):
 				raise ValueError('directory `{}` not found'.format(directory))
 		else:
 			return self.DB.dump_to_yaml(
-					os.path.join(directory, case_name),
+					os.path.join(yaml_directory, case_name),
 					logged_entries_only=True)
