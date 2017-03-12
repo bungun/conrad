@@ -22,4 +22,5 @@ from conrad.medicine import *
 from conrad.physics import *
 from conrad.optimization import *
 from conrad.case import Case
+from conrad.io import CaseIO
 from conrad.visualization.plot import CasePlotter
