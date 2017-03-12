@@ -26,6 +26,7 @@ import numpy as np
 
 from conrad.physics import Physics
 from conrad.medicine import Anatomy, Prescription
+from conrad.optimization.preprocessing import ObjectiveMethods
 from conrad.optimization.problem import PlanningProblem
 from conrad.optimization.history import RunRecord, PlanningHistory
 
@@ -336,9 +337,12 @@ class Case(object):
 
 		for structure in self.anatomy:
 			label = structure.label
-			structure.A_full = self.physics.dose_matrix_by_label(label)
-			structure.voxel_weights = self.physics.voxel_weights_by_label(
-					label)
+			vw = self.physics.voxel_weights_by_label(label)
+			mat = self.physics.dose_matrix_by_label(label)
+			if np.size(vw) == 1 and np.sum(vw) > 1:
+				structure.A_mean = mat
+			else:
+				structure.A_full = mat
 		self.physics.mark_data_as_loaded()
 
 	def gather_physics_from_anatomy(self):
