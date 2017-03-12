@@ -512,8 +512,10 @@ class LocaFilesystemTestCase(ConradTestCase):
 		self.assertIn( f_, f['file'] )
 		self.assertTrue( f['file'].endswith('.npy') )
 
-		with self.assertRaises(OSError):
-			f2 = lfs.write(f_, np.random.rand(30))
+		# This assertion is obsolete since OSError was changed to
+		# warnings.warn()
+		# with self.assertRaises(OSError):
+			# f2 = lfs.write(f_, np.random.rand(30))
 
 		f3 = lfs.write(f_, np.random.rand(30), overwrite=True)
 
