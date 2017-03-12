@@ -74,7 +74,7 @@ class CaseAccessor(ConradDBAccessor):
 					'argument `case` must be of type {}'.format(Case))
 
 		self.FS.check_dir(directory)
-		subdir = self.FS.join_mkdir(directory, ['cases', case_name])
+		subdir = self.FS.join_mkdir(directory, case_name)
 
 		rx = case.prescription.rx_list if case.prescription is None else None
 		if case_ID is None or not self.DB.has_key(case_ID):
@@ -100,7 +100,7 @@ class CaseAccessor(ConradDBAccessor):
 					'argument `case_entry` must be of type {}'
 					''.format(CaseEntry))
 
-		subdir = self.FS.join_mkdir(directory, ['cases', case_entry.name])
+		subdir = self.FS.join_mkdir(directory, case_entry.name)
 		case_entry.physics = self.physics_accessor.save_physics(
 				case.physics, subdir, overwrite)
 		case_entry.anatomy = self.anatomy_accessor.save_anatomy(case.anatomy)

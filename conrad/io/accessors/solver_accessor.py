@@ -39,7 +39,7 @@ class SolverCacheAccessor(ConradDBAccessor):
 
 		self.FS.check_dir(directory)
 		subdir = self.FS.join_mkdir(
-				directory, ['solver_caches', 'pogs_solver_caches', frame_name])
+				directory, 'solver_caches', 'pogs_solver_caches', frame_name)
 
 		# save equilibration
 		solver_cache_entry.matrix = self.pop_and_record(

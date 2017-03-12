@@ -42,7 +42,7 @@ class DoseFrameAccessor(ConradDBAccessor):
 					''.format(DoseFrame))
 
 		self.FS.check_dir(directory)
-		subdir = self.FS.join_mkdir(directory, ['frames'], frame.name)
+		subdir = self.FS.join_mkdir(directory, 'frames', frame.name)
 
 		if frame.dose_matrix is not None:
 			dm = self.record_entry(
@@ -128,7 +128,7 @@ class FrameMappingAccessor(ConradDBAccessor):
 		map_name = frame_mapping.source + '_to_' + frame_mapping.target
 
 		self.FS.check_dir(directory)
-		subdir = self.FS.join_mkdir(directory, ['frame_mappings'], map_name)
+		subdir = self.FS.join_mkdir(directory, 'frame_mappings', map_name)
 
 		fm = frame_mapping
 		vmap = fm.voxel_map.vec if fm.voxel_map is not None else None
@@ -213,7 +213,6 @@ class PhysicsAccessor(ConradDBAccessor):
 			raise TypeError(
 					'argument `physics` must be of type {}'
 					''.format(Physics))
-
 		self.FS.check_dir(directory)
 
 		if physics.dose_grid is not None:

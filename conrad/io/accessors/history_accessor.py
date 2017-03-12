@@ -103,7 +103,7 @@ class HistoryAccessor(ConradDBAccessor):
 
 		h = HistoryEntry()
 		for key in history_dictionary:
-			subdir = self.FS.join_mkdir(directory, ['solutions', key])
+			subdir = self.FS.join_mkdir(directory, 'solutions', key)
 
 			solution_dictionary = history_dictionary[key]
 			h.add_solutions(self.solution_accessor.save_solution(
