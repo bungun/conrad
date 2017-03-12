@@ -22,11 +22,17 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 from conrad.compat import *
 
 import numpy as np
+import cvxpy
 
+from conrad import Gy
 from conrad.optimization.objectives import *
+from conrad.optimization.objectives.default_weights import *
 from conrad.tests.base import *
 
 class TreatmentObjectiveTestImplementation(TreatmentObjective):
+	@property
+	def objective_type(self):
+		return 'dummy objective'
 	@property
 	def is_target_objective(self):
 		raise NotImplementedError
@@ -60,8 +66,10 @@ class ObjectivesTestCase(ConradTestCase):
 			obj.linear_weight
 		with self.assertRaises(AttributeError):
 			obj.rx_dose
-		with self.assertRaises(KeyError):
-			obj.dict
+		self.assertEqual(
+				obj.dict['type'],
+				TreatmentObjectiveTestImplementation().objective_type)
+		self.assertEqual(obj.dict['parameters']['test_weight'], 2)
 		self.assertIsInstance( obj.parameters, dict )
 		self.assertIn( 'test_weight', obj.parameters )
 

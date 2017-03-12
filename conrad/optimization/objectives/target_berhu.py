@@ -1,0 +1,31 @@
+# from conrad.compat import *
+
+# from conrad.optimization.objectives.target_base import *
+
+# class TargetObjectivePWBerhu(TreatmentObjective):
+# 	def primal_eval(self, y, voxel_weights=None):
+# 		raise NotImplementedError
+
+# 	def dual_eval(self, y_dual, voxel_weights=None):
+# 		raise NotImplementedError
+
+# 	def primal_expr(self, y_var, voxel_weights=None):
+# 		raise NotImplementedError
+
+# 	def primal_expr_Ax(self, A, x_var, voxel_weights=None):
+# 		raise NotImplementedError
+
+# 	def dual_expr(self, y_dual_var, voxel_weights=None):
+# 		raise NotImplementedError
+
+# 	def dual_domain_constraints(self, nu_var, voxel_weights=None):
+# 		raise NotImplementedError
+
+# 	def primal_expr_pogs(self, size, voxel_weights=None):
+# 		raise NotImplementedError
+
+# 	def dual_expr_pogs(self, size, voxel_weights=None):
+# 		raise NotImplementedError
+
+# 	def dual_domain_constraints_pogs(self, size, voxel_weights=None):
+# 		raise NotImplementedError

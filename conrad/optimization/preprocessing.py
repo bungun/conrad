@@ -54,7 +54,7 @@ class ObjectiveMethods(object):
 		return ObjectiveMethods.primal_eval(structure, y, x)
 
 	@staticmethod
-	def primal_eval(structure, y=None, x=None, meow=False):
+	def primal_eval(structure, y=None, x=None):
 		if y is not None:
 			structure.assign_dose(y)
 		elif x is not None:
@@ -126,3 +126,21 @@ class ObjectiveMethods(object):
 		weights = ObjectiveMethods.get_weights(structure)
 		size = 1 if structure.collapsable else structure.size
 		return structure.objective.dual_domain_constraints_pogs(size, weights)
+
+	@staticmethod
+	def clinical_primal_eval(structures, voxel_doses=None, beam_fluences=None):
+		f = lambda s: ObjectiveMethods.eval(s, voxel_doses, beam_fluences)
+		return sum(map(f, structures))
+
+	@staticmethod
+	def clinical_dual_eval(structures, voxel_prices, beam_prices=None):
+		f_conjugate = lambda s: ObjectiveMethods.dual_eval(s, voxel_prices)
+		return sum(map(f_conjugate, structures))
+
+	@staticmethod
+	def deliverability_primal_eval(beams_sets, beam_fluences=None):
+		raise NotImplementedError
+
+	@staticmethod
+	def deliverability_dual_eval(beam_sets, beam_prices=None):
+		raise NotImplementedError

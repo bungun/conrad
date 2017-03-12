@@ -32,6 +32,7 @@ setup(
               'conrad.medicine',
               'conrad.physics',
               'conrad.optimization',
+              'conrad.optimization.objectives',
               'conrad.io',
               'conrad.io.accessors',
               'conrad.visualization',
