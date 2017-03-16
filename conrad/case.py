@@ -337,8 +337,10 @@ class Case(object):
 		for structure in self.anatomy:
 			label = structure.label
 			structure.A_full = self.physics.dose_matrix_by_label(label)
-			structure.voxel_weights = self.physics.voxel_weights_by_label(
-					label)
+		if not self.physics.voxel_labels.unweighted:
+			for structure in self.anatomy:
+				structure.voxel_weights = self.physics.voxel_weights_by_label(
+						label)
 		self.physics.mark_data_as_loaded()
 
 	def gather_physics_from_anatomy(self):
