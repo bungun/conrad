@@ -20,6 +20,10 @@ class WeightVector(SliceCachingVector):
 			raise ValueError(
 					'entries of weight vector must be nonnnegative')
 
+	@property
+	def unweighted(self):
+		return self.data is not None and np.sum(self.data == 1) == self.size
+
 class DoseMatrix(SliceCachingMatrix):
 	def __init__(self, data):
 		SliceCachingMatrix.__init__(self, data)
