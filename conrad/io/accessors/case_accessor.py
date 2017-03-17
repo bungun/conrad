@@ -80,6 +80,9 @@ class CaseAccessor(ConradDBAccessor):
 		if case_ID is None or not self.DB.has_key(case_ID):
 			case_ID = self.DB.next_available_key(CaseEntry)
 
+		if case.physics.plannable < case.anatomy.plannable:
+			case.gather_physics_from_anatomy()
+
 		return self.DB.set(
 				case_ID,
 				CaseEntry(

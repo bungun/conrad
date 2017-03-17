@@ -258,6 +258,8 @@ class SliceCachingMatrix(object):
 					'component matrices already provided'
 					''.format(SliceCachingMatrix, SliceCachingMatrix))
 		else:
+			if callable(indices):
+				indices = indices(label)
 			self.__row_slices[label] = self.__row_slice_generic(
 					self.data, indices)
 			return self.__row_slices[label]
@@ -289,6 +291,8 @@ class SliceCachingMatrix(object):
 					'component matrices already provided'
 					''.format(SliceCachingMatrix, SliceCachingMatrix))
 		else:
+			if callable(indices):
+				indices = indices(label)
 			self.__column_slices[label] = self.__column_slice_generic(
 					self.data, indices)
 			return self.__column_slices[label]
@@ -298,13 +302,6 @@ class SliceCachingMatrix(object):
 
 	def slice(self, row_label=None, column_label=None,
 			  row_indices=None, column_indices=None):
-		if row_label not in self.__row_slices:
-			if callable(row_indices) and row_label is not None:
-				row_indices = row_indices(row_label)
-		if column_label not in self.__column_slices:
-			if callable(column_indices) and column_label is not None:
-				column_indices = column_indices(column_label)
-
 		if row_label is None and column_label is None:
 			raise ValueError(
 					'at least one of arguments `row_label` and '
@@ -320,10 +317,14 @@ class SliceCachingMatrix(object):
 				return self.__double_slices[key]
 			elif row_label in self.__row_slices:
 				# use precomputed row-labeled submatrix, if cached
+				if callable(column_indices):
+					column_indices = column_indices(column_label)
 				self.__double_slices[key] = self.__column_slice_generic(
 						self.__row_slices[row_label], column_indices)
 			elif column_label in self.__column_slices:
 				# use precomputed column-labeled submatrix, if cached
+				if callable(row_indices):
+					row_indices = row_indices(row_label)
 				self.__double_slices[key] = self.__row_slice_generic(
 						self.__column_slices[column_label], row_indices)
 			else:

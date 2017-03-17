@@ -27,6 +27,7 @@ import numpy as np
 
 from conrad.case import *
 from conrad.io.io import *
+from conrad.medicine import Structure
 from conrad.physics.physics import DoseFrameMapping
 from conrad.tests.base import *
 from conrad.tests.test_io_filesystem import FilesystemTestCaching
@@ -328,6 +329,25 @@ class CaseIOTestCase(ConradTestCase):
 			self.assertIn( s.label, case.anatomy )
 		self.assert_vector_equal( case.A, self.case.A )
 
+		# test anatomy->physics (on save),
+		# physics->anatomy transfer (on load)
+		m1, m2, n = 30, 30, 20
+		A1 = np.random.rand(m1, n)
+		A2 = np.random.rand(m2, n)
+		case2 = Case()
+		case2.anatomy += Structure(0, 'target', True, A=A1)
+		case2.anatomy += Structure(1, 'OAR', False, A=A2)
+		self.assertTrue( case2.plannable )
+
+		yaml_store2 = caseio.case_to_YAML(case2, 'yaml_testing_2', directory)
+		self.__files.append(yaml_store2)
+		self.assertTrue( os.path.exists(yaml_store2) )
+
+		# take example YAML, build a case
+		caseio2 = CaseIO()
+		case2 = caseio.YAML_to_case(yaml_store2)
+		self.assertTrue( case2.plannable )
+
 	def test_caseio_transfer(self):
 		# make CaseIO with some database entries
 		caseio = CaseIO(FS_constructor=FilesystemTestCaching)
@@ -342,4 +362,3 @@ class CaseIOTestCase(ConradTestCase):
 		self.assertIn( 'test case', caseio2.available_cases )
 		case = caseio2.load_case('test case')
 		self.assert_vector_equal( case.A, self.case.A )
-
