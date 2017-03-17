@@ -298,10 +298,12 @@ class SliceCachingMatrix(object):
 
 	def slice(self, row_label=None, column_label=None,
 			  row_indices=None, column_indices=None):
-		if callable(row_indices) and row_label is not None:
-			row_indices = row_indices(row_label)
-		if callable(column_indices) and column_label is not None:
-			column_indices = column_indices(column_label)
+		if row_label not in self.__row_slices:
+			if callable(row_indices) and row_label is not None:
+				row_indices = row_indices(row_label)
+		if column_label not in self.__column_slices:
+			if callable(column_indices) and column_label is not None:
+				column_indices = column_indices(column_label)
 
 		if row_label is None and column_label is None:
 			raise ValueError(
