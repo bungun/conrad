@@ -40,8 +40,10 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
+import abc
 import numpy as np
 
+@add_metaclass(abc.ABCMeta)
 class AbstractNonnegativeUnit(object):
 	""" Base class for physical units """
 
@@ -80,6 +82,13 @@ class AbstractNonnegativeUnit(object):
 
 	def __float__(self):
 		return self.value
+
+	def __str__(self):
+		return '{} {}'.format(self.value, self.unit_string)
+
+	@abc.abstractproperty
+	def unit_string(self):
+		return NotImplemented
 
 class Percent(AbstractNonnegativeUnit):
 	""" Specialize :obj:`AbstractNonnegativeUnit` to percent units. """
@@ -174,6 +183,11 @@ class Percent(AbstractNonnegativeUnit):
 		""" String of contained value P as 'P%'. """
 		return '{}%'.format(self.value)
 
+	@property
+	def unit_string(self):
+		return '%'
+
+@add_metaclass(abc.ABCMeta)
 class Length(AbstractNonnegativeUnit):
 	""" Specialize :class:`AbstractNonnegativeUnit` to lengths. """
 	def __init__(self, value=1.):
@@ -266,9 +280,9 @@ class MM(Length):
 		else:
 			return self.value == other.to_mm.value
 
-	def __str__(self):
-		""" String of length value L as 'L mm'. """
-		return str('{} mm'.format(self.value))
+	@property
+	def unit_string(self):
+		return 'mm'
 
 	@property
 	def to_mm(self):
@@ -356,9 +370,9 @@ class CM(Length):
 			return self.value == other.to_cm.value
 
 
-	def __str__(self):
-		""" String of length value L as 'L cm'. """
-		return str('{} cm'.format(self.value))
+	@property
+	def unit_string(self):
+		return 'cm'
 
 	@property
 	def to_mm(self):
@@ -370,6 +384,7 @@ class CM(Length):
 		""" Convert to length units of cm (no-op). """
 		return self
 
+@add_metaclass(abc.ABCMeta)
 class Area(AbstractNonnegativeUnit):
 	""" Extend abstract unit to form base class of :class:`Area` units. """
 
@@ -455,9 +470,9 @@ class MM2(Area):
 		else:
 			return self.value == other.to_mm2.value
 
-	def __str__(self):
-		""" String of area value A as 'A mm^2'. """
-		return str('{} mm^2'.format(self.value))
+	@property
+	def unit_string(self):
+		return 'mm^2'
 
 	@property
 	def to_mm2(self):
@@ -538,9 +553,9 @@ class CM2(Area):
 		else:
 			return self.value == other.to_cm2.value
 
-	def __str__(self):
-		""" String of area value A as 'A cm^2'. """
-		return str('{} cm^2'.format(self.value))
+	@property
+	def unit_string(self):
+		return 'cm^2'
 
 	@property
 	def to_cm2(self):
@@ -552,7 +567,7 @@ class CM2(Area):
 		""" Convert to area units of mm^2. """
 		return MM2(self.value * 1e2)
 
-
+@add_metaclass(abc.ABCMeta)
 class Volume(AbstractNonnegativeUnit):
 	""" Extend abstract unit to form base class of :class:`Volume` units. """
 
@@ -617,9 +632,9 @@ class MM3(Volume):
 		else:
 			return self.value == other.to_mm3.value
 
-	def __str__(self):
-		""" String of volume value V as 'V mm^3'. """
-		return str('{} mm^3'.format(self.value))
+	@property
+	def unit_string(self):
+		return 'mm^3'
 
 	@property
 	def to_mm3(self):
@@ -680,9 +695,9 @@ class CM3(Volume):
 		else:
 			return self.value == other.to_cm3.value
 
-	def __str__(self):
-		""" String of volume value V as 'V cm^3'. """
-		return str('{} cm^3'.format(self.value))
+	@property
+	def unit_string(self):
+		return 'cm^3'
 
 	@property
 	def to_mm3(self):
@@ -694,6 +709,7 @@ class CM3(Volume):
 		""" Convert to volume units of cm^3 (no-op). """
 		return self
 
+@add_metaclass(abc.ABCMeta)
 class DeliveredDose(AbstractNonnegativeUnit):
 	"""
 	Extend :obj:`AbstractNonnegativeUnit` to form base class of dose units.
@@ -806,6 +822,10 @@ class Gray(DeliveredDose):
 		return '{:.1f} Gy'.format(self.value)
 
 	@property
+	def unit_string(self):
+		return 'Gy'
+
+	@property
 	def to_Gy(self):
 		""" Convert to dose units of Gray (no-op). """
 		return self
@@ -907,9 +927,9 @@ class centiGray(DeliveredDose):
 		else:
 			return self.value == other.to_cGy.value
 
-	def __str__(self):
-		""" String of dose value D as 'D cGy'. """
-		return '{} cGy'.format(self.value)
+	@property
+	def unit_string(self):
+		return 'cGy'
 
 	@property
 	def to_Gy(self):
