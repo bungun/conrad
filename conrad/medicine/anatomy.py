@@ -275,6 +275,26 @@ class Anatomy(object):
 			out += s.summary_string
 		return out
 
+	@property
+	def constraint_summary(self):
+		out = []
+		for s in self:
+			for cid in s.constraints:
+				c = s.constraints[cid]
+				slack = 0 * c.dose
+				slack.value = c.slack
+				out.append({'structure':s.name, 'constraint':c, 'slack':slack})
+		return out
+
+	@property
+	def constraint_summary_string(self):
+		out = '{:<20}{:<20}{:<10}\n'.format('Structure', 'Constraint', 'Slack')
+		out += 50 * '-' + '\n'
+		for line in self.constraint_summary:
+			out += '{structure:<20}{constraint:<20}{slack:<10}\n'.format(
+					**{k: str(line[k]) for k in line})
+		return out
+
 	def __iadd__(self, other):
 		"""
 		Overload operator +=.
