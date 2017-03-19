@@ -146,6 +146,7 @@ class RunOutput(object):
 
 		self.optimal_variables = {'x': None, 'x_exact': None}
 		self.optimal_dvh_slopes = {}
+		self.optimal_slacks = {}
 		self.solver_info = {'time': np.nan, 'time_exact': np.nan}
 		self.feasible = False
 
