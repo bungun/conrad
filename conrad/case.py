@@ -335,12 +335,18 @@ class Case(object):
 				return
 
 		for structure in self.anatomy:
-			label = structure.label
-			structure.A_full = self.physics.dose_matrix_by_label(label)
+			A = self.physics.dose_matrix_by_label(structure.label)
+			if A.shape[0] == 1:
+				structure.A_mean = A
+			else:
+				structure.A_full = A
+
 		if not self.physics.frame.voxel_weights.unweighted:
 			for structure in self.anatomy:
-				structure.voxel_weights = self.physics.voxel_weights_by_label(
-						label)
+				vw = self.physics.voxel_weights_by_label(structure.label)
+				if structure.size is None:
+					structure.size = np.sum(vw)
+				structure.voxel_weights = vw
 		self.physics.mark_data_as_loaded()
 
 	def gather_physics_from_anatomy(self):
