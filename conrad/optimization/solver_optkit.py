@@ -88,7 +88,10 @@ if module_installed('optkit'):
 			self.objective_beams = None
 			self.pogs_solver = None
 			self.__A_current = None
+			self.__A_dict = {}
 			self.__n_beams = None
+			self.__curr_config = None
+			self.__resume = False
 
 		def init_problem(self, n_beams=None, **options):
 			"""
@@ -160,7 +163,8 @@ if module_installed('optkit'):
 			Raises:
 				ValueError: Always.
 			"""
-			raise ValueError('dose constraints not supported for SolverOptkit')
+			raise ValueError(
+					'dose constraints not supported for SolverOptkit')
 
 		@staticmethod
 		def __percentile_constraint_exact(A, y, constr, had_slack=False):
@@ -181,7 +185,8 @@ if module_installed('optkit'):
 			Raises:
 				ValueError: Always.
 			"""
-			raise ValueError('dose constraints not supported for SolverOptkit')
+			raise ValueError(
+					'dose constraints not supported for SolverOptkit')
 
 
 		def __add_constraints(self, structure, exact=False):
@@ -202,7 +207,8 @@ if module_installed('optkit'):
 			Raises:
 				ValueError: Always.
 			"""
-			raise ValueError('dose constraints not supported for SolverOptkit')
+			raise ValueError(
+					'dose constraints not supported for SolverOptkit')
 
 
 		def get_slack_value(self, constr_id):
@@ -260,11 +266,12 @@ if module_installed('optkit'):
 					``None``.
 			"""
 			if self.pogs_solver is None:
-				raise ValueError('no POGS solver built; cannot '
-									 'retrieve property SolverOptkit.{}'
-									 '.\n Call SolverOptkit.build() at '
-									 'least once to build a solver in '
-									 'the backend'.format(property_name))
+				raise ValueError(
+						'no POGS solver built; cannot retrieve '
+						'property SolverOptkit.{}.\n Call '
+						'SolverOptkit.build() at least once to build a '
+						'solver in the backend'
+						''.format(property_name))
 
 		@property
 		def x(self):
@@ -338,6 +345,24 @@ if module_installed('optkit'):
 					cache_options['solver_cache']['e'] is not None)
 			return cache_options
 
+
+		def __check_for_updates(self, structures):
+			A_dict_curr = {s.label: None for s in structures}
+			for s in structures:
+				if s.collapsable:
+					A_dict_curr[s.label] = s.A_mean
+				else
+					A_dict_curr[s.label] = s.A_full
+
+			updated = True
+			if len(self.__A_dict) > 0:
+				updated = any([
+						self.__A_dict[s] is not A_dict_curr[s]
+						for s in A_dict_curr])
+			self.__A_dict.update(A)
+			return updated
+
+
 		def __build_matrix(self, structures):
 			r"""Gather dose matrix from ``structures``.
 
@@ -393,6 +418,14 @@ if module_installed('optkit'):
 		def __update_beam_objective(self, structures):
 			pass
 
+		def __update_backend(gpu=False, double=False):
+			if bool(
+					gpu == ok.api.backend.device_is_gpu and
+					double != ok.api.backend.precision_is_32bit):
+				return
+			self.clear()
+			ok.set_backend(gpu=gpu, double=double)
+
 		def build(self, structures, solver_cache=None, **options):
 			"""
 			Build POGS optimization problem from structure data.
@@ -430,15 +463,12 @@ if module_installed('optkit'):
 			if isinstance(structures, Anatomy):
 				structures = structures.list
 
-			A = self.__build_matrix(structures)
 
-
-			if self.__A_current is None:
-				matrix_updated = True
+			matrix_updated = self.__check_for_updates(structures)
+			if self.__A_current is None or matrix_updated:
+				A = self.__A_current = self.__build_matrix(structures)
 			else:
-				matrix_updated = (self.__A_current != A).sum() > 0
-
-			self.__A_current = A
+				A = self.__A_current
 
 			n_voxels, n_beams = A.shape
 
@@ -452,17 +482,22 @@ if module_installed('optkit'):
 			else:
 				self.__update_voxel_objective(structures)
 
-
 			if rebuild_g:
 				self.__build_beam_objective(structures)
 			else:
 				self.__update_beam_objective(structures)
 
-				self.objective_beams = ok.PogsObjective(n_beams, h='IndGe0')
+			backend_gpu = options.pop('gpu', ok.api.backend.device_is_gpu)
+			backend_double = options.pop(
+					'double', not ok.api.backend.precision_is_32bit)
+			self.__update_backend(gpu=backend_gpu, double=backend_double)
 
 			if self.pogs_solver is None or matrix_updated:
 				cache_options = self.__preprocess_solver_cache(solver_cache)
 				self.pogs_solver = ok.PogsSolver(A, **cache_options)
+				self.__resume = False
+			else:
+				self.__resume = True
 
 			return self._Solver__construction_report(structures)
 
@@ -487,15 +522,22 @@ if module_installed('optkit'):
 					not been built.
 			"""
 			if self.pogs_solver is None:
-				raise ValueError('no POGS solver built; cannot '
-									 'perform treatment plan '
-									 'optimization.\n Call '
-									 'SolverOptkit.build() at least '
-									 'once to build a solver in the '
-									 'backend')
+				raise ValueError(
+						'no POGS solver built; cannot perform '
+						'treatment plan optimization.\n Call '
+						'SolverOptkit.build() at least once to build a '
+						'solver in the backend')
 
-			self.pogs_solver.solve(self.objective_voxels, self.objective_beams,
-								   **options)
+			options['abstol'] = options.pop('abstol', ABSTOL_DEFAULT)
+			options['reltol'] = options.pop('reltol', RELTOL_DEFAULT)
+			options['verbose'] = options.pop('verbose', VERBOSE_DEFAULT)
+			options['suppress'] = options.pop('suppress', False)
+			options['maxiters'] = options.pop(
+					'maxiters', options.pop('maxiter', MAXITER_DEFAULT))
+			options['resume'] = self.__resume
+
+			self.pogs_solver.solve(
+					self.objective_voxels, self.objective_beams, **options)
 			return self.pogs_solver.info.converged
 
 		@property

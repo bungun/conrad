@@ -229,7 +229,8 @@ class Solver(object):
 		report = []
 		for structure in structures:
 			A = structure.A
-			matrix_info = str('using dose matrix, dimensions {}x{}'.format(
+			if A is not None:
+				matrix_info = str('using dose matrix, dimensions {}x{}'.format(
 							  *structure.A.shape))
 			if structure.is_target:
 				reason  = 'structure is target'
