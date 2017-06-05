@@ -520,10 +520,22 @@ class ConstraintListTestCase(ConradTestCase):
 		cl += D('min') > 0.1 * Gy
 		cl += D('max') < 1 * Gy
 		cl += D(80) < 1 * Gy
-		self.assertIn( D('min') > 0.1 * Gy, cl )
-		self.assertIn( D('max') < 1 * Gy, cl )
-		self.assertIn( D(80) < 1 * Gy, cl )
-		self.assertEqual( cl.size, 3 )
+
+		def run_assertions(c_list):
+			self.assertIn( D('min') > 0.1 * Gy, c_list )
+			self.assertIn( D('max') < 1 * Gy, c_list )
+			self.assertIn( D(80) < 1 * Gy, c_list )
+			self.assertEqual( c_list.size, 3 )
+
+		run_assertions(cl)
+
+		# alternate initializations:
+		cl2 = ConstraintList(cl)
+		run_assertions(cl2)
+		cl3 = ConstraintList(['Dmin > 0.1Gy', 'Dmax < 1 Gy', 'D80 < 1 Gy'])
+		run_assertions(cl3)
+		cl4 = constraintList('["Dmin > 0.1Gy", "Dmax < 1 Gy", "D80 < 1 Gy"]')
+		run_assertions(cl4)
 
 	def test_plotting_data(self):
 		""" test ConstraintList object property plotting_data """

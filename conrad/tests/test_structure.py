@@ -388,6 +388,15 @@ class StructureTestCase(ConradTestCase):
 
 		self.assertFalse( s.satisfies(s.constraints[cid])[0] )
 
+		y -= 10
+		s.calc_y(y)
+
+		s.constraints += D(20) < 10 * Gy
+		s.constraints += D(20) < 10 * Gy
+
+		# multiple constraint check for a ConstraintList
+		self.assertTrue( s.satisfies_all(s.constraints) )
+
 	def test_plotting_data(self):
 		m, n = 500, 30
 		x = np.random.rand(n)

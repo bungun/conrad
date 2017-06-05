@@ -295,6 +295,21 @@ class Anatomy(object):
 					**{k: str(line[k]) for k in line})
 		return out
 
+	def satisfies_prescription(self, constraint_dict):
+		"""
+		Check whether anatomy satisfies supplied constraints.
+
+		Arguments:
+			:obj:`dict`: Dictionary of :class:`ConstraintList` objects
+			keyed by structure labels.
+
+		Returns:
+			:obj:`int`: True if each structure in
+		"""
+		audit = lambda label, constrs: self[label].satisfies_all(
+				constrs) if label in self else True
+		return all(map(audit, constraint_dict.items()))
+
 	def __iadd__(self, other):
 		"""
 		Overload operator +=.

@@ -348,13 +348,16 @@ class Structure(object):
 	@voxel_weights.setter
 	def voxel_weights(self, weights):
 		if self.size in (None, np.nan, 0):
-			raise ValueError('structure size must be defined to add '
-							 'voxel weights')
-		if len(weights) != self.size:
-			raise ValueError('length of input "weights" ({}) does not '
-							 'match structure size ({}) of this {} '
-							 'object'
-							 ''.format(len(weights), self.size, Structure))
+			raise ValueError(
+					'structure size must be defined to add voxel '
+					'weights')
+		if len(weights) != self.size and np.sum(weights) != self.size:
+			raise ValueError(
+					'either the length ({}) or sum ({}) of input '
+					'`weights` does not match structure size ({}) '
+					'of this {} object'.format(
+							len(weights), np.sum(weights), self.size,
+							Structure))
 		if any(weights < 0):
 			raise ValueError('negative voxel weights not allowed')
 		self.__voxel_weights = vec(weights)
@@ -624,6 +627,9 @@ class Structure(object):
 			status = dose_achieved >= dose
 
 		return (status, dose_achieved)
+
+	def satisfies_all(self, constraint_list):
+		return all(map(self.satisfies, ConstraintList(constraint_list)))
 
 	def plotting_data(self, constraints_only=False, maxlength=None):
 		"""

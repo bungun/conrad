@@ -30,6 +30,7 @@ setup(
     packages=['conrad',
               'conrad.abstract',
               'conrad.medicine',
+              'conrad.medicine.dose',
               'conrad.physics',
               'conrad.optimization',
               'conrad.io',
