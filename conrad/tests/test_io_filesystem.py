@@ -436,7 +436,9 @@ class LocaFilesystemTestCase(ConradTestCase):
 		while len(self.directories) > 0:
 			d = self.directories.pop()
 			for f in os.listdir(d):
-				os.remove(f)
+				print("REMOVING {}".format(f))
+				if os.path.exists(f):
+					os.remove(f)
 			if os.path.exists(d):
 				os.rmdir(d)
 

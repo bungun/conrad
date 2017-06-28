@@ -29,8 +29,6 @@ import numpy as np
 import scipy.sparse as sp
 
 from conrad.defs import sparse_or_dense, CONRAD_MATRIX_TYPES
-from conrad.case import Case
-from conrad.medicine import Anatomy, Structure, Prescription
 from conrad.io.schema import *
 
 @add_metaclass(abc.ABCMeta)

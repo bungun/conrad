@@ -306,8 +306,8 @@ class Anatomy(object):
 		Returns:
 			:obj:`int`: True if each structure in
 		"""
-		audit = lambda label, constrs: self[label].satisfies_all(
-				constrs) if label in self else True
+		audit = lambda label_constrs: self[label_constrs[0]].satisfies_all(
+				label_constrs[1]) if label_constrs[0] in self else True
 		return all(map(audit, constraint_dict.items()))
 
 	def __iadd__(self, other):

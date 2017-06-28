@@ -534,7 +534,7 @@ class ConstraintListTestCase(ConradTestCase):
 		run_assertions(cl2)
 		cl3 = ConstraintList(['Dmin > 0.1Gy', 'Dmax < 1 Gy', 'D80 < 1 Gy'])
 		run_assertions(cl3)
-		cl4 = constraintList('["Dmin > 0.1Gy", "Dmax < 1 Gy", "D80 < 1 Gy"]')
+		cl4 = ConstraintList('["Dmin > 0.1Gy", "Dmax < 1 Gy", "D80 < 1 Gy"]')
 		run_assertions(cl4)
 
 	def test_plotting_data(self):

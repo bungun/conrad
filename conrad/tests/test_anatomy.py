@@ -120,7 +120,7 @@ class AnatomyTestCase(ConradTestCase):
 			'oar': ['D100 < 1000 Gy', 'D0 < 1000 Gy'],
 			'ptv': ['D100 < 1000 Gy', 'D0 < 1000 Gy'],
 		}
-		self.assertTrue( a.satisfies(constraints) )
+		self.assertTrue( a.satisfies_prescription(constraints) )
 
 		ds = a.dose_summary_data()
 		for s in self.structures:

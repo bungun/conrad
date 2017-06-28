@@ -351,15 +351,15 @@ if module_installed('optkit'):
 			for s in structures:
 				if s.collapsable:
 					A_dict_curr[s.label] = s.A_mean
-				else
+				else:
 					A_dict_curr[s.label] = s.A_full
 
 			updated = True
 			if len(self.__A_dict) > 0:
 				updated = any([
-						self.__A_dict[s] is not A_dict_curr[s]
+						self.__A_dict[s.label] is not A_dict_curr[s.label]
 						for s in A_dict_curr])
-			self.__A_dict.update(A)
+			self.__A_dict.update(A_dict_curr)
 			return updated
 
 
@@ -418,7 +418,7 @@ if module_installed('optkit'):
 		def __update_beam_objective(self, structures):
 			pass
 
-		def __update_backend(gpu=False, double=False):
+		def __update_backend(self, gpu=False, double=False):
 			if bool(
 					gpu == ok.api.backend.device_is_gpu and
 					double != ok.api.backend.precision_is_32bit):

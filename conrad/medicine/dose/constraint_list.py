@@ -45,7 +45,7 @@ class ConstraintList(object):
 		self.items = {}
 		self.last_key = None
 		if constraints is not None:
-			self += constraints
+			self.append(constraints)
 
 	@staticmethod
 	def __keygen(constraint):
@@ -85,10 +85,15 @@ class ConstraintList(object):
 		return self.items.__iter__()
 
 	def __iadd__(self, other):
+		return self.append(other)
+
+	def append(self, other):
 		"""
 		Overload operator +=.
 
-		Enable syntax :class:`ConstraintList` += :class:`Constraint`.
+		Enable syntaxes
+			 :class:`ConstraintList` += :class:`Constraint`.
+			 :class:`ConstraintList` += :class:`ConstraintList`.
 
 		Arguments:
 			other: Singleton, or iterable collection of
@@ -113,17 +118,17 @@ class ConstraintList(object):
 				self += eval(other)
 			except SyntaxError:
 				# str of constraint
-				self += eval_constraint(other)
+				self.append(eval_constraint(other))
 		elif isinstance(other, (list, tuple)):
 			for constr in other:
-				self += constr
+				self.append(constr)
 			return self
 		elif isinstance(other, ConstraintList):
-			self += other.items
+			self.append(other.items)
 			return self
 		elif isinstance(other, dict):
 			for constr in other.values():
-				self += constr
+				self.append(constr)
 			return self
 		else:
 			raise TypeError('argument must be of type {} or {}'.format(

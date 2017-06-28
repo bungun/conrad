@@ -629,7 +629,11 @@ class Structure(object):
 		return (status, dose_achieved)
 
 	def satisfies_all(self, constraint_list):
-		return all(map(self.satisfies, ConstraintList(constraint_list)))
+		return all(listmap(
+				lambda status_dose_tuple: status_dose_tuple[0],
+				listmap(
+						self.satisfies,
+						ConstraintList(constraint_list).list)))
 
 	def plotting_data(self, constraints_only=False, maxlength=None):
 		"""

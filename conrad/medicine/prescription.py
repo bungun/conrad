@@ -67,6 +67,8 @@ import os
 import json, yaml
 import traceback
 
+from conrad.physics.units import Gy
+from conrad.physics.string import dose_from_string
 from conrad.medicine.structure import Structure
 from conrad.medicine.anatomy import Anatomy
 from conrad.medicine.dose import eval_constraint, ConstraintList
