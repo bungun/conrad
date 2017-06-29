@@ -345,7 +345,6 @@ if module_installed('optkit'):
 					cache_options['solver_cache']['e'] is not None)
 			return cache_options
 
-
 		def __check_for_updates(self, structures):
 			A_dict_curr = {s.label: None for s in structures}
 			for s in structures:
@@ -357,11 +356,10 @@ if module_installed('optkit'):
 			updated = True
 			if len(self.__A_dict) > 0:
 				updated = any([
-						self.__A_dict[s.label] is not A_dict_curr[s.label]
-						for s in A_dict_curr])
+						self.__A_dict[label] is not A_dict_curr[label]
+						for label in A_dict_curr])
 			self.__A_dict.update(A_dict_curr)
 			return updated
-
 
 		def __build_matrix(self, structures):
 			r"""Gather dose matrix from ``structures``.
@@ -386,6 +384,7 @@ if module_installed('optkit'):
 			cols = self._Solver__check_dimensions(structures)
 			rows = sum([s.size if not s.collapsable else 1 for s in structures])
 			A = np.zeros((rows, cols))
+			CONRAD_DEBUG_PRINT('BUILT MATRIX SIZE: {}'.format(A.size))
 
 			ptr = 0
 			for s in structures:
