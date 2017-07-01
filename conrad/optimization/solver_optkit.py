@@ -35,7 +35,7 @@ from conrad.compat import *
 
 import numpy as np
 
-from conrad.defs import module_installed
+from conrad.defs import module_installed, CONRAD_DEBUG_PRINT
 from conrad.medicine.anatomy import Anatomy
 from conrad.optimization.preprocessing import ObjectiveMethods
 from conrad.optimization.solver_base import *

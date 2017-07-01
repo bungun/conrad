@@ -48,7 +48,6 @@ Test/dependency hierarchy:
 3:
 	physics
 	structure
-	solver
 
 4:
 	anatomy
