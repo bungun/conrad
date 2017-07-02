@@ -243,7 +243,7 @@ class Solver(object):
 		self.__global_dose_scaling = dose_scaling
 		self.__global_weight_scaling = weight_scaling
 		for s in structures:
-			s.global_scaling = self.global_weight_scaling
+			s.objective.global_scaling = self.global_weight_scaling
 
 	def build(self, structures, exact=False, **options):
 		""" Prototype for problem construction. """

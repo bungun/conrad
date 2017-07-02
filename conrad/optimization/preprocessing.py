@@ -30,10 +30,13 @@ from conrad.medicine.structure import Structure
 class ObjectiveMethods(object):
 	@staticmethod
 	def normalize(structure):
+		# scale by global scaling factor / structure cardinality
 		if structure.collapsable:
+			# |S| * G / |S| = G
 			structure.objective.normalization = float(
 					structure.objective.global_scaling)
-		elif structure.objective.normalization == 1:
+		else:
+			# G / |S|
 			if structure.weighted_size is None:
 				raise ValueError(
 						'attributes `size` or `voxel_weights` of '
