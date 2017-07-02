@@ -54,10 +54,6 @@ class SolverTestCase(ConradTestCase):
 		with self.assertRaises(ValueError):
 			s.gamma_prioritized('string input')
 
-		c, d = s.get_cd_from_wts(1, 0.05)
-		self.assert_scalar_equal( c, 1.05 / 2. )
-		self.assert_scalar_equal( d, -0.95 / 2. )
-
 	def test_solver_dimcheck(self):
 		m0 = 100
 		m1 = 150

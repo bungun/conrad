@@ -21,6 +21,7 @@ if OPTKIT_INSTALLED:
 @add_metaclass(abc.ABCMeta)
 class TreatmentObjective(object):
 	def __init__(self, **dose_and_weight_params):
+		self.global_scaling = 1.
 		self.normalization = 1.
 		self.__weights = {}
 		self.__doses = {}
@@ -99,6 +100,7 @@ class TreatmentObjective(object):
 		if float(nonnegative_scalar) >= 0:
 			for k in self.__weights:
 				self.__weights[k] *= nonnegative_scalar
+			self.__last_scaling = float(nonnegative_scalar)
 		else:
 			raise ValueError('scaling must be nonnegative')
 

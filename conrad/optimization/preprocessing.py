@@ -31,14 +31,17 @@ class ObjectiveMethods(object):
 	@staticmethod
 	def normalize(structure):
 		if structure.collapsable:
-			structure.objective.normalization = 1.
+			structure.objective.normalization = float(
+					structure.objective.global_scaling)
 		elif structure.objective.normalization == 1:
 			if structure.weighted_size is None:
 				raise ValueError(
 						'attributes `size` or `voxel_weights` of '
 						'argument `structure` must be set to normalize '
 						'objective')
-			structure.objective.normalization = 1. / structure.weighted_size
+			structure.objective.normalization = float(
+					structure.objective.global_scaling /
+					structure.weighted_size)
 
 	@staticmethod
 	def get_weights(structure):
@@ -54,7 +57,7 @@ class ObjectiveMethods(object):
 		return ObjectiveMethods.primal_eval(structure, y, x)
 
 	@staticmethod
-	def primal_eval(structure, y=None, x=None, meow=False):
+	def primal_eval(structure, y=None, x=None):
 		if y is not None:
 			structure.assign_dose(y)
 		elif x is not None:

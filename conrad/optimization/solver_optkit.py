@@ -93,6 +93,7 @@ if module_installed('optkit'):
 			self.__curr_config = None
 			self.__resume = False
 
+
 		def init_problem(self, n_beams=None, **options):
 			"""
 			Initialize problem---no-op for :class:`SolverOptkit`.
@@ -209,7 +210,6 @@ if module_installed('optkit'):
 			"""
 			raise ValueError(
 					'dose constraints not supported for SolverOptkit')
-
 
 		def get_slack_value(self, constr_id):
 			"""
@@ -399,7 +399,7 @@ if module_installed('optkit'):
 
 		def __build_voxel_objective(self, structures):
 			rows = sum([s.size if not s.collapsable else 1 for s in structures])
-			self.objective_voxels = ok.PogsObjective(rows)
+			self.objective_voxels = ok.api.PogsObjective(rows)
 			self.__update_voxel_objective(structures)
 
 		def __update_voxel_objective(self, structures):
@@ -411,7 +411,7 @@ if module_installed('optkit'):
 
 		def __build_beam_objective(self, structures):
 			cols = self._Solver__check_dimensions(structures)
-			self.objective_beams = ok.PogsObjective(cols, h='IndGe0')
+			self.objective_beams = ok.api.PogsObjective(cols, h='IndGe0')
 			self.__update_beam_objective(structures)
 
 		def __update_beam_objective(self, structures):
@@ -476,6 +476,7 @@ if module_installed('optkit'):
 			rebuild_g = bool(self.objective_beams is None or
 						   self.objective_beams.size != n_beams)
 
+			self._Solver__set_scaling(structures)
 			if rebuild_f:
 				self.__build_voxel_objective(structures)
 			else:
@@ -493,7 +494,7 @@ if module_installed('optkit'):
 
 			if self.pogs_solver is None or matrix_updated:
 				cache_options = self.__preprocess_solver_cache(solver_cache)
-				self.pogs_solver = ok.PogsSolver(A, **cache_options)
+				self.pogs_solver = ok.api.PogsSolver(A, **cache_options)
 				self.__resume = False
 			else:
 				self.__resume = True
@@ -535,8 +536,20 @@ if module_installed('optkit'):
 					'maxiters', options.pop('maxiter', MAXITER_DEFAULT))
 			options['resume'] = self.__resume
 
+
+			scale_doses = options.pop('scale_doses', True)
+			scale_doses &= self.global_dose_scaling != 1.
+			if scale_doses:
+				self.objective_voxels._Objective__b /= self.global_dose_scaling
+				if 'x0' in options:
+					options['x0'] /= self.global_dose_scaling
+
 			self.pogs_solver.solve(
 					self.objective_voxels, self.objective_beams, **options)
+
+			if scale_doses:
+				self.pogs_solver.output.x *= self.global_dose_scaling
+				self.pogs_solver.output.y *= self.global_dose_scaling
 			return self.pogs_solver.info.converged
 
 		@property
