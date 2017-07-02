@@ -24,7 +24,7 @@ from conrad.compat import *
 import abc
 import os
 import yaml
-import operator as op
+import operator
 from conrad.defs import is_vector, sparse_or_dense
 from conrad.io.schema import *
 
