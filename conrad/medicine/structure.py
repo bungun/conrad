@@ -542,7 +542,8 @@ class Structure(object):
 			self.__y_mean = self.__y_mean[0]
 
 		# make DVH curve from calculated dose
-		self.dvh.data = self.__y
+		if self.y is not None:
+			self.dvh.data = self.y
 
 	@property
 	def y(self):
