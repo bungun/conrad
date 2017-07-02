@@ -68,6 +68,10 @@ class CaseIO(object):
 						''.format(ConradFilesystemBase))
 			self.FS = FS_constructor()
 
+		if options.pop('load_default', False):
+			if len(self.available_cases) > 0:
+				self.load_case(self.available_cases[0])
+
 	@property
 	def DB(self):
 		return self.__DB
