@@ -422,8 +422,8 @@ if module_installed('optkit'):
 			pass
 
 		def __update_backend(self, gpu=False, double=False):
-			changed = gpu != ok.api.backend.device_is_gpu
-			changed &= double == ok.api.backend.precision_is_32bit
+			changed = bool(gpu != ok.api.backend.device_is_gpu)
+			changed |= bool(double == ok.api.backend.precision_is_32bit)
 			if not changed:
 				return
 			else:
