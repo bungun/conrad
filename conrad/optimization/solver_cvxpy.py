@@ -298,6 +298,8 @@ if module_installed('cvxpy'):
 					self.slack_vars[cid] = slack
 					self.problem.objective += cvxpy.Minimize(gamma * slack)
 					self.problem.constraints += [slack >= 0]
+					if not c.upper:
+						self.problem.constraints += [slack <= c.dose.value]
 				else:
 					slack = 0.
 					self.slack_vars[cid] = None

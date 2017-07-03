@@ -342,7 +342,7 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 			self.anatomy['tumor'].constraints += constr
 			p.objective += cvxpy.Minimize(
 					s.gamma_prioritized(constr.priority) * slack)
-			p.constraints = [x>=0, slack >= 0, constr_cvxpy]
+			p.constraints = [x>=0, slack >= 0, slack <= dose, constr_cvxpy]
 			s._SolverCVXPY__add_constraints(self.anatomy['tumor'])
 			self.assert_problems_equivalent( p, s.problem )
 
@@ -504,8 +504,11 @@ class SolverCVXPYTestCase(SolverGenericTestCase):
 		self.assertEqual( len(s.dvh_vars), 0 )
 		self.assertEqual( len(s._SolverCVXPY__constraint_indices), 1 )
 		self.assertIn( cid, s._SolverCVXPY__constraint_indices )
-		# constraint 0: x >= 0; constraint 1: slack >= 0; cosntraint 2: this
-		self.assertEqual( s._SolverCVXPY__constraint_indices[cid], 2 )
+		# constraint 0: x >= 0;
+		# constraint 1: slack >= 0;
+		# constraint 2: slack <= dose; (omitted if upper constraint w/slack)
+		# constraint 3: this
+		self.assertEqual( s._SolverCVXPY__constraint_indices[cid], 3 )
 
 		# add percentile constraint, test slope retrieval
 		structure_list[0].constraints += D(20) >= 10 * Gy
