@@ -596,14 +596,14 @@ class Structure(object):
 			raise TypeError('argument "constraint" must be of type '
 				'conrad.dose.Constraint')
 
-		if self.dvh is None and constraint.threshold != mean:
+		if self.dvh is None and constraint.threshold != 'mean':
 			raise ValueError('structure DVH does not exist, cannot evaluate '
 							 'constraint satisfaction.\n(assign structure '
 							 'size explicitly by setting field "{}.size"\nor '
 							 'impicitly by assigning a dose matrix with '
 							 'field "{}.A_full"\nto trigger DVH instantiation)'
 							 ''.format(Structure, Structure))
-		if not self.dvh.populated and constraint.threshold != mean:
+		if not self.dvh.populated and constraint.threshold != 'mean':
 			raise ValueError('structure DVH not populated by dose data, '
 							 'cannot evaluate constraint satisfaction\n'
 							 '(assign dose by setting field "{}.y")'
