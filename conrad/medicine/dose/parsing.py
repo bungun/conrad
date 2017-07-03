@@ -64,16 +64,16 @@ def eval_constraint(string_constraint, rx_dose=None):
 
 		- "D __ < x Gy" ("D __ > x Gy")
 			- variants: "D __%", "d __%", "D __", "d __"
-			- meaning: dose to __ percent of volume less than (greater than) x Gy
+			- meaning: __ percent of volume receives less than (more than) x Gy
 
 		- "V __ Gy < p %" ("V __ Gy > p %")
 			- variants: "V __", "v __", "__ Gy to", "__ to"
-			- meaning: no more than (at least) __ Gy to p percent of volume.
+			- meaning: no more than (at least) __ Gy to p_th percentile of volume.
 
 	Relative dose constraints:
 		- "V __ %rx < p %" ("V __ %rx > p %")
 			- variants: "V __%", "v __%", "V __", "v __"
-			- meaning: at most (at least) p percent of structure receives  __ percent of rx dose.
+			- meaning: no more than (at least) __ % of rx dose to p_th percentile of volume.
 
 		- "D __ < {frac} rx", "D __ > {frac} rx"
 			- variants: "D __%", "d __%", "D __", "d __"
@@ -83,7 +83,6 @@ def eval_constraint(string_constraint, rx_dose=None):
 		- "V __ Gy > x cm3" ("V __ Gy < x cm3"), "V __ rx > x cm3"  ("V __ rx < x cm3")
 			- variants: "cc" vs. "cm3" vs. "cm^3"; "V __ _" vs. "v __ _"
 			- error: convert to relative volume terms
-
 
 	Arguments:
 		string_constraint (:obj:`str`): Parsable string representation
@@ -97,9 +96,6 @@ def eval_constraint(string_constraint, rx_dose=None):
 
 	Raises:
 		TypeError: If ``rx_dose`` not of type :class:`DeliveredDose`.
-		ValueError: If input string specifies an absolute volume
-			constraint, or if input is not well-formed (e.g., a dose
-			quantity appears on LHS and RHS of inequality).
 	"""
 	string_constraint = str(string_constraint)
 
@@ -108,12 +104,6 @@ def eval_constraint(string_constraint, rx_dose=None):
 				'if provided, argument "rx_dose" must be of type {}, '
 				'e.g., {} or {}'
 				''.format(DeliveredDose, type(Gy), type(cGy)))
-
-	if volume_unit_from_string(string_constraint) is not None:
-		raise ValueError(
-				'Detected dose volume constraint with absolute volume '
-				'units. Convert to percentage.\n(input = {})'
-				''.format(string_constraint))
 
 	leq = '<' in string_constraint
 	if leq:
@@ -157,24 +147,14 @@ def eval_constraint(string_constraint, rx_dose=None):
 				''.format(string_constraint))
 
 	try:
-		# cases:
-		# - "min > x Gy"
-		# - "mean < x Gy"
-		# - "max < x Gy"
-		# - "D __% < x Gy"
-		# - "D __% > x Gy"
+		dose = None
+		volume = None
+		threshold = None
+
 		if rdose:
-			#-----------------------------------------------------#
-			# constraint in form "{LHS} <> {x} Gy"
-			#
-			# conversion to canonical form:
-			#  (none required)
-			#-----------------------------------------------------#
-
-			# parse dose
+			# "{min, mean, max, D__%} {<, >} x Gy"
+			construction = 'D'
 			dose = dose_from_string(right)
-
-			# parse threshold (min, mean, max or percentile)
 			if 'mean' in left or 'Mean' in left:
 				threshold = 'mean'
 			elif 'min' in left or 'Min' in left:
@@ -183,95 +163,35 @@ def eval_constraint(string_constraint, rx_dose=None):
 				threshold = 'max'
 			else:
 				threshold = percent_from_string(d_strip(left))
-
-		# cases:
-		# - "V __ Gy < p %" ( == "x Gy to < p %")
-		# - "V __ Gy > p %" ( == "x Gy to > p %")
 		elif ldose:
-			#-----------------------------------------------------#
-			# constraint in form "V{x} Gy <> {p} %"
-			#
-			# conversion to canonical form:
-			# {x} Gy < {p} % ---> D{100 - p} < {x} Gy
-			# {x} Gy > {p} % ---> D{p} > {x} Gy
-			#-----------------------------------------------------#
-
-			# parse dose
+			# "V __ Gy {<,>} {p%, x cm^3}"
+			construction = 'V'
 			dose = dose_from_string(v_strip(left))
-
-			# parse percentile
-			threshold = percent_from_string(right)
-
-			# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-			# VOLUME AT X GY < P % of STRUCTURE
-			#
-			# 	~equals~
-			#
-			# X Gy to < P% of structure
-			#
-			# 	~equivalent to~
-			#
-			# D(100 - P) < X Gy
-			# <<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>
-			# VOLUME AT X GY > P% of STRUCTURE
-			#
-			# 	~equals~
-			#
-			# X Gy to > P% of structure
-			#
-			# 	~equivalent to~
-			#
-			# D(P) > X Gy
-			# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-			if leq:
-				threshold.value = 100 - threshold.value
-
-
-		# cases:
-		# - "V __% < p %"
-		# - "V __% > p %"
-		# - "D __% < {frac} rx"
-		# - "D __% > {frac} rx"
+			absvol = volume_unit_from_string(right)
+			volume = volume_from_string(right) if absvol else percent_from_string(right)
 		else:
-			#-----------------------------------------------------#
-			# constraint in form "V __% <> p%"
-			#
-			# conversion to canonical form:
-			# V{x}% < {p} % ---> D{100 - p} < {x/100} * {rx_dose} Gy
-			# V{x}% > {p} % ---> D{p} > {x/100} * {rx_dose} Gy
-			#-----------------------------------------------------#
-			if not 'rx' in right:
-				# parse dose
-				reldose = fraction_or_percent_from_string(
-						v_strip(left.replace('rx', '')))
-				dose = reldose * rx_dose
-
-				# parse percentile
-				threshold = percent_from_string(right)
-
-				if leq:
-					threshold.value = 100 - threshold.value
-
-			#-----------------------------------------------------#
-			# constraint in form "D{p}% <> {frac} rx" OR
-			#					 "D{p}% <> {100 * frac}% rx"
-			#
-			# conversion to canonical form:
-			# D{p}% < {frac} rx ---> D{p} < {frac} * {rx_dose} Gy
-			# D{p}% >{frac} rx ---> D{p} > {frac} * {rx_dose} Gy
-			#-----------------------------------------------------#
-			else:
-				# parse dose
+			if 'rx' in right:
+				# "D__% {<, >} [frac] rx"
+				construction = 'D'
 				dose = fraction_or_percent_from_string(
 						right.replace('rx', '')) * rx_dose
-
-				# parse percentile
 				threshold = percent_from_string(d_strip(left))
 
-		if leq:
-			return D(threshold) <= dose
+			else:
+				# "{V__%, V [frac] rx} {<,>} {p%, x cm^3}"
+				construction = 'V'
+				dose = fraction_or_percent_from_string(
+						v_strip(left.replace('rx', ''))) * rx_dose
+				absvol = volume_unit_from_string(right)
+				volume = volume_from_string(right) if absvol else percent_from_string(right)
+
+		if construction == 'D':
+			return D(threshold) < dose if leq else D(threshold) > dose
 		else:
-			return D(threshold) >= dose
+			return V(dose) < volume if leq else V(dose) > volume
+
+
+
 
 	except:
 		print(str(

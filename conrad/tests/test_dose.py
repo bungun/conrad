@@ -40,7 +40,7 @@ class ConstraintTestCase(ConradTestCase):
 		""" test Constraint object intialization and properties """
 		c = Constraint()
 		self.assertFalse( c.resolved )
-		self.assert_nan( c.dose )
+		self.assert_nan( c.dose.value )
 		self.assertEqual( c.relop, RELOPS.INDEFINITE )
 		self.assertIsNone( c.threshold )
 
@@ -155,7 +155,7 @@ class ConstraintTestCase(ConradTestCase):
 	def test_generic_constraint_print(self):
 		""" test Constraint object __str__() function """
 		c = Constraint()
-		self.assertEqual( str(c), 'DNone <> nan' )
+		self.assertEqual( str(c), 'DNone <> nan Gy' )
 		c > 30 * Gy
 		self.assertEqual( str(c), 'DNone >= 30.0 Gy' )
 		c < 25 * Gy
@@ -165,7 +165,7 @@ class PercentileConstraintTestCase(ConradTestCase):
 	def test_percentile_constraint(self):
 		pc = PercentileConstraint()
 		self.assertEqual( pc.relop, RELOPS.INDEFINITE )
-		self.assert_nan( pc.dose )
+		self.assert_nan( pc.dose.value )
 		self.assertIsNone( pc.percentile )
 		pc.percentile = 12
 		self.assertIsInstance( pc.percentile, type(percent) )
@@ -227,54 +227,6 @@ class PercentileConstraintTestCase(ConradTestCase):
 
 		# confirm sorted
 		self.assertEqual( sum(np.diff(dose_sub_slack.argsort()) != 1), 0 )
-
-# class AbsoluteVolumeConstraintTestCase(ConradTestCase):
-# 	def test_absolutevolumeconstraint(self):
-# 		avc = AbsoluteVolumeConstraint()
-# 		self.assertTrue( avc.volume.value is nan )
-# 		self.assertTrue( avc.total_volume.value is nan )
-# 		self.assertTrue( avc.relop == RELOPS.INDEFINITE )
-# 		self.assertTrue( avc.dose is nan )
-
-# 		avc.volume = 500 * mm3
-# 		self.assertTrue( avc.volume.value == 500 )
-# 		avc <= 1 * Gy
-
-# 		# conversion to percentile constraint should fail when total volume
-# 		# not set
-# 		try:
-# 			pc_failed = avc.to_percentile_constraint
-# 			self.assertTrue( False )
-# 		except:
-# 			self.assertTrue( True )
-
-# 		avc.total_volume = 40 * cm3
-
-# 		# constraint resolution status is exception
-# 		try:
-# 			status = avc.resolved
-# 			self.assertTrue( False )
-# 		except:
-# 			self.assertTrue( True )
-
-# 		pc = avc.to_percentile_constraint
-# 		self.assertTrue( pc.resolved )
-
-# 		# exception: constrained volume / total volume > 1
-# 		avc.total_volume = 100 * mm3
-# 		try:
-# 			pc_failed = avc.to_percentile_constraint
-# 			self.assertTrue( False )
-# 		except:
-# 			self.assertTrue( True )
-
-# 		# exception: constrained volume / total volume == 0
-# 		avc.volume = 0 * mm3
-# 		try:
-# 			pc_failed = avc.to_percentile_constraint
-# 			self.assertTrue( False )
-# 		except:
-# 			self.assertTrue( True )
 
 class MeanConstraintTestCase(ConradTestCase):
 	def test_mean_constraint(self):
@@ -462,8 +414,336 @@ class DTestCase(ConradTestCase):
 		self.assertEqual( D('min') >= 30 * Gy, D('min') > 30. * Gy )
 		self.assertEqual( D('max') <= 30 * Gy, D('max') < 30. * Gy )
 
-# class VTestCase(ConradTestCase):
-# 	pass
+
+class AbsoluteVolumeConstraintTestCase(ConradTestCase):
+	def test_absolutevolumeconstraint(self):
+		avc = AbsoluteVolumeConstraint()
+		self.assertIsNone( avc.volume )
+		self.assertIsNone( avc.total_volume )
+		self.assertTrue( avc.relop == RELOPS.INDEFINITE )
+		self.assert_nan( avc.dose.value )
+
+		avc.volume = 500 * mm3
+		self.assertTrue( avc.volume.value == 500 )
+
+		avc > 550 * mm3
+		self.assertTrue( avc.volume.value == 550 )
+		self.assertTrue( avc.relop == RELOPS.GEQ )
+		avc < 520 * mm3
+		self.assertTrue( avc.volume == 520 * mm3 )
+		self.assertTrue( avc.relop == RELOPS.LEQ )
+
+		avc.dose = 1 * Gy
+
+		# conversion to percentile constraint should fail when total volume
+		# not set
+		with self.assertRaises(ValueError):
+			pc_failed = avc.to_percentile_constraint()
+
+		avc.total_volume = 40 * cm3
+
+		# constraint resolution status is exception
+		with self.assertRaises(ValueError):
+			status = avc.resolved
+
+		pc = avc.to_percentile_constraint()
+		self.assertTrue( pc.resolved )
+
+		# exception: constrained volume / total volume > 1
+		with self.assertRaises(ValueError):
+			avc.total_volume = 100 * mm3
+			pc_failed = avc.to_percentile_constraint()
+
+		with self.assertRaises(ValueError):
+			avc.volume = 0 * mm3
+			pc_failed = avc.to_percentile_constraint()
+
+		avc = AbsoluteVolumeConstraint(1 * Gy)
+		self.assertTrue( avc.dose == 1 * Gy )
+
+
+class GenericVolumeConstraintTestCase(ConradTestCase):
+	def test_genericvolumeconstraint(self):
+		gvc = GenericVolumeConstraint()
+		self.assertIsNone( gvc.volume )
+		self.assertTrue( gvc.relop == RELOPS.INDEFINITE )
+		self.assert_nan( gvc.dose.value )
+
+		self.assertTrue(
+				isinstance(gvc.specialize(), GenericVolumeConstraint) )
+
+		gvc.volume = 500 * mm3
+		self.assertTrue( gvc.volume.value == 500 )
+		self.assertIsNone( gvc.threshold )
+		self.assertTrue(
+				isinstance(gvc.specialize(), AbsoluteVolumeConstraint) )
+
+		gvc = GenericVolumeConstraint()
+		gvc.volume = 50 * Percent()
+		self.assertIsNone( gvc.volume )
+		self.assertTrue( gvc.threshold.value == 50 )
+		self.assertTrue(
+				isinstance(gvc.specialize(), PercentileConstraint) )
+
+		avc = gvc < 5 * cm3
+		self.assertTrue( isinstance(avc, AbsoluteVolumeConstraint) )
+		self.assertTrue( avc.relop == RELOPS.LEQ )
+		self.assertTrue( avc.volume == 5 * cm3 )
+
+		avc = gvc > 5 * cm3
+		self.assertTrue( isinstance(avc, AbsoluteVolumeConstraint) )
+		self.assertTrue( avc.relop == RELOPS.GEQ )
+		self.assertTrue( avc.volume == 5 * cm3 )
+
+		pc = gvc < 30 * Percent()
+		self.assertTrue( isinstance(pc, PercentileConstraint) )
+		self.assertTrue( pc.relop == RELOPS.LEQ )
+		self.assertTrue( pc.threshold.value == 30 )
+
+		pc = gvc > 30 * Percent()
+		self.assertTrue( isinstance(pc, PercentileConstraint) )
+		self.assertTrue( pc.relop == RELOPS.GEQ )
+		self.assertTrue( pc.threshold.value == 30 )
+
+class VTestCase(ConradTestCase):
+	def test_V(self):
+		""" test function V() """
+
+		c = V(80 * Gy) < 12 * percent
+		self.assertIsInstance( c, PercentileConstraint )
+		self.assertEqual( c.dose.value, 80 )
+		self.assertIsInstance( c.threshold, Percent )
+		self.assertEqual( c.threshold.value, 12 )
+		self.assertEqual( c.relop, RELOPS.LEQ )
+
+		c = V(80 * Gy) > 12 * cm3
+		self.assertIsInstance( c, AbsoluteVolumeConstraint )
+		self.assertEqual( c.dose.value, 80 )
+		self.assertIsNone( c.threshold )
+		self.assertIsInstance( c.volume, Volume )
+		self.assertEqual( c.volume.value, 12 )
+		self.assertEqual( c.relop, RELOPS.GEQ )
+
+		c = V(80 * percent) < 15 * percent
+		self.assertIsInstance( c, PercentileConstraint )
+		self.assert_nan( c.dose.value )
+		self.assertIsInstance( c.threshold, Percent )
+		self.assertEqual( c.threshold.value, 15 )
+		self.assertEqual( c.relop, RELOPS.LEQ )
+		c.rx_dose = 10 * Gy
+		self.assertEqual( c.dose.value, 0.8 * 10 )
+
+		c = V(80 * percent) > 20 * cm3
+		self.assertIsInstance( c, AbsoluteVolumeConstraint )
+		self.assert_nan( c.dose.value )
+		self.assertIsNone( c.threshold )
+		self.assertEqual( c.volume, 20 * cm3 )
+		self.assertEqual( c.relop, RELOPS.GEQ )
+		c.rx_dose = 10 * Gy
+		self.assertEqual( c.dose.value, 0.8 * 10 )
+
+		with self.assertRaises(TypeError):
+			c = V(80) < 12 * Percent()
+
+		with self.assertRaises(TypeError):
+			c = V(80 * Gy) < 12
+
+class ConstraintParsingTestCase(ConradTestCase):
+	def test_eval_constraint(self):
+		# PARSABLE:
+		# - "min > x Gy"
+		# - "mean < x Gy"
+		# - "max < x Gy"
+		# - "D__% < x Gy"
+		# - "D__% > x Gy"
+		# - "V__ Gy < p %" ( == "x Gy to < p %")
+		# - "V__ Gy > p %" ( == "x Gy to > p %")
+
+		# - "min > x Gy"
+		s_variants = [
+			'min > 10 Gy', 'min >= 10 Gy', 'min > 10.0 Gy',
+			'Min > 10 Gy', 'min >= 10 Gy', 'Min > 10.0 Gy',
+			'min > 10 Gray', 'min > 1000 cGy'
+			]
+		c = D('min') > 10 * Gy
+		for s in s_variants:
+			self.assertTrue( eval_constraint(s) == c )
+
+		# - "max < x Gy"
+		s_variants = [
+			'max < 10 Gy', 'max <= 10 Gy', 'max < 10.0 Gy',
+			'Max < 10 Gy', 'max <= 10 Gy', 'Max < 10.0 Gy',
+			'max < 10 Gray', 'max < 1000 cGy'
+			]
+		c = D('max') < 10 * Gy
+		for s in s_variants:
+			self.assertTrue( eval_constraint(s) == c )
+
+		# - "mean > x Gy"
+		s_variants = [
+			'mean > 10 Gy', 'mean >= 10 Gy', 'mean > 10.0 Gy',
+			'Mean > 10 Gy', 'mean >= 10 Gy', 'Mean > 10.0 Gy',
+			'mean > 10 Gray', 'mean > 1000 cGy'
+			]
+		c = D('mean') > 10 * Gy
+		for s in s_variants:
+			self.assertTrue( eval_constraint(s) == c )
+
+		# - "mean < x Gy"
+		s_variants = [
+			'mean < 10 Gy', 'mean <= 10 Gy', 'mean < 10.0 Gy',
+			'Mean < 10 Gy', 'mean <= 10 Gy', 'Mean < 10.0 Gy',
+			'mean < 10 Gray', 'mean < 1000 cGy'
+			]
+		c = D('mean') < 10 * Gy
+		for s in s_variants:
+			self.assertTrue( eval_constraint(s) == c )
+
+		# - "D__% < x Gy"
+		s_variants = [
+			'D20 < 10 Gy', 'D20 <= 10 Gy', 'D20 < 10.0 Gy',
+			'D20% < 10 Gy', 'D20 <= 10 Gy', 'D20% < 10.0 Gy',
+			'D20.0 < 10 Gy', 'D20 < 10 Gray', 'D20 < 1000 cGy'
+			]
+		c = D(20) < 10 * Gy
+		for s in s_variants:
+			self.assertTrue( eval_constraint(s) == c )
+
+		# - "D__% > x Gy"
+		s_variants = [
+			'D80 > 10 Gy', 'D80 >= 10 Gy', 'D80 > 10.0 Gy',
+			'D80% > 10 Gy', 'D80 >= 10 Gy', 'D80% > 10.0 Gy',
+			'D80.0 > 10 Gy', 'D80 > 10 Gray', 'D80 > 1000 cGy'
+			]
+		c = D(80) > 10 * Gy
+		for s in s_variants:
+			self.assertTrue( eval_constraint(s) == c )
+
+		# - "V__ Gy < p %" ( == "x Gy to < p %")
+		s_variants = [
+			'V10 Gy < 20%', 'V10 Gy < 20 %', 'V10 Gy < 20.0%',
+			'V10.0 Gy < 20%', '10 Gy to < 20%'
+			]
+		c = V(10 * Gy) < 20 * percent
+		cd = D(20) < 10 * Gy
+		for s in s_variants:
+			self.assertTrue( eval_constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == cd )
+
+		# - "V__ Gy > p %" ( == "x Gy to > p %")
+		s_variants = [
+			'V10 Gy > 20%', 'V10 Gy > 20 %', 'V10 Gy > 20.0%',
+			'V10 Gy >= 20', 'V10.0 Gy > 20%', '10 Gy to > 20%',
+			'10 Gy to >= 20%'
+			]
+		c = V(10 * Gy) > 20 * percent
+		cd = D(20) > 10 * Gy
+		for s in s_variants:
+			self.assertTrue( eval_constraint(s) == c )
+			self.assertTrue( eval_constraint(s) == cd )
+
+		# PARSABLE WITH RX_DOSE PROVIDED:
+		rx_dose = 10 * Gy
+		rx_dose_fail = 100
+
+		# - "D__% < {frac} rx"
+		s_variants = [
+			'D20 < 1.05 rx', 'D20.0 < 1.05rx', 'D20% < 1.05rx',
+			'D20.0% < 105% rx', 'D20 < 105% rx', 'D20 < 105.0% rx',
+			'D20 <1.05rx', 'D20 <= 1.05rx', 'D20<=1.05rx'
+			]
+		c = D(20) < 1.05 * rx_dose
+		for s in s_variants:
+			self.assertEqual( eval_constraint(s, rx_dose=rx_dose), c )
+			with self.assertRaises(ValueError):
+				c1 = eval_constraint(s)
+			with self.assertRaises(TypeError):
+				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
+
+		# - "D__% > {frac} rx"
+		s_variants = [
+			'D80 > 0.95 rx', 'D80.0 > 0.95rx', 'D80% > 0.95rx',
+			'D80.0% > 95% rx', 'D80 > 95% rx', 'D80 > 95.0% rx'
+			]
+		c = D(80) > 0.95 * rx_dose
+		for s in s_variants:
+			self.assertEqual( eval_constraint(s, rx_dose=rx_dose), c )
+			with self.assertRaises(ValueError):
+				c1 = eval_constraint(s)
+			with self.assertRaises(TypeError):
+				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
+
+		# - "V__ rx < p %"
+		s_variants = [
+			'V 0.1 rx < 80%', 'V 10% rx < 80%', 'V10.0% rx < 80%',
+			'V 0.1 rx < 80.0%'
+			]
+		c = V(0.1 * rx_dose) < 80 * percent
+		for s in s_variants:
+			self.assertEqual( eval_constraint(s, rx_dose=rx_dose), c )
+			with self.assertRaises(ValueError):
+				c1 = eval_constraint(s)
+			with self.assertRaises(TypeError):
+				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
+
+		# - "V__ rx > p %"
+		s_variants = [
+			'V 0.9 rx > 80%', 'V 90% rx > 80%', 'V90.0% rx > 80%',
+			'V 0.9 rx > 80.0%'
+			]
+		c = V(0.9 * rx_dose) > 80 * percent
+		for s in s_variants:
+			self.assertEqual( eval_constraint(s, rx_dose=rx_dose), c )
+			with self.assertRaises(ValueError):
+				c1 = eval_constraint(s)
+			with self.assertRaises(TypeError):
+				c1 = eval_constraint(s, rx_dose=rx_dose_fail)
+
+		# PARSABLE, BUT CONSTRAINT.RESOLVED FAILURE WITHOUT TOTAL VOLUME:
+		# - "V_ Gy > x cm3"
+		# - "V_ Gy < x cm3"
+		# - "V_ rx > x cm3"
+		# - "V_ rx < x cm3"\
+
+		s_variants = [
+				'V20Gy > 10 cm3', 'V20Gy > 10.0 cm3', 'V20Gy > 10 CM3',
+				'V20Gy > 10 cc', 'V20Gy > 10 CC']
+		c = V(20 * Gy) > 50 * percent
+		i = 0
+		for relop in ('>', '<'):
+			print("ITER", i)
+			c.relop = relop
+			for s in s_variants:
+				s = s.replace('>', relop)
+				c_eval = eval_constraint(s)
+				with self.assertRaises(ValueError):
+					c_eval.resolved
+				cp = c_eval.to_percentile_constraint(20 * cm3)
+				cp.resolved
+				self.assertEqual( cp, c )
+
+		s_variants = [
+			'V 0.9rx > 10 cm3', 'V 0.9rx > 10.0 cm3', 'V90% rx > 10cm3',
+			'V 90.0% rx > 10 CM3','V 0.9rx > 10 CM3',
+			'V 0.9rx > 10 CM3', 'V 0.9rx > 10 cc', 'V 0.9rx > 10 CC']
+		c = V(0.9 * rx_dose) > 10 * cm3
+
+		for relop in ('>', '<'):
+			c.relop = relop
+			for s in s_variants:
+				s = s.replace('>', relop)
+				c_eval = eval_constraint(s, rx_dose=rx_dose)
+				self.assertEqual( c_eval, c )
+				with self.assertRaises(ValueError):
+					c_eval.resolved
+				with self.assertRaises(ValueError):
+					c1 = eval_constraint(s)
+				with self.assertRaises(TypeError):
+					c1 = eval_constraint(s, rx_dose=rx_dose_fail)
+				cp = c_eval.to_percentile_constraint(20 * cm3)
+				cp.resolved
+				self.assertIsInstance( cp.threshold, Percent )
+				self.assertEqual( cp.threshold.value, 50. )
 
 class ConstraintListTestCase(ConradTestCase):
 	def test_constraint_list(self):

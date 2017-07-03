@@ -71,7 +71,7 @@ class Constraint(object):
 		Arguments:
 			None
 		"""
-		self.__dose = np.nan
+		self.__dose = np.nan * Gy
 		self.__threshold = None
 		self.__relop = RELOPS.INDEFINITE
 		self.__slack = 0.
@@ -534,80 +534,6 @@ class PercentileConstraint(Constraint):
 		dose = self.dose_achieved.value if had_slack else self.dose.value
 		return (vec(y) - dose).argsort()[start:end]
 
-
-# class AbsoluteVolumeConstraint(Constraint):
-# 	def __init__(self, volume=None, relop=None, dose=None):
-# 		Constraint.__init__(self)
-# 		if relop is not None:
-# 			self.relop = relop
-# 		if dose is not None:
-# 			self.dose = dose
-# 		if volume is not None:
-# 			self.volume = volume
-# 		else:
-# 			self.volume = np.nan * cm3
-# 		self.__total_volume = np.nan * cm3
-
-# 	# overload property Constraint.resolved to always be false:
-# 	# force conversion to PercentileConstraint for planning
-# 	@property
-# 	def resolved(self):
-# 		raise ValueError('{} is unresolvable by convention: please convert '
-# 						 'to {} using built-in conversion')
-
-# 	@property
-# 	def volume(self):
-# 		return self.threshold
-
-# 	@volume.setter
-# 	def volume(self, volume):
-# 		if not isinstance(volume, Volume):
-# 			raise TypeError('argument "volume" must be of type {}'
-# 							''.format(Volume))
-# 		else:
-# 			self.threshold = volume
-
-# 	@property
-# 	def total_volume(self):
-# 		return self.__total_volume
-
-# 	@total_volume.setter
-# 	def total_volume(self, total_volume):
-# 		if not isinstance(total_volume, Volume):
-# 			raise TypeError('argument "total_volume" must be of type {}'
-# 							''.format(Volume))
-# 		self.__total_volume = total_volume
-
-# 	@property
-# 	def to_percentile_constraint(self, total_volume=None):
-# 		if total_volume is not None:
-# 			self.total_volume = total_volume
-# 		if self.total_volume.value in (np.nan, None):
-# 			raise ValueError('field "total_volume" of {} object must be set '
-# 							 'for conversion to {} to be possible'.format(
-# 							 AbsoluteVolumeConstraint, PercentileConstraint))
-# 		fraction = self.volume.to_cm3.value / self.total_volume.to_cm3.value
-# 		if fraction > 1:
-# 			raise ValueError('conversion from {} to {} failed.\n'
-# 							 'cannot form a {} with a percentile greater than '
-# 							 '100%.\nRequested: {:0.1f}\n'
-# 							 '(constrained volume / total volume = {}/{})'
-# 							 ''.format(AbsoluteVolumeConstraint,
-# 							 PercentileConstraint, PercentileConstraint,
-# 							 100 * fraction, self.volume.to_cm3,
-# 							 self.total_volume.to_cm3))
-# 		elif fraction == 1 or fraction == 0:
-# 			raise ValueError('conversion from {} to {} failed.\n'
-# 							 'constrained volume / total volume = {}/{})\n'
-# 							 'rephrase as min dose or max dose constraint'
-# 							 ''.format(AbsoluteVolumeConstraint,
-# 							 PercentileConstraint, self.volume.to_cm3,
-# 							 self.total_volume.to_cm3))
-# 		else:
-# 			return PercentileConstraint(100 * fraction * Percent(), self.relop,
-# 										self.dose)
-
-
 class MeanConstraint(Constraint):
 	"""
 	Mean dose constraint.
@@ -741,42 +667,199 @@ def D(threshold, relop=None, dose=None):
 		return PercentileConstraint(percentile=threshold, relop=relop, dose=dose)
 	raise ValueError('constraint unparsable as phrased')
 
+class AbsoluteVolumeConstraint(Constraint):
+	def __init__(self, dose=None, relop=None, volume_threshold=None,
+				 structure_volume=None):
+		Constraint.__init__(self)
+		self.__constraint_volume = None
+		self.__total_volume = None
 
-# class VolumeAtOrAbove(object):
-	# def __init__(self, dose, relop=None, threshold=None)
-	#
+		if dose is not None:
+			self.dose = dose
+		if relop is not None:
+			self.relop = relop
+		if volume_threshold is not None:
+			self.volume = volume_threshold
+		if structure_volume is not None:
+			self.total_volume = structure_volume
 
-# class AbsoluteVolumeAtOrAbove(VolumeAtOrAbove):
+	# overload property Constraint.resolved to always be false:
+	# force conversion to PercentileConstraint for planning
+	@property
+	def resolved(self):
+		raise ValueError('{} is unresolvable by convention: please convert '
+						 'to {} using built-in conversion'
+						 ''.format(
+						 		AbsoluteVolumeConstraint, PercentileConstraint))
 
-# class FractionalVolumeAtOrAbove(VolumeAtOrAbove):
+	def __lt__(self, other):
+		"""
+		Overload operator <.
 
-# class UnresolvedVolumeAtOrAbove(object):
+		Enable :attr:`AbsoluteVolumeConstraint.volume` and
+		:attr:`Constraint.relop` to
+		be set via syntax 'constraint < volume'.
 
-# class UnresolvedVolumeConstraint(Constraint):
-# 	def __init__(self, dose=None, relop=None, threshold=None):
-# 		Constraint.__init__(self)
-# 		if dose is not None:
-# 			self.dose = dose
-# 		if relop is not None:
-# 			self.relop = relop
-# 		if threshold is not None:
-# 			self.threshold = threshold
+		Arguments:
+			other: Value that :attr:`AbsoluteVolumeConstraint.volume` will be set to.
 
-# 	def __le__(self, other):
-# 		if isinstance(other, Percent):
-# 			return D(other) >= self.dose
+		Returns:
+			:class:`AbsoluteVolumeConstraint`: Updated version of this object.
+		"""
+		self.relop = RELOPS.LEQ
+		self.volume = other
+		return self
 
-# 	def __lt__(self, other):
-# 		return self.__le__(other)
+	def __gt__(self, other):
+		"""
+		Overload operator >.
 
-# 	def __ge__(self, other):
-# 		if isinstance(other, Percent):
-# 			return D(other) <= self.dose
+		Enable :attr:`AbsoluteVolumeConstraint.volume` and :attr:`Constraint.relop` to
+		be set via syntax 'constraint > volume'.
 
-# 	def __gt__(self, other):
-# 		return self.__ge__(other)
+		Arguments:
+			other: Value that :attr:`AbsoluteVolumeConstraint.dose` will be set to.
+
+		Returns:
+			:class:`AbsoluteVolumeConstraint`: Updated version of this object.
+		"""
+		self.relop = RELOPS.GEQ
+		self.volume = other
+		return self
+
+	@property
+	def volume(self):
+		return self.__constraint_volume
+
+	@volume.setter
+	def volume(self, volume):
+		if not isinstance(volume, Volume):
+			raise TypeError(
+					'argument `volume` must be of type {}'
+					''.format(Volume))
+		self.__constraint_volume = volume
+
+	@property
+	def total_volume(self):
+		return self.__total_volume
+
+	@total_volume.setter
+	def total_volume(self, volume):
+		if not isinstance(volume, Volume):
+			raise TypeError(
+					'argument `volume` must be of type {}'
+					''.format(Volume))
+		self.__total_volume = volume
+
+	def to_percentile_constraint(self, structure_volume=None):
+		if self.total_volume is None:
+			if structure_volume is None:
+				raise ValueError(
+						'to convert to percentile constraint, '
+						'`AbsoluteVolumeConstraint.total_volume` must '
+						'be set prior to method call, or argument '
+						'`structure_volume` must be provided')
+			self.total_volume = structure_volume
+
+		if self.volume is None:
+			raise ValueError(
+					'constraint absolute volume unspecified, cannot '
+					'use structure volume to convert to relative '
+					'volume constraint')
+
+		ratio = self.volume.to_cm3.value / self.total_volume.to_cm3.value
+
+		if ratio > 1:
+			raise ValueError('conversion from {} to {} failed.\n'
+							 'cannot form a {} with a percentile greater than '
+							 '100%.\nRequested: {:0.1f}\n'
+							 '(constrained volume / total volume = {}/{})'
+							 ''.format(AbsoluteVolumeConstraint,
+							 PercentileConstraint, PercentileConstraint,
+							 100 * ratio, self.volume.to_cm3,
+							 self.total_volume.to_cm3))
+		elif ratio == 1 or ratio == 0:
+			raise ValueError('conversion from {} to {} failed.\n'
+							 'constrained volume / total volume = {}/{})\n'
+							 'rephrase as min dose or max dose constraint'
+							 ''.format(AbsoluteVolumeConstraint,
+							 PercentileConstraint, self.volume.to_cm3,
+							 self.total_volume.to_cm3))
+
+		return PercentileConstraint(
+				100 * ratio * Percent(), self.relop, self.dose)
 
 
-# def V(dose, relop=None, threshold=None):
-# 	c = UnresolvedVolumeConstraint(dose, relop, threshold)
-# 	return c
+class GenericVolumeConstraint(Constraint):
+	def __init__(self, dose=None, relop=None, volume_threshold=None):
+		Constraint.__init__(self)
+		self.__constraint_volume = None
+
+		if dose is not None:
+			self.dose = dose
+		if relop is not None:
+			self.relop = relop
+		if volume_threshold is not None:
+			self.volume = volume_threshold
+
+	@property
+	def volume(self):
+		return self.__constraint_volume
+
+	@volume.setter
+	def volume(self, volume):
+		if isinstance(volume, Percent):
+			self.threshold = volume
+		elif isinstance(volume, Volume):
+			self.__constraint_volume = volume
+		else:
+			raise TypeError(
+				'volume threshold for a GenericVolume constraint must '
+				'either be a relative volume (expressed as '
+				':class:`Percent`) or an absolute volume (expressed as '
+				'type :class:`Volume`')
+
+	# overload property Constraint.resolved to always be false:
+	# force conversion to PercentileConstraint for planning
+	@property
+	def resolved(self):
+		raise ValueError('{} is unresolvable by convention: please convert '
+						 'to {} or {} using built-in conversion'
+						 ''.format(
+						 		GenericVolumeConstraint,
+						 		AbsoluteVolumeConstraint,
+						 		PercentileConstraint))
+
+	def __lt__(self, other):
+		dose_arg = self._Constraint__dose
+		if isinstance(other, Percent):
+			return PercentileConstraint(other, RELOPS.LEQ, dose_arg)
+		elif isinstance(other, Volume):
+			return AbsoluteVolumeConstraint(dose_arg, RELOPS.LEQ, other)
+		else:
+			self.relop = RELOPS.LEQ
+			self.volume = other
+
+	def __gt__(self, other):
+		dose_arg = self._Constraint__dose
+		if isinstance(other, Percent):
+			return PercentileConstraint(other, RELOPS.GEQ, dose_arg)
+		elif isinstance(other, Volume):
+			return AbsoluteVolumeConstraint(dose_arg, RELOPS.GEQ, other)
+		else:
+			self.relop = RELOPS.GEQ
+			self.volume = other
+
+	def specialize(self):
+		relop_arg = self.relop if self.relop != RELOPS.INDEFINITE else None
+		dose_arg = self._Constraint__dose
+		if self.threshold is not None:
+			return PercentileConstraint(self.threshold, relop_arg, dose_arg)
+		elif self.volume is not None:
+			return AbsoluteVolumeConstraint(dose_arg, relop_arg, self.volume)
+		else:
+			return self
+
+def V(dose, relop=None, threshold=None):
+	return GenericVolumeConstraint(dose, relop, threshold).specialize()
+	return c.specialize()
