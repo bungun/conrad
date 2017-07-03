@@ -12,6 +12,9 @@ the variable ``SolverOptkit`` is still defined in the module
 namespace as a lambda returning ``None`` with the same method signature
 as the initializer for :class:`SolverOptkit`. If :mod:`optkit` is found,
 the class is defined normally.
+
+# TODO: change backend switching syntax to check flag .precision_is_64bit
+instead of current .precision_is_32bit when optkit api updated
 """
 """
 Copyright 2016 Baris Ungun, Anqi Fu
@@ -418,12 +421,13 @@ if module_installed('optkit'):
 			pass
 
 		def __update_backend(self, gpu=False, double=False):
-			if bool(
-					gpu == ok.api.backend.device_is_gpu and
-					double != ok.api.backend.precision_is_32bit):
+			changed = gpu != ok.api.backend.device_is_gpu
+			changed &= double == ok.api.backend.precision_is_32bit
+			if not changed:
 				return
-			self.clear()
-			ok.set_backend(gpu=gpu, double=double)
+			else:
+				self.clear()
+				ok.set_backend(gpu=gpu, double=double)
 
 		def build(self, structures, solver_cache=None, **options):
 			"""
@@ -462,6 +466,11 @@ if module_installed('optkit'):
 			if isinstance(structures, Anatomy):
 				structures = structures.list
 
+			self.__update_backend(
+					options.pop(
+							'gpu', ok.api.backend.device_is_gpu),
+					options.pop(
+							'double', not ok.api.backend.precision_is_32bit))
 
 			matrix_updated = self.__check_for_updates(structures)
 			if self.__A_current is None or matrix_updated:
@@ -486,11 +495,6 @@ if module_installed('optkit'):
 				self.__build_beam_objective(structures)
 			else:
 				self.__update_beam_objective(structures)
-
-			backend_gpu = options.pop('gpu', ok.api.backend.device_is_gpu)
-			backend_double = options.pop(
-					'double', not ok.api.backend.precision_is_32bit)
-			self.__update_backend(gpu=backend_gpu, double=backend_double)
 
 			if self.pogs_solver is None or matrix_updated:
 				cache_options = self.__preprocess_solver_cache(solver_cache)
