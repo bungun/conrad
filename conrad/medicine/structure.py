@@ -31,6 +31,7 @@ from conrad.compat import *
 
 import numpy as np
 import scipy.sparse as sp
+import operator
 
 from conrad.defs import CONRAD_DEBUG_PRINT, positive_real_valued, \
 						sparse_or_dense, vec
@@ -608,8 +609,7 @@ class Structure(object):
 			raise TypeError('argument "constraint" must be of type '
 				'conrad.dose.Constraint')
 
-		dose = constraint.dose.value
-		relop = constraint.relop
+		relop = operator.le if constraint.relop == RELOPS.LEQ else operator.ge
 
 		if isinstance(constraint.threshold, str):
 			if constraint.threshold == 'mean':
@@ -622,12 +622,9 @@ class Structure(object):
 			dose_achieved = self.dvh.dose_at_percentile(
 				constraint.threshold)
 
-		if relop == RELOPS.LEQ:
-			status = dose_achieved <= dose
-		elif relop == RELOPS.GEQ:
-			status = dose_achieved >= dose
-
-		return (status, dose_achieved)
+		status = relop(float(dose_achieved), float(constraint.dose))
+		dose = float(dose_achieved) / float(constraint.dose) * constraint.dose
+		return (status, dose)
 
 	def satisfies_all(self, constraint_list):
 		return all(listmap(

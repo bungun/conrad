@@ -390,11 +390,26 @@ class StructureTestCase(ConradTestCase):
 
 		y -= 10
 		s.calc_y(y)
+		above_mean = np.mean(y) * 1.1
+		below_mean = np.mean(y) * 0.9
+		above_max = 1.1 * np.max(y)
+		below_min = 0.9 * np.min(y)
 
 		s.constraints += D(20) < 10 * Gy
-		s.constraints += D(20) < 10 * Gy
+		self.assertTrue( s.satisfies_all(s.constraints) )
 
-		# multiple constraint check for a ConstraintList
+		s.constraints += D('mean') < above_mean * Gy
+		c = D('mean') < above_mean * Gy
+		st, dz = s.satisfies(c)
+		self.assertTrue( s.satisfies_all(s.constraints) )
+
+		s.constraints += D('mean') > below_mean * Gy
+		self.assertTrue( s.satisfies_all(s.constraints) )
+
+		s.constraints += D('max') < above_max * Gy
+		self.assertTrue( s.satisfies_all(s.constraints) )
+
+		s.constraints += D('min') > below_min * Gy
 		self.assertTrue( s.satisfies_all(s.constraints) )
 
 	def test_plotting_data(self):

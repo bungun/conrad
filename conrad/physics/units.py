@@ -86,6 +86,9 @@ class AbstractNonnegativeUnit(object):
 	def __str__(self):
 		return '{} {}'.format(self.value, self.unit_string)
 
+	def __repr__(self):
+		return self.__str__()
+
 	@abc.abstractproperty
 	def unit_string(self):
 		return NotImplemented
