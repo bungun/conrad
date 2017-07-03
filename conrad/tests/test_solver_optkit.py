@@ -76,17 +76,24 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 		self.assert_vector_equal( A[self.m_target:, :], self.A_oar )
 
 	def __assert_voxel_objective_default(self, v_objective, compressed=True,
-										 weight_targ=1., weight_oar=1.):
+										 voxweight_targ=1., voxweight_oar=1.):
 		size_expect = self.m_target
 		size_expect += 1 if compressed else self.m_oar
 		self.assertEqual( v_objective.size, size_expect )
 
+		N_targ = float(self.anatomy[0].weighted_size)
+		N_oar = float(self.anatomy[1].weighted_size)
+		if not isinstance(voxweight_targ, float):
+			self.assertEqual( N_targ, np.sum(voxweight_targ) )
+		if not isinstance(voxweight_oar, float):
+			self.assertEqual( N_oar, np.sum(voxweight_oar) )
+
 		w_over = self.anatomy[0].objective.weight_over_raw
 		w_under = self.anatomy[0].objective.w_under_raw
-		w_abs = 0.5 * (w_over + w_under) / self.anatomy[0].weighted_size
-		w_lin = 0.5 * (w_over - w_under) / self.anatomy[0].weighted_size
+		w_abs = 0.5 * (w_over + w_under) * N_targ / N_targ
+		w_lin = 0.5 * (w_over - w_under) * N_targ / N_targ
 		w = self.anatomy[1].objective.weight_raw
-		w_norm = w / self.anatomy[1].weighted_size
+		w_norm = w * N_targ / N_oar
 
 		equality_assertion = self.assert_scalar_equal if compressed else \
 							 self.assert_vector_equal
@@ -104,15 +111,15 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 		# param 'c' == 	w_abs if target,
 		#				0 otherwise
 		self.assert_vector_equal(
-				v_objective.c[:self.m_target], w_abs * weight_targ )
+				v_objective.c[:self.m_target], w_abs * voxweight_targ )
 		equality_assertion( v_objective.c[self.m_target:], 0 )
 
 		# param 'd' == 	w_abs if target,
 		#				w otherwise
 		self.assert_vector_equal(
-				v_objective.d[:self.m_target], w_lin * weight_targ )
+				v_objective.d[:self.m_target], w_lin * voxweight_targ )
 		lhs = v_objective.d[self.m_target:]
-		rhs = w if compressed else w_norm * weight_oar
+		rhs = w * N_targ if compressed else w_norm * voxweight_oar
 		equality_assertion( lhs, rhs )
 
 		# param 'e' == 0
@@ -123,6 +130,7 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 		if s is None:
 			return
 
+		self.anatomy[0].objective.target_dose.value = 22.
 		self.assertTrue( s.objective_voxels is None )
 
 		# -structure 1 not collapsable (reason: target)
@@ -158,12 +166,12 @@ class SolverOptkitTestCase(SolverGenericTestCase):
 		s._SolverOptkit__build_voxel_objective(self.anatomy.list)
 		self.__assert_voxel_objective_default(
 				s.objective_voxels, compressed=False,
-				weight_targ=voxel_weights0, weight_oar=voxel_weights1)
+				voxweight_targ=voxel_weights0, voxweight_oar=voxel_weights1)
 		self.anatomy[1].constraints.clear()
 		s._SolverOptkit__build_voxel_objective(self.anatomy.list)
 		self.__assert_voxel_objective_default(
 				s.objective_voxels, compressed=True,
-				weight_targ=voxel_weights0, weight_oar=voxel_weights1)
+				voxweight_targ=voxel_weights0, voxweight_oar=voxel_weights1)
 
 	def test_solver_build_beam_objective(self):
 		s = SolverOptkit()

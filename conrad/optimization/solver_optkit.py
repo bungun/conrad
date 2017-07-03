@@ -406,6 +406,7 @@ if module_installed('optkit'):
 			self.__update_voxel_objective(structures)
 
 		def __update_voxel_objective(self, structures):
+			self._Solver__set_scaling(structures)
 			ptr = 0
 			for s in structures:
 				obj_sub = ObjectiveMethods.primal_expr_pogs(s)
@@ -485,7 +486,6 @@ if module_installed('optkit'):
 			rebuild_g = bool(self.objective_beams is None or
 						   self.objective_beams.size != n_beams)
 
-			self._Solver__set_scaling(structures)
 			if rebuild_f:
 				self.__build_voxel_objective(structures)
 			else:
