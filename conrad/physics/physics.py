@@ -743,6 +743,7 @@ class Physics(object):
 						'input vector must match voxel dimension of '
 						'current dose frame')
 			doses = {label: y[self.frame.voxel_lookup_by_label(label)]}
+		return doses
 
 	@property
 	def available_frame_mappings(self):
