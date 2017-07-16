@@ -65,7 +65,13 @@ class RunProfile(object):
 		self.use_slack = use_slack
 		self.use_2pass = use_2pass
 
-		# dictionary of objective, keyed by structure label
+		# list of structure labels
+		self.label_order = []
+
+		# dictionary of sizes, keyed by structure label
+		self.representation_sizes = {}
+
+		# dictionary of objectives, keyed by structure label
 		self.objectives = {}
 
 		# dictionary of constraints, keyed by ID
@@ -91,11 +97,13 @@ class RunProfile(object):
 		"""
 		for _, s in enumerate(structures):
 			obj = s.objective
+			self.label_order.append(s.label)
 			self.objectives[s.label] = {
 				'label' : s.label,
 				'name' : s.name,
 				'objective' : obj.dict if obj is not None else None
 			}
+			self.representation_sizes[s.label] = 1 if s.collapsable else s.size
 
 	def pull_constraints(self, structures):
 		"""
@@ -345,6 +353,11 @@ class PlanningHistory(object):
 		else:
 			TypeError('operator += only defined for '
 				'rvalues of type conrad.RunRecord')
+
+	def add_run(self, run, tag=None):
+		self += run
+		if tag is not None:
+			self.tag_last(tag)
 
 	def no_run_check(self, property_name):
 		"""
