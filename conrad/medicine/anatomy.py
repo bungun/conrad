@@ -76,6 +76,12 @@ class Anatomy(object):
 		elif structures:
 			self.structures = structures
 
+	def clone(self):
+		a = Anatomy()
+		for s in self:
+			a += s.clone()
+		a._Anatomy__label_order = self.__label_order
+
 	def __contains__(self, comparator):
 		for s in self:
 			if comparator in (s.name, s.label):

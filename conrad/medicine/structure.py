@@ -489,11 +489,36 @@ class Structure(object):
 		u.value = 1
 		return u
 
+	def clone(self):
+		s = Structure(self.label, self.name, self.is_target, self.size)
+		s._Structure__A_full = self.__A_full
+		s._Structure__A_mean = self.__A_mean
+		s._Structure__voxel_weights = self.__voxel_weights
+		s._Structure__weighted_size = self.__weighted_size
+		s._Structure__dose = self.__dose
+		s._Structure__boost = self.__boost
+		s._Structure__objective = self.__objective
+		s.constraints = self.constraints
+
+	def primal_objective_eval(self, voxel_doses=None, beam_intensities=None):
+		if voxel_doses is not None:
+			self.assign_y(voxel_doses)
+		elif beam_intensities is not None:
+			self.calc_y(beam_intensities)
+		return self.objective.eval(self.y, self.voxel_weights)
+
+	def dual_objective_eval(self, voxel_prices):
+		return self.objective.dual_eval(voxel_prices, self.voxel_weights)
+
+	def assign_dose(self, voxel_doses):
+		""" Alias for :meth:`Structure.assign_y`. """
+		self.assign_y(beam_intensities)
+
 	def calculate_dose(self, beam_intensities):
 		""" Alias for :meth:`Structure.calc_y`. """
 		self.calc_y(beam_intensities)
 
-	def assign_dose(self, y):
+	def assign_y(self, y):
 		"""
 		Assign dose vector to structure.
 
@@ -666,16 +691,6 @@ class Structure(object):
 			out += '<unnamed>'
 		out += ' (label = {})\n'.format(self.label)
 		return out
-
-	# @property
-	# def objective(self):
-	# 	""" Dictionary of objective data. """
-	# 	return {
-	# 			'is_target': self.is_target,
-	# 			'dose': self.dose,
-	# 			'weight_under': self.__w_under,
-	# 			'weight_over': self.__w_over
-	# 			}
 
 	@property
 	def __obj_string(self):
