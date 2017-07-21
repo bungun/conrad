@@ -432,6 +432,11 @@ if module_installed('cvxpy'):
 			return self.__solvetime
 
 		@property
+		def setuptime(self):
+			""" Solver run time. """
+			return np.nan
+
+		@property
 		def status(self):
 			""" Solver status. """
 			return self.problem.status

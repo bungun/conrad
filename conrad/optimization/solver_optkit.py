@@ -307,6 +307,12 @@ if module_installed('optkit'):
 			return self.pogs_solver.info.c.solve_time
 
 		@property
+		def setuptime(self):
+			""" Solver run time. """
+			self.__assert_solver_exists('setuptime')
+			return self.pogs_solver.info.c.setup_time
+
+		@property
 		def status(self):
 			self.__assert_solver_exists('status')
 			return self.pogs_solver.info.err

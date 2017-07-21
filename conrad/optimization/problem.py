@@ -351,6 +351,7 @@ class PlanningProblem(object):
 		self.__gather_dvh_slopes(run_output, structures)
 		self.__gather_constraint_slacks(run_output, structures)
 		run_output.solver_info['time'] = self.solver.solvetime
+		run_output.solver_info['setup_time'] = self.solver.setuptime
 
 		if not run_output.feasible:
 			return 0
@@ -367,6 +368,7 @@ class PlanningProblem(object):
 			self.__gather_solver_info(run_output, exact=True)
 			self.__gather_solver_vars(run_output, exact=True)
 			run_output.solver_info['time_exact'] = self.solver.solvetime
+			run_output.solver_info['setup_time_exact'] = self.solver.setuptime
 
 			for s in structures:
 				self.__update_structure(s, exact=True)
