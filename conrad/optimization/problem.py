@@ -196,8 +196,35 @@ class PlanningProblem(object):
 		# recover dvh constraint slope variables
 		for s in structures:
 			for cid in s.constraints:
-				run_output.optimal_dvh_slopes[cid] = \
-						self.solver.get_dvh_slope(cid)
+				run_output.optimal_dvh_slopes[cid] = self.solver.get_dvh_slope(
+						cid)
+
+	def __gather_constraint_slacks(self, run_output, structures):
+		"""
+		Transfer optimal dose constraint slacks to :class:`RunOutput`.
+
+		Arguments:
+			run_output (:class:`RunOutput`): Container for solver data.
+				Data stored as dictionary entries in
+				:attr:`RunOutput.optimal_dvh_slopes`.
+			structures: Iterable collection of
+				:class:`~conrad.medicine.Structure` objects.
+
+		Returns:
+			None
+
+		Raises:
+			TypeError: If ``run_output`` not of type :class:`RunOutput`.
+		"""
+		if not isinstance(run_output, RunOutput):
+			raise TypeError('Argument "run_output" must be of type {}'
+							''.format(RunOutput))
+
+		# recover dvh constraint slope variables
+		for s in structures:
+			for cid in s.constraints:
+				run_output.optimal_slacks[cid] = self.solver.get_slack_value(
+						cid)
 
 	def __set_solver_fastest_available(self, structures):
 		"""
@@ -321,7 +348,9 @@ class PlanningProblem(object):
 		self.__gather_solver_info(run_output)
 		self.__gather_solver_vars(run_output)
 		self.__gather_dvh_slopes(run_output, structures)
+		self.__gather_constraint_slacks(run_output, structures)
 		run_output.solver_info['time'] = self.solver.solvetime
+		run_output.solver_info['setup_time'] = self.solver.setuptime
 
 		if not run_output.feasible:
 			return 0
@@ -338,6 +367,7 @@ class PlanningProblem(object):
 			self.__gather_solver_info(run_output, exact=True)
 			self.__gather_solver_vars(run_output, exact=True)
 			run_output.solver_info['time_exact'] = self.solver.solvetime
+			run_output.solver_info['setup_time_exact'] = self.solver.setuptime
 
 			for s in structures:
 				self.__update_structure(s, exact=True)

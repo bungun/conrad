@@ -22,6 +22,8 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
+import yaml
+
 from conrad.io.schema import cdb_util, CaseEntry
 from conrad.io.filesystem import ConradFilesystemBase, LocalFilesystem
 from conrad.io.database import ConradDatabaseBase, LocalPythonDatabase
@@ -65,6 +67,10 @@ class CaseIO(object):
 						'it must be a type that inherits from {}'
 						''.format(ConradFilesystemBase))
 			self.FS = FS_constructor()
+
+		if options.pop('load_default', False):
+			if len(self.available_cases) > 0:
+				self.load_case(self.available_cases[0])
 
 	@property
 	def DB(self):
@@ -244,14 +250,14 @@ class CaseIO(object):
 
 		self.accessor.save_solver_cache(
 				self.active_meta, self.active_case.problem.solver,
-				self.active_frame_name, cache_name, directory)
+				cache_name, self.active_frame_name, directory)
 
 	def load_solver_cache(self, cache_name):
 		if self.active_meta is None or self.active_case is None:
 			raise ValueError('no active case')
 
 		return self.accessor.load_solver_cache(
-				self.active_meta, self.active_frame_name, cache_name)
+				self.active_meta, cache_name, self.active_frame_name)
 
 	def save_solution(self, solution_name, directory=None, frame_name=None,
 					  **solution_data):
@@ -283,7 +289,8 @@ class CaseIO(object):
 		return self.accessor.load_solution(
 				self.active_meta.history, frame_name, solution_name)
 
-	def case_to_YAML(self, case, case_name, directory=None):
+	def case_to_YAML(self, case, case_name, directory=None,
+					 yaml_directory=None):
 		if self.working_directory is None and directory is None:
 			raise ValueError(
 					'no directory specified. please call with keyword '
@@ -293,7 +300,8 @@ class CaseIO(object):
 			directory = self.working_directory
 
 		return self.accessor.write_case_yaml(
-				case, case_name, directory, single_document=True)
+				case, case_name, directory, single_document=True,
+				yaml_directory=yaml_directory)
 
 	def YAML_to_case(self, yaml_file):
 		self.close_active_case()

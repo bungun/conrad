@@ -436,7 +436,9 @@ class LocaFilesystemTestCase(ConradTestCase):
 		while len(self.directories) > 0:
 			d = self.directories.pop()
 			for f in os.listdir(d):
-				os.remove(f)
+				print("REMOVING {}".format(f))
+				if os.path.exists(f):
+					os.remove(f)
 			if os.path.exists(d):
 				os.rmdir(d)
 
@@ -512,8 +514,10 @@ class LocaFilesystemTestCase(ConradTestCase):
 		self.assertIn( f_, f['file'] )
 		self.assertTrue( f['file'].endswith('.npy') )
 
-		with self.assertRaises(OSError):
-			f2 = lfs.write(f_, np.random.rand(30))
+		# This assertion is obsolete since OSError was changed to
+		# warnings.warn()
+		# with self.assertRaises(OSError):
+			# f2 = lfs.write(f_, np.random.rand(30))
 
 		f3 = lfs.write(f_, np.random.rand(30), overwrite=True)
 

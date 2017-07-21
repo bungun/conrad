@@ -18,8 +18,10 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 __version__ = "0.0.3a"
 
+
 from conrad.medicine import *
 from conrad.physics import *
 from conrad.optimization import *
 from conrad.case import Case
+from conrad.io import CaseIO
 from conrad.visualization.plot import CasePlotter

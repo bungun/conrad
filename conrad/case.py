@@ -336,13 +336,19 @@ class Case(object):
 				return
 
 		for structure in self.anatomy:
-			label = structure.label
-			vw = self.physics.voxel_weights_by_label(label)
-			mat = self.physics.dose_matrix_by_label(label)
-			if np.size(vw) == 1 and np.sum(vw) > 1:
-				structure.A_mean = mat
+			A = self.physics.dose_matrix_by_label(structure.label)
+			if A.shape[0] == 1:
+				structure.A_mean = A
 			else:
-				structure.A_full = mat
+				structure.A_full = A
+
+		if not self.physics.frame.voxel_weights.unweighted:
+			for structure in self.anatomy:
+				vw = self.physics.voxel_weights_by_label(structure.label)
+				if structure.size is None:
+					structure.size = np.sum(vw)
+				structure.voxel_weights = vw
+
 		self.physics.mark_data_as_loaded()
 
 	def gather_physics_from_anatomy(self):
@@ -361,10 +367,14 @@ class Case(object):
 		"""
 		if self.physics.dose_matrix is None:
 			data = {structure.label: structure.A for structure in self.anatomy}
-			self.physics.frame.data = data
+			self.physics.frame.dose_matrix = data
 		else:
 			raise AttributeError(
 					'dose matrix for `Case.physics` is already set')
+		if self.physics.frame.voxel_weights is None:
+			data = {
+				structure.label: structure.voxel_weights
+				for structure in self.anatomy}
 
 	def calculate_doses(self, x):
 		"""

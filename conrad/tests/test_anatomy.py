@@ -115,6 +115,13 @@ class AnatomyTestCase(ConradTestCase):
 		self.assert_vector_equal( y0, a[0].y )
 		self.assert_vector_equal( y1, a[1].y )
 
+		# test satisfaction of some patently true constraints
+		constraints = {
+			'oar': ['D100 < 1000 Gy', 'D0 < 1000 Gy'],
+			'ptv': ['D100 < 1000 Gy', 'D0 < 1000 Gy'],
+		}
+		self.assertTrue( a.satisfies_prescription(constraints) )
+
 		ds = a.dose_summary_data()
 		for s in self.structures:
 			self.assertIn( s.label, ds )
@@ -140,7 +147,6 @@ class AnatomyTestCase(ConradTestCase):
 			self.assertIn( 'D10', ds[s.label] )
 			self.assertIn( 'D22', ds[s.label] )
 			self.assertIn( 'D83', ds[s.label] )
-
 
 		ds = a.dose_summary_data(percentiles=xrange(10, 100, 10))
 		for s in self.structures:

@@ -23,13 +23,12 @@ loading and saving treatment planning cases.
 from conrad.compat import *
 
 import os
+import warnings
 import abc
 import numpy as np
 import scipy.sparse as sp
 
 from conrad.defs import sparse_or_dense, CONRAD_MATRIX_TYPES
-from conrad.case import Case
-from conrad.medicine import Anatomy, Structure, Prescription
 from conrad.io.schema import *
 
 @add_metaclass(abc.ABCMeta)
@@ -326,14 +325,23 @@ class LocalFilesystem(ConradFilesystemBase):
 		if not file.endswith(extension):
 			file += extension
 
+		new_write = overwrite or not os.path.exists(file)
 		if os.path.exists(file) and not overwrite:
-			raise OSError('file `{}` exists; please specify keyword '
-						  'argument `overwrite=True` to proceed with '
-						  'save operation'.format(file))
+			warnings.warn('file `{}` exists; please specify keyword '
+						  'argument `overwrite=True` to overwrite'
+						  ''.format(file))
+			# TODO: consider having a verbosity property attached to
+			# the conrad.io.Filesystem type (perhaps default is
+			# ``verbose=True``) to allow users to suppress the above
+			# warning message when they know what they're doing and
+			# don't want to be warned repeatedly, e.g., when working
+			# with a large database with some pre-written files.
 
 		if isinstance(data, dict):
-			np.savez(file, **data)
+			if new_write:
+				np.savez(file, **data)
 			return {key: {'file': file, 'key': key} for key in data}
 		else:
-			np.save(file, data)
+			if new_write:
+				np.save(file, data)
 			return {'file': file, 'key': None}

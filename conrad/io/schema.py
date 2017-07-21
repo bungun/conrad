@@ -1285,6 +1285,7 @@ class SparseMatrixEntry(DataFragmentEntry):
 						'CSR': self.layout_CSR,
 						'fortran_indexing': self.layout_fortran_indexing,
 				},
+				'shape': self.shape,
 				'data': {
 						'pointers': {
 								'file': self.data_pointers_file,

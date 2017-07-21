@@ -23,6 +23,7 @@ LONG_DESC = "TODO: LONG DESCRIPTION"
 setup(
     name='conrad',
     version='0.0.3a',
+
     author='Baris Ungun, Anqi Fu, Stephen Boyd',
     author_email='ungun@stanford.edu',
     url='http://github.com/bungun/conrad/',
@@ -30,6 +31,7 @@ setup(
     packages=['conrad',
               'conrad.abstract',
               'conrad.medicine',
+              'conrad.medicine.dose',
               'conrad.physics',
               'conrad.optimization',
               'conrad.optimization.objectives',

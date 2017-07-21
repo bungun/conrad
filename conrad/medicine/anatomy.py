@@ -76,6 +76,12 @@ class Anatomy(object):
 		elif structures:
 			self.structures = structures
 
+	def clone(self):
+		a = Anatomy()
+		for s in self:
+			a += s.clone()
+		a._Anatomy__label_order = self.__label_order
+
 	def __contains__(self, comparator):
 		for s in self:
 			if comparator in (s.name, s.label):
@@ -274,6 +280,41 @@ class Anatomy(object):
 		for s in self.structures.values():
 			out += s.summary_string
 		return out
+
+	@property
+	def constraint_summary(self):
+		out = []
+		for s in self:
+			for cid in s.constraints:
+				c = s.constraints[cid]
+				slack = 0 * c.dose
+				slack.value = c.slack
+				out.append({'structure':s.name, 'constraint':c, 'slack':slack})
+		return out
+
+	@property
+	def constraint_summary_string(self):
+		out = '{:<20}{:<20}{:<10}\n'.format('Structure', 'Constraint', 'Slack')
+		out += 50 * '-' + '\n'
+		for line in self.constraint_summary:
+			out += '{structure:<20}{constraint:<20}{slack:<10}\n'.format(
+					**{k: str(line[k]) for k in line})
+		return out
+
+	def satisfies_prescription(self, constraint_dict):
+		"""
+		Check whether anatomy satisfies supplied constraints.
+
+		Arguments:
+			:obj:`dict`: Dictionary of :class:`ConstraintList` objects
+			keyed by structure labels.
+
+		Returns:
+			:obj:`int`: True if each structure in
+		"""
+		audit = lambda label_constrs: self[label_constrs[0]].satisfies_all(
+				label_constrs[1]) if label_constrs[0] in self else True
+		return all(map(audit, constraint_dict.items()))
 
 	def __iadd__(self, other):
 		"""

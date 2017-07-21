@@ -30,15 +30,21 @@ from conrad.medicine.structure import Structure
 class ObjectiveMethods(object):
 	@staticmethod
 	def normalize(structure):
+		# scale by global scaling factor / structure cardinality
 		if structure.collapsable:
-			structure.objective.normalization = 1.
-		elif structure.objective.normalization == 1:
+			# |S| * G / |S| = G
+			structure.objective.normalization = float(
+					structure.objective.global_scaling)
+		else:
+			# G / |S|
 			if structure.weighted_size is None:
 				raise ValueError(
 						'attributes `size` or `voxel_weights` of '
 						'argument `structure` must be set to normalize '
 						'objective')
-			structure.objective.normalization = 1. / structure.weighted_size
+			structure.objective.normalization = float(
+					structure.objective.global_scaling /
+					structure.weighted_size)
 
 	@staticmethod
 	def get_weights(structure):
@@ -115,32 +121,41 @@ class ObjectiveMethods(object):
 		return structure.objective.dual_expr_pogs(size, weights)
 
 	@staticmethod
-	def dual_domain_constraints(structure, nu_var):
+	def dual_domain_constraints(structure, nu_var, nu_offset=None,
+								nonnegative=False):
 		ObjectiveMethods.normalize(structure)
 		weights = ObjectiveMethods.get_weights(structure)
-		return structure.objective.dual_domain_constraints(nu_var, weights)
+		return structure.objective.dual_domain_constraints(
+				nu_var, weights, nu_offset=nu_offset, nonnegative=nonnegative)
 
 	@staticmethod
-	def dual_domain_constraints_pogs(structure):
+	def dual_domain_constraints_pogs(structure, nu_offset=None,
+									 nonnegative=False):
 		ObjectiveMethods.normalize(structure)
 		weights = ObjectiveMethods.get_weights(structure)
 		size = 1 if structure.collapsable else structure.size
-		return structure.objective.dual_domain_constraints_pogs(size, weights)
+
+		return structure.objective.dual_domain_constraints_pogs(
+				size, weights, nu_offset=nu_offset, nonnegative=nonnegative)
 
 	@staticmethod
-	def clinical_primal_eval(structures, voxel_doses=None, beam_fluences=None):
-		f = lambda s: ObjectiveMethods.eval(s, voxel_doses, beam_fluences)
-		return sum(map(f, structures))
+	def dual_fused_expr_constraints_pogs(structure, nu_offset=None,
+										 nonnegative=False):
+		ObjectiveMethods.normalize(structure)
+		weights = ObjectiveMethods.get_weights(structure)
+		size = 1 if structure.collapsable else structure.size
+		return structure.objective.dual_fused_expr_constraints_pogs(
+				size, weights, nu_offset=nu_offset, nonnegative=nonnegative)
 
 	@staticmethod
-	def clinical_dual_eval(structures, voxel_prices, beam_prices=None):
-		f_conjugate = lambda s: ObjectiveMethods.dual_eval(s, voxel_prices)
-		return sum(map(f_conjugate, structures))
+	def partial_beam_prices(structure, voxel_prices):
+		if structure.collapsable:
+			return structure.A_mean * float(nu)
+		else:
+			return structure.A.T.dot(nu)
 
 	@staticmethod
-	def deliverability_primal_eval(beams_sets, beam_fluences=None):
-		raise NotImplementedError
-
-	@staticmethod
-	def deliverability_dual_eval(beam_sets, beam_prices=None):
-		raise NotImplementedError
+	def beam_prices(structures, voxel_prices_by_label):
+		pbp = lambda s: ObjectiveMethods.partial_beam_prices(
+				s, voxel_prices_by_label[s.label])
+		return np.add.reduce(listmap(pbp, structures))

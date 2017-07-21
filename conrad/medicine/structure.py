@@ -31,6 +31,7 @@ from conrad.compat import *
 
 import numpy as np
 import scipy.sparse as sp
+import operator
 
 from conrad.defs import CONRAD_DEBUG_PRINT, positive_real_valued, \
 						sparse_or_dense, vec
@@ -490,11 +491,26 @@ class Structure(object):
 		u.value = 1
 		return u
 
+	def clone(self):
+		s = Structure(self.label, self.name, self.is_target, self.size)
+		s._Structure__A_full = self.__A_full
+		s._Structure__A_mean = self.__A_mean
+		s._Structure__voxel_weights = self.__voxel_weights
+		s._Structure__weighted_size = self.__weighted_size
+		s._Structure__dose = self.__dose
+		s._Structure__boost = self.__boost
+		s._Structure__objective = self.__objective
+		s.constraints = self.constraints
+
+	def assign_dose(self, voxel_doses):
+		""" Alias for :meth:`Structure.assign_y`. """
+		self.assign_y(voxel_doses)
+
 	def calculate_dose(self, beam_intensities):
 		""" Alias for :meth:`Structure.calc_y`. """
 		self.calc_y(beam_intensities)
 
-	def assign_dose(self, y):
+	def assign_y(self, y):
 		"""
 		Assign dose vector to structure.
 
@@ -544,7 +560,8 @@ class Structure(object):
 			self.__y_mean = self.__y_mean[0]
 
 		# make DVH curve from calculated dose
-		self.dvh.data = self.__y
+		if self.y is not None:
+			self.dvh.data = self.y
 
 	@property
 	def y(self):
@@ -592,25 +609,24 @@ class Structure(object):
 			ValueError: If :attr:`Structure.dvh` not initialized or not
 				populated with dose data.
 		"""
-		if self.dvh is None:
+		if not isinstance(constraint, Constraint):
+			raise TypeError('argument "constraint" must be of type '
+				'conrad.dose.Constraint')
+
+		if self.dvh is None and constraint.threshold != 'mean':
 			raise ValueError('structure DVH does not exist, cannot evaluate '
 							 'constraint satisfaction.\n(assign structure '
 							 'size explicitly by setting field "{}.size"\nor '
 							 'impicitly by assigning a dose matrix with '
 							 'field "{}.A_full"\nto trigger DVH instantiation)'
 							 ''.format(Structure, Structure))
-		if not self.dvh.populated:
+		if not self.dvh.populated and constraint.threshold != 'mean':
 			raise ValueError('structure DVH not populated by dose data, '
 							 'cannot evaluate constraint satisfaction\n'
 							 '(assign dose by setting field "{}.y")'
 							 ''.format(Structure))
 
-		if not isinstance(constraint, Constraint):
-			raise TypeError('argument "constraint" must be of type '
-				'conrad.dose.Constraint')
-
-		dose = constraint.dose.value
-		relop = constraint.relop
+		relop = operator.le if constraint.relop == RELOPS.LEQ else operator.ge
 
 		if isinstance(constraint.threshold, str):
 			if constraint.threshold == 'mean':
@@ -623,12 +639,16 @@ class Structure(object):
 			dose_achieved = self.dvh.dose_at_percentile(
 				constraint.threshold)
 
-		if relop == RELOPS.LEQ:
-			status = dose_achieved <= dose
-		elif relop == RELOPS.GEQ:
-			status = dose_achieved >= dose
+		status = relop(float(dose_achieved), float(constraint.dose))
+		dose = float(dose_achieved) / float(constraint.dose) * constraint.dose
+		return (status, dose)
 
-		return (status, dose_achieved)
+	def satisfies_all(self, constraint_list):
+		return all(listmap(
+				lambda status_dose_tuple: status_dose_tuple[0],
+				listmap(
+						self.satisfies,
+						ConstraintList(constraint_list).list)))
 
 	def plotting_data(self, constraints_only=False, maxlength=None):
 		"""
@@ -663,16 +683,6 @@ class Structure(object):
 			out += '<unnamed>'
 		out += ' (label = {})\n'.format(self.label)
 		return out
-
-	# @property
-	# def objective(self):
-	# 	""" Dictionary of objective data. """
-	# 	return {
-	# 			'is_target': self.is_target,
-	# 			'dose': self.dose,
-	# 			'weight_under': self.__w_under,
-	# 			'weight_over': self.__w_over
-	# 			}
 
 	@property
 	def __obj_string(self):

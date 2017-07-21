@@ -74,11 +74,14 @@ class CaseAccessor(ConradDBAccessor):
 					'argument `case` must be of type {}'.format(Case))
 
 		self.FS.check_dir(directory)
-		subdir = self.FS.join_mkdir(directory, ['cases', case_name])
+		subdir = self.FS.join_mkdir(directory, case_name)
 
 		rx = case.prescription.rx_list if case.prescription is None else None
 		if case_ID is None or not self.DB.has_key(case_ID):
 			case_ID = self.DB.next_available_key(CaseEntry)
+
+		if case.physics.plannable < case.anatomy.plannable:
+			case.gather_physics_from_anatomy()
 
 		return self.DB.set(
 				case_ID,
@@ -100,7 +103,7 @@ class CaseAccessor(ConradDBAccessor):
 					'argument `case_entry` must be of type {}'
 					''.format(CaseEntry))
 
-		subdir = self.FS.join_mkdir(directory, ['cases', case_entry.name])
+		subdir = self.FS.join_mkdir(directory, case_entry.name)
 		case_entry.physics = self.physics_accessor.save_physics(
 				case.physics, subdir, overwrite)
 		case_entry.anatomy = self.anatomy_accessor.save_anatomy(case.anatomy)
@@ -206,13 +209,19 @@ class CaseAccessor(ConradDBAccessor):
 		# otherwise, return None
 		return None
 
-	def write_case_yaml(self, case, case_name, directory, single_document=False):
+	def write_case_yaml(self, case, case_name, directory,
+						single_document=False, yaml_directory=None):
 		self.FS.check_dir(directory)
+		if yaml_directory is not None:
+			self.FS.check_dir(yaml_directory)
+		else:
+			yaml_directory = directory
 		self.DB.clear_log()
+
 		ptr = self.save_case(case, case_name, directory)
 		if single_document:
 			if os.path.exists(directory):
-				filename = os.path.join(directory, case_name + '.yaml')
+				filename = os.path.join(yaml_directory, case_name + '.yaml')
 				f = open(filename, 'w')
 				entry = self.DB.get(ptr)
 				f.write(yaml.safe_dump(
@@ -224,5 +233,5 @@ class CaseAccessor(ConradDBAccessor):
 				raise ValueError('directory `{}` not found'.format(directory))
 		else:
 			return self.DB.dump_to_yaml(
-					os.path.join(directory, case_name),
+					os.path.join(yaml_directory, case_name),
 					logged_entries_only=True)

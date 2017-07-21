@@ -44,6 +44,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 from conrad.compat import *
 
 import numpy as np
+import abc
 
 GAMMA_DEFAULT = 1e-2
 RELTOL_DEFAULT = 1e-3
@@ -95,6 +96,8 @@ class Solver(object):
 		self.dvh_vars = {}
 		self.slack_vars = {}
 		self.feasible = False
+		self.__global_weight_scaling = 1.
+		self.__global_dose_scaling = 1.
 
 	@property
 	def gamma(self):
@@ -106,35 +109,13 @@ class Solver(object):
 		if gamma:
 			self.__gamma = float(gamma)
 
-	@staticmethod
-	def get_cd_from_wts(wt_under, wt_over):
-		r"""
-		Convert piecewise linear weights to absolute value + affine.
+	@property
+	def global_weight_scaling(self):
+		return self.__global_weight_scaling
 
-		Given an objective function f_i: R -> R that consists of
-		separate affine penalties for underdosing and overdosing:
-
-		:math: f_i = w_+ (y_i - \mbox{dose}_i) + w_i (y_i - \mbox{dose}_i)
-
-		rephrase as mixture of absolute value plus affine terms:
-
-		:math: f_i = c |y_i - \mbox{dose}_i| + d (y_i - \mbox{dose}_i)
-
-		where
-
-		Arguments:
-			wt_under (:obj:`float`): Underdose weight, value should be
-				nonnegative.
-			wt_over (:obj:`float`): Overdose weight, value should be
-				positive.
-
-		Returns:
-			:obj:`tuple` of float: Weights for absolute value and affine
-			terms that result in an equivalent objective function.
-		"""
-		c = (wt_over + wt_under) / 2.
-		d = (wt_over - wt_under) / 2.
-		return c, d
+	@property
+	def global_dose_scaling(self):
+		return self.__global_dose_scaling
 
 	def gamma_prioritized(self, priority):
 		"""
@@ -229,7 +210,8 @@ class Solver(object):
 		report = []
 		for structure in structures:
 			A = structure.A
-			matrix_info = str('using dose matrix, dimensions {}x{}'.format(
+			if A is not None:
+				matrix_info = str('using dose matrix, dimensions {}x{}'.format(
 							  *structure.A.shape))
 			if structure.is_target:
 				reason  = 'structure is target'
@@ -250,6 +232,18 @@ class Solver(object):
 							  '{} (reason: {})'.format(structure.name,
 							  structure.label, matrix_info, reason)))
 		return report
+
+	def __set_scaling(self, structures):
+		weight_scaling = 1.
+		dose_scaling = 1.
+		for s in structures:
+			if s.is_target:
+				weight_scaling = max(weight_scaling, float(s.weighted_size))
+				dose_scaling = max(dose_scaling, float(s.dose))
+		self.__global_dose_scaling = dose_scaling
+		self.__global_weight_scaling = weight_scaling
+		for s in structures:
+			s.objective.global_scaling = self.global_weight_scaling
 
 	def build(self, structures, exact=False, **options):
 		""" Prototype for problem construction. """
