@@ -5,12 +5,12 @@ import numpy as np
 import operator as op
 import cvxpy
 
-from conrad.defs import vec, module_installed
+from conrad.defs import vec
 from conrad.physics.units import Gy, DeliveredDose
 from conrad.physics.string import dose_from_string
+from conrad.optimization.solvers.environment import OPTKIT_INSTALLED
 from conrad.optimization.objectives.default_weights import *
 
-OPTKIT_INSTALLED = module_installed('optkit')
 if OPTKIT_INSTALLED:
 	import optkit as ok
 	from optkit.libs.enums import OKFunctionEnums as fn_enums

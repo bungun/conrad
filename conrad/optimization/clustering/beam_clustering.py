@@ -24,10 +24,9 @@ from conrad.compat import *
 import abc
 import numpy as np
 
-from conrad.defs import module_installed
+from conrad.optimization.solvers.environment import OPTKIT_INSTALLED
 from conrad.optimization.clustering.clustering_base import ClusteredProblem
 
-OPTKIT_INSTALLED = module_installed('optkit')
 if OPTKIT_INSTALLED:
 	import optkit as ok
 else:

@@ -42,12 +42,13 @@ from conrad.medicine.dose import Constraint, MeanConstraint, MinConstraint, \
 								 MaxConstraint, PercentileConstraint
 from conrad.medicine.anatomy import Anatomy
 from conrad.optimization.preprocessing import ObjectiveMethods
-from conrad.optimization.solver_base import *
+from conrad.optimization.solvers.environment import *
+from conrad.optimization.solvers.solver_base import *
 
-if module_installed('cvxpy'):
+if CVXPY_INSTALLED:
 	import cvxpy
 
-	if module_installed('scs'):
+	if SCS_INSTALLED:
 		SOLVER_DEFAULT = cvxpy.SCS
 	else:
 		SOLVER_DEFAULT = cvxpy.ECOS

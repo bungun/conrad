@@ -35,6 +35,7 @@ setup(
               'conrad.physics',
               'conrad.optimization',
               'conrad.optimization.objectives',
+              'conrad.optimization.solvers',
               'conrad.optimization.clustering',
               'conrad.io',
               'conrad.io.accessors',

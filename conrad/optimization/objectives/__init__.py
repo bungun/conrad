@@ -1,6 +1,6 @@
 from conrad.compat import *
 
-from conrad.optimization.objectives.treatment import OPTKIT_INSTALLED
+from conrad.optimization.solvers.environment import OPTKIT_INSTALLED
 from conrad.optimization.objectives.treatment import TreatmentObjective
 from conrad.optimization.objectives.nontarget_linear import NontargetObjectiveLinear
 from conrad.optimization.objectives.target_pwl import TargetObjectivePWL

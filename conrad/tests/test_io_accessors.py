@@ -29,7 +29,7 @@ import scipy.sparse as sp
 
 from conrad.abstract.mapping import DiscreteMapping
 from conrad.medicine import Structure
-from conrad.optimization.solver_cvxpy import SolverCVXPY
+from conrad.optimization.solvers.solver_cvxpy import SolverCVXPY
 from conrad import Gy
 from conrad.io.accessors.base_accessor import *
 from conrad.io.accessors.anatomy_accessor import *

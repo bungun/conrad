@@ -26,7 +26,7 @@ import numpy as np
 from conrad.defs import module_installed
 from conrad.medicine import Structure, D
 from conrad.physics import Gy
-from conrad.optimization.solver_cvxpy import *
+from conrad.optimization.solvers.solver_cvxpy import *
 from conrad.tests.base import *
 from conrad.tests.test_solver import SolverGenericTestCase
 

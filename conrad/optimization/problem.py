@@ -25,8 +25,8 @@ from conrad.compat import *
 import os
 
 from conrad.medicine.dose import PercentileConstraint
-from conrad.optimization.solver_cvxpy import SolverCVXPY
-from conrad.optimization.solver_optkit import SolverOptkit
+from conrad.optimization.solvers.solver_cvxpy import SolverCVXPY
+from conrad.optimization.solvers.solver_optkit import SolverOptkit
 from conrad.optimization.history import RunOutput
 
 class PlanningProblem(object):

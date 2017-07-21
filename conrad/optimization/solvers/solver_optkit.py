@@ -41,7 +41,7 @@ import numpy as np
 from conrad.defs import module_installed, CONRAD_DEBUG_PRINT
 from conrad.medicine.anatomy import Anatomy
 from conrad.optimization.preprocessing import ObjectiveMethods
-from conrad.optimization.solver_base import *
+from conrad.optimization.solvers.solver_base import *
 
 if module_installed('optkit'):
 	import optkit as ok

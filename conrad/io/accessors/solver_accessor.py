@@ -21,7 +21,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 """
 from conrad.compat import *
 
-from conrad.optimization.solver_optkit import SolverOptkit, \
+from conrad.optimization.solvers.solver_optkit import SolverOptkit, \
 											  PROJECTOR_POGS_DENSE_DIRECT
 from conrad.io.schema import SolverCacheEntry
 from conrad.io.accessors.base_accessor import ConradDBAccessor
