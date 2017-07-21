@@ -17,6 +17,10 @@ WEIGHT_LIN_NONTARGET_DEFAULT = 0.03
 OPTKIT_INSTALLED = module_installed('optkit')
 if OPTKIT_INSTALLED:
 	import optkit as ok
+	from optkit.libs.enums import OKFunctionEnums as fn_enums
+else:
+	ok = NotImplemented
+	fn_enums = NotImplemented
 
 @add_metaclass(abc.ABCMeta)
 class TreatmentObjective(object):
@@ -152,7 +156,8 @@ class TreatmentObjective(object):
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def dual_domain_constraints(self, nu_var, voxel_weights=None):
+	def dual_domain_constraints(self, nu_var, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
 		raise NotImplementedError
 
 	@abc.abstractmethod
@@ -164,7 +169,8 @@ class TreatmentObjective(object):
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def dual_domain_constraints_pogs(self, size, voxel_weights=None):
+	def dual_domain_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
 		raise NotImplementedError
 
 	@property
@@ -248,12 +254,16 @@ class NontargetObjectiveLinear(TreatmentObjective):
 		""" Return ``0``"""
 		return 0
 
-	def dual_domain_constraints(self, nu_var, voxel_weights=None):
+	def dual_domain_constraints(self, nu_var, voxel_weights=None,
+								nu_offset=None, nonnegative=False):
 		r"""
 		Return constraint :math:`\omega\nu = c`
 		"""
 		weight_vec = 1. if voxel_weights is None else voxel_weights
-		return nu_var == self.weight * weight_vec
+		offset = 0 if nu_offset is None else vec(nu_offset)
+		constraints = [nu_var >= 0] if nonnegative else []
+		constraints += [nu_var + offset == self.weight * weight_vec]
+		return constraints
 
 	def primal_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
@@ -269,9 +279,34 @@ class NontargetObjectiveLinear(TreatmentObjective):
 		else:
 			raise NotImplementedError
 
-	def dual_domain_constraints_pogs(self, size, voxel_weights=None):
+	def dual_domain_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
 		if OPTKIT_INSTALLED:
 			raise NotImplementedError
+		else:
+			raise NotImplementedError
+
+	def dual_fused_expr_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
+		"""
+		simulatenously give dual expression
+
+			:math:`f^*(\nu) = 0`
+
+		and enforce dual domain constraints:
+
+			:math:`\nu + \nu_{offset} == w`.
+
+		if additionally desire :math:`nu \ge 0`, must have
+
+			:math:`w  \ge \nu_{offset}`
+		"""
+		if OPTKIT_INSTALLED:
+			weights = 1. if voxel_weights is None else vec(voxel_weights)
+			offset = 0. if nu_offset is None else vec(nu_offset)
+			return ok.api.PogsObjective(
+					size, h='IndEq0', b=self.weight * weights - offset,
+					d=-float(self.deadzone_dose) * weights)
 		else:
 			raise NotImplementedError
 
@@ -367,20 +402,21 @@ class TargetObjectivePWL(TreatmentObjective):
 			return -float(self.target_dose) * cvxpy.sum_entries(
 					cvxpy.mul_elemwise(voxel_weights, nu_var))
 
-	def dual_domain_constraints(self, nu_var, voxel_weights=None):
+	def dual_domain_constraints(self, nu_var, voxel_weights=None,
+								nu_offset=None):
 		"""
 		Return the constraint :math:`-w_- \le \nu \le w_+`.
 		"""
 		upper_bound = self.weight_overdose
 		lower_bound = -self.weight_underdose
-		if voxel_weights is None:
-			voxel_weights = 1
-		else:
-			voxel_weights = vec(voxel_weights)
-		return [
-				nu_var <= voxel_weights * upper_bound,
-				nu_var >= voxel_weights * lower_bound
+		voxel_weights = 1 if voxel_weights is None else vec(voxel_weights)
+		offset = 0 if nu_offset is None else vec(nu_offset)
+		constraints = [nu_var >= 0] if nonnegative else []
+		constraints += [
+				nu_var + offset <= voxel_weights * upper_bound,
+				nu_var + offset >= voxel_weights * lower_bound
 		]
+		return constraints
 
 	def primal_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
@@ -400,9 +436,54 @@ class TargetObjectivePWL(TreatmentObjective):
 		else:
 			raise NotImplementedError
 
-	def dual_domain_constraints_pogs(self, size, voxel_weights=None):
+	def dual_domain_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
 		if OPTKIT_INSTALLED:
 			raise NotImplementedError
+		else:
+			raise NotImplementedError
+
+	def dual_fused_expr_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
+		"""
+		simulatenously give dual expression
+
+			f_conj(\nu) = -(dose * voxel_weights)^T * nu
+
+		and enforce dual domain constraints:
+
+			-w_- <= nu + nu_offset <= w_+.
+
+		if additionally desire nu >= 0, instead enforce
+
+			max(-(w_- + nu_offset), 0) <= nu <= max(w_+ - nu_offset, 0)
+			L <= nu <= U
+
+		rephrasing as a box constraint to the interval [0, 1], constrain
+		each element nu_i to be:
+
+			0 <= (nu_i - L) / (U - L) <= 1	; U - L > 0
+			nu_i == 0						; U - L <= 0.
+
+		"""
+		if OPTKIT_INSTALLED:
+			# f_conj = self.dual_expr_pogs(size, voxel_weights)
+			# f_fused = self.dual_domain_constraint_pogs(
+			# 		size, voxel_weights, nu_offset, nonnegative)
+			# f_fused.set(d=f_conj.d)
+			# return f_fused
+
+			weights = 1. if voxel_weights is None else vec(voxel_weights)
+			w_over = self.weight_overdose * voxel_weights
+			w_under = self.weight_underdose * voxel_weights
+			offset = 0. if nu_offset is None else vec(nu_offset)
+
+			lower_limit = np.maximum(-(w_under + offset), 0)
+			upper_limit = np.maximum(w_over - offset, 0)
+
+			expr = __box01_pogs(size, lower_limit, upper_limit)
+			expr.set(d=-float(self.deadzone_dose) * weights)
+			return expr
 		else:
 			raise NotImplementedError
 
@@ -457,15 +538,18 @@ class ObjectiveHinge(TreatmentObjective):
 			return -float(self.deadzone_dose) * cvxpy.sum_entries(
 					cvxpy.mul_elemwise(voxel_weights, nu_var))
 
-	def dual_domain_constraints(self, nu_var, voxel_weights=None):
+	def dual_domain_constraints(self, nu_var, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
 		"""
 		Return the constraint :math:`0 \le \nu \le w`.
 		"""
-		if voxel_weights is None:
-			voxel_weights = 1
-		else:
-			voxel_weights = vec(voxel_weights)
-		return [nu_var <= voxel_weights * self.weight, nu_var >= 0]
+		voxel_weights = 1 if voxel_weights is None else vec(voxel_weights)
+		offset = 0 if nu_offset is None else nu_offset
+		constraints = [nu_var >= 0] if nonnegative else []
+		constraints += [
+			nu_var + offset <= voxel_weights * self.weight,
+			nu_var + offset >= 0]
+		return constraints
 
 	def primal_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
@@ -485,9 +569,59 @@ class ObjectiveHinge(TreatmentObjective):
 		else:
 			raise NotImplementedError
 
-	def dual_domain_constraints_pogs(self, size, voxel_weights=None):
+	def dual_domain_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
 		if OPTKIT_INSTALLED:
+			# weights = 1. if voxel_weights is None else vec(voxel_weights)
+			# offset = 0. if nu_offset is None else vec(nu_offset)
+
+			# lower_limit = np.maximum(-offset, 0)
+			# upper_limit = np.maximum(weights - offset, 0)
+
+			# return __box01_pogs(size, lower_limit, upper_limit)
 			raise NotImplementedError
+		else:
+			raise NotImplementedError
+
+	def dual_fused_expr_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
+		"""
+		simulatenously give dual expression
+
+			f_conj(\nu) = -(dose * voxel_weights)^T * nu
+
+		and enforce dual domain constraints:
+
+			0 <= nu + nu_offset <= w.
+
+		if additionally desire nu >= 0, instead enforce
+
+			max(-nu_offset, 0) <= nu <= max(w - nu_offset, 0)
+			L <= nu <= U
+
+		rephrasing as a box constraint to the interval [0, 1], constrain
+		each element nu_i to be:
+
+			0 <= (nu_i - L) / (U - L) <= 1	; U - L > 0
+			nu_i == 0						; U - L <= 0.
+
+		"""
+		if OPTKIT_INSTALLED:
+			# f_conj = self.dual_expr_pogs(size, voxel_weights)
+			# f_fused = self.dual_domain_constraint_pogs(
+			# 		size, voxel_weights, nu_offset, nonnegative)
+			# f_fused.set(d=f_conj.d)
+			# return f_fused
+
+			weights = 1. if voxel_weights is None else vec(voxel_weights)
+			offset = 0. if nu_offset is None else vec(nu_offset)
+
+			lower_limit = np.maximum(-offset, 0)
+			upper_limit = np.maximum(weights - offset, 0)
+
+			expr = __box01_pogs(size, lower_limit, upper_limit)
+			expr.set(d=-float(self.deadzone_dose) * weights)
+			return expr
 		else:
 			raise NotImplementedError
 
@@ -504,3 +638,23 @@ OBJECTIVE_TO_STRING = {
 	ObjectiveHinge: 'hinge',
 }
 STRING_TO_OBJECTIVE = {v: k for k, v in OBJECTIVE_TO_STRING.items()}
+
+# Auxilliary methods:
+def __box01_pogs(size, lower_limit, upper_limit):
+	if not OPTKIT_INSTALLED:
+		raise RuntimeError('module `optkit` not installed')
+
+	expr = ok.api.PogsObjective(size, h='IndBox01')
+	U_minus_L = upper_limit - lower_limit
+		h = expr.h
+		a = expr.a
+		b = expr.b
+	for i in xrange(size):
+		if U_minus_L > 0:
+			a[i] = 1. / U_minus_L[i]
+			b[i] = lower_limit[i] / U_minus_L[i]
+		else:
+			a[i] = 1.
+			b[i] = 0.
+			h[i] = fn_enums.dict['IndEq0']
+	expr.set(h=h, a=a, b=b, c=1, d=0, e=0)

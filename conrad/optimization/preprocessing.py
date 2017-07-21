@@ -121,14 +121,41 @@ class ObjectiveMethods(object):
 		return structure.objective.dual_expr_pogs(size, weights)
 
 	@staticmethod
-	def dual_domain_constraints(structure, nu_var):
+	def dual_domain_constraints(structure, nu_var, nu_offset=None,
+								nonnegative=False):
 		ObjectiveMethods.normalize(structure)
 		weights = ObjectiveMethods.get_weights(structure)
-		return structure.objective.dual_domain_constraints(nu_var, weights)
+		return structure.objective.dual_domain_constraints(
+				nu_var, weights, nu_offset=nu_offset, nonnegative=nonnegative)
 
 	@staticmethod
-	def dual_domain_constraints_pogs(structure):
+	def dual_domain_constraints_pogs(structure, nu_offset=None,
+									 nonnegative=False):
 		ObjectiveMethods.normalize(structure)
 		weights = ObjectiveMethods.get_weights(structure)
 		size = 1 if structure.collapsable else structure.size
-		return structure.objective.dual_domain_constraints_pogs(size, weights)
+		return structure.objective.dual_domain_constraints_pogs(
+				size, weights, nu_offset=nu_offset, nonnegative=nonnegative)
+
+	@staticmethod
+	def dual_fused_expr_constraints_pogs(structure, nu_offset=None,
+										 nonnegative=False):
+		ObjectiveMethods.normalize(structure)
+		weights = ObjectiveMethods.get_weights(structure)
+		size = 1 if structure.collapsable else structure.size
+		return structure.objective.dual_fused_expr_constraints_pogs(
+				size, weights, nu_offset=nu_offset, nonnegative=nonnegative)
+
+	@staticmethod
+	def partial_beam_prices(structure, voxel_prices):
+		if structure.collapsable:
+			return structure.A_mean * float(nu)
+		else:
+			return structure.A.T.dot(nu)
+
+	@staticmethod
+	def beam_prices(structures, voxel_prices_by_label):
+		pbp = lambda s: ObjectiveMethods.partial_beam_prices(
+				s, voxel_prices_by_label[s.label])
+		return np.add.reduce(listmap(pbp, structures))
+
