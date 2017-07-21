@@ -500,16 +500,6 @@ class Structure(object):
 		s._Structure__objective = self.__objective
 		s.constraints = self.constraints
 
-	def primal_objective_eval(self, voxel_doses=None, beam_intensities=None):
-		if voxel_doses is not None:
-			self.assign_y(voxel_doses)
-		elif beam_intensities is not None:
-			self.calc_y(beam_intensities)
-		return self.objective.eval(self.y, self.voxel_weights)
-
-	def dual_objective_eval(self, voxel_prices):
-		return self.objective.dual_eval(voxel_prices, self.voxel_weights)
-
 	def assign_dose(self, voxel_doses):
 		""" Alias for :meth:`Structure.assign_y`. """
 		self.assign_y(beam_intensities)
