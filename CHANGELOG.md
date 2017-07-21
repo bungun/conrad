@@ -20,11 +20,13 @@
 - warn user and stop plan execution if infeasible status returned
 
 ## Version 0.0.3 (alpha)
+- V() syntax for DVH constraints
+
 TODO: allow plotting of 1st pass when 2-pass is enabled
 TODO: __str__ method for RunRecord (why?)
 TODO: RunRecord compatibility for CaseIO.save_solution()
 TODO: DictionaryMapping class for structure-wise clustering 
-TODO: V() constraints
+TODO: cluster-and-bound solution heuristics for unconstrained problems
 
 ## Version 0.0.2 
 - IO module for saving/loading cases from config files (database compatible)

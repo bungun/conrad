@@ -23,7 +23,7 @@ from conrad.compat import *
 
 import abc
 
-from conrad.optimization.clustering_base import ClusteredProblem
+from conrad.optimization.clustering.clustering_base import ClusteredProblem
 
 @add_metaclass(abc.ABCMeta)
 class VoxelClusteredProblem(ClusteredProblem):
