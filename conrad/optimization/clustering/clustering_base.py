@@ -23,7 +23,7 @@ import abc
 from conrad.optimization.preprocessing import ObjectiveMethods
 
 @add_metaclass(abc.ABCMeta)
-class ClusteredProblem(ClusteredProblem):
+class ClusteredProblem(object):
 	def __init__(self, case, reference_frame_name, clustered_frame_name):
 		self.__case = case
 		self.__reference_frame = reference_frame_name
