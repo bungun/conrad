@@ -173,6 +173,12 @@ class TreatmentObjective(object):
 									 nu_offset=None, nonnegative=False):
 		raise NotImplementedError
 
+
+	@abc.abstractmethod
+	def dual_fused_expr_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
+		raise NotImplementedError
+
 	@property
 	def parameters(self):
 		p = {}
@@ -403,7 +409,7 @@ class TargetObjectivePWL(TreatmentObjective):
 					cvxpy.mul_elemwise(voxel_weights, nu_var))
 
 	def dual_domain_constraints(self, nu_var, voxel_weights=None,
-								nu_offset=None):
+								nu_offset=None, nonnegative=False):
 		"""
 		Return the constraint :math:`-w_- \le \nu \le w_+`.
 		"""
@@ -645,10 +651,12 @@ def __box01_pogs(size, lower_limit, upper_limit):
 		raise RuntimeError('module `optkit` not installed')
 
 	expr = ok.api.PogsObjective(size, h='IndBox01')
+	h = expr.h
+	a = expr.a
+	b = expr.b
+
 	U_minus_L = upper_limit - lower_limit
-		h = expr.h
-		a = expr.a
-		b = expr.b
+
 	for i in xrange(size):
 		if U_minus_L > 0:
 			a[i] = 1. / U_minus_L[i]

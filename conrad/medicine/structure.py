@@ -502,7 +502,7 @@ class Structure(object):
 
 	def assign_dose(self, voxel_doses):
 		""" Alias for :meth:`Structure.assign_y`. """
-		self.assign_y(beam_intensities)
+		self.assign_y(voxel_doses)
 
 	def calculate_dose(self, beam_intensities):
 		""" Alias for :meth:`Structure.calc_y`. """

@@ -225,7 +225,6 @@ class PlanningProblem(object):
 			for cid in s.constraints:
 				run_output.optimal_slacks[cid] = self.solver.get_slack_value(
 						cid)
-		print run_output.optimal_slacks.values()
 
 	def __set_solver_fastest_available(self, structures):
 		"""

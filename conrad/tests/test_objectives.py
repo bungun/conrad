@@ -51,6 +51,8 @@ class TreatmentObjectiveTestImplementation(TreatmentObjective):
 		raise NotImplementedError
 	def dual_domain_constraints_pogs(self, size, voxel_weights=None):
 		raise NotImplementedError
+	def dual_fused_expr_constraints_pogs(self, size, voxel_weights=None):
+		raise NotImplementedError
 
 class ObjectivesTestCase(ConradTestCase):
 	def test_treatment_objective(self):
@@ -172,7 +174,7 @@ class ObjectivesTestCase(ConradTestCase):
 		# dual domain constraints
 		constr = obj.dual_domain_constraints(cvxpy.Variable(3))
 		self.assertIsInstance(
-				constr, cvxpy.constraints.eq_constraint.EqConstraint )
+				constr[0], cvxpy.constraints.eq_constraint.EqConstraint )
 
 	def test_target_objective_pwl(self):
 		obj = TargetObjectivePWL()
