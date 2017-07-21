@@ -30,6 +30,8 @@ from conrad.medicine.structure import Structure
 class ObjectiveMethods(object):
 	@staticmethod
 	def normalize(structure):
+		print("STRUCTURE SIZE:", structure.size)
+		print("WEIGHTED SIZE:", structure.weighted_size)
 		# scale by global scaling factor / structure cardinality
 		if structure.collapsable:
 			# |S| * G / |S| = G

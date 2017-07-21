@@ -1,5 +1,6 @@
 from conrad.compat import *
 
+from conrad.optimization.objectives.treatment import OPTKIT_INSTALLED
 from conrad.optimization.objectives.treatment import TreatmentObjective
 from conrad.optimization.objectives.nontarget_linear import NontargetObjectiveLinear
 from conrad.optimization.objectives.target_pwl import TargetObjectivePWL
@@ -18,7 +19,6 @@ OBJECTIVES = [
 ]
 
 STRING_TO_OBJECTIVE = {o().objective_type: o for o in OBJECTIVES}
-
 
 def dictionary_to_objective(**options):
 	if 'type' in options:

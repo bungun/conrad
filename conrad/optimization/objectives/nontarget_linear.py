@@ -59,12 +59,16 @@ class NontargetObjectiveLinear(TreatmentObjective):
 		""" Return ``0``"""
 		return 0
 
-	def dual_domain_constraints(self, nu_var, voxel_weights=None):
+	def dual_domain_constraints(self, nu_var, voxel_weights=None,
+								nu_offset=None, nonnegative=False):
 		r"""
 		Return constraint :math:`\omega\nu = c`
 		"""
-		weight_vec = 1. if voxel_weights is None else voxel_weights
-		return nu_var == self.weight * weight_vec
+		weight_vec = 1. if voxel_weights is None else vec(voxel_weights)
+		offset = 0. if nu_offset is None else vec(nu_offset)
+		constraints = [nu_var >= 0] if nonnegative else []
+		constraints += [nu_var + offset == self.weight * weight_vec]
+		return constraints
 
 	def primal_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
@@ -80,8 +84,34 @@ class NontargetObjectiveLinear(TreatmentObjective):
 		else:
 			raise NotImplementedError
 
-	def dual_domain_constraints_pogs(self, size, voxel_weights=None):
+	def dual_domain_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
 		if OPTKIT_INSTALLED:
 			raise NotImplementedError
 		else:
 			raise NotImplementedError
+
+	def dual_fused_expr_constraints_pogs(self, structure, voxel_weights=None,
+										 nu_offset=None, nonnegative=False):
+		"""
+		simulatenously give dual expression
+
+		        :math:`f^*(\nu) = 0`
+
+		and enforce dual domain constraints:
+
+		        :math:`\nu + \nu_{offset} == w`.
+
+		if additionally desire :math:`nu \ge 0`, must have
+
+		        :math:`w  \ge \nu_{offset}`
+		"""
+		if OPTKIT_INSTALLED:
+			weights = 1. if voxel_weights is None else vec(voxel_weights)
+			offset = 0. if nu_offset is None else vec(nu_offset)
+			return ok.api.PogsObjective(
+					size, h='IndEq0', b=self.weight * weights - offset,
+					d=-float(self.deadzone_dose) * weights
+			)
+		else:
+		        raise NotImplementedError

@@ -13,11 +13,39 @@ from conrad.optimization.objectives.default_weights import *
 OPTKIT_INSTALLED = module_installed('optkit')
 if OPTKIT_INSTALLED:
 	import optkit as ok
+	from optkit.libs.enums import OKFunctionEnums as fn_enums
+
+	def __box01_pogs(size, lower_limit, upper_limit):
+		if not OPTKIT_INSTALLED:
+			raise RuntimeError('module `optkit` not installed')
+
+		expr = ok.api.PogsObjective(size, h='IndBox01')
+		h = expr.h
+		a = expr.a
+		b = expr.b
+
+		U_minus_L = upper_limit - lower_limit
+
+		for i in xrange(size):
+			if U_minus_L > 0:
+				a[i] = 1. / U_minus_L[i]
+				b[i] = lower_limit[i] / U_minus_L[i]
+			else:
+				a[i] = 1.
+				b[i] = 0.
+				h[i] = fn_enums.dict['IndEq0']
+		expr.set(h=h, a=a, b=b, c=1, d=0, e=0)
+
+else:
+	ok = NotImplemented
+	fn_enums = NotImplemented
+	__box01_pogs = NotImplemented
 
 @add_metaclass(abc.ABCMeta)
 class TreatmentObjective(object):
 	def __init__(self, **dose_and_weight_params):
 		self.normalization = 1.
+		self.global_scaling = 1.
 		self.__weights = {}
 		self.__doses = {}
 		self.__aliases = {}
@@ -150,7 +178,8 @@ class TreatmentObjective(object):
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def dual_domain_constraints(self, nu_var, voxel_weights=None):
+	def dual_domain_constraints(self, nu_var, voxel_weights=None,
+								nu_offset=None, nonnegative=False):
 		raise NotImplementedError
 
 	@abc.abstractmethod
@@ -162,7 +191,13 @@ class TreatmentObjective(object):
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def dual_domain_constraints_pogs(self, size, voxel_weights=None):
+	def dual_domain_constraints_pogs(self, size, voxel_weights=None,
+									 nu_offset=None, nonnegative=False):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def dual_fused_expr_constraints_pogs(self, structure, voxel_weights=None,
+										 nu_offset=None, nonnegative=False):
 		raise NotImplementedError
 
 	@property
