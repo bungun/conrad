@@ -131,16 +131,16 @@ class FrameMappingAccessor(ConradDBAccessor):
 		subdir = self.FS.join_mkdir(directory, 'frame_mappings', map_name)
 
 		fm = frame_mapping
-		vmap = fm.voxel_map.vec if fm.voxel_map is not None else None
-		bmap = fm.voxel_map.vec if fm.beam_map is not None else None
+		vmap = fm.voxel_map.manifest if fm.voxel_map is not None else None
+		bmap = fm.voxel_map.manifest if fm.beam_map is not None else None
 
 		return self.DB.set_next(DoseFrameMappingEntry(
 				source_frame=frame_mapping.source,
 				target_frame=frame_mapping.target,
-				voxel_map=self.FS.write_data(
+				voxel_map=self.record_entry(
 						subdir, 'voxel_map', vmap, overwrite=overwrite),
 				voxel_map_type=frame_mapping.voxel_map_type,
-				beam_map=self.FS.write_data(
+				beam_map=self.record_entry(
 						subdir, 'beam_map', bmap, overwrite=overwrite),
 				beam_map_type=frame_mapping.beam_map_type
 		))
