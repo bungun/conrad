@@ -22,13 +22,52 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 from conrad.compat import *
 
 import numpy as np
+import abc
 
 from conrad.defs import vec, is_vector, sparse_or_dense
+from conrad.abstract.vector import SliceCachingVector
+from conrad.abstract.matrix import SliceCachingMatrix
 
 # TODO: Change module to maps?
 # TODO: Change this to DiscreteMap?
+# TODO: left and right application to matrices
+# TODO: HierarchicalMapping type or recursive capabilities for
+# 	DictionaryMapping
+@add_metaclass(abc.ABCMeta)
+class AbstractDiscreteMapping(object):
+	@abc.abstractproperty
+	def vec(self):
+		raise NotImplementedError
 
-class DiscreteMapping(object):
+	@abc.abstractproperty
+	def manifest(self):
+		raise NotImplementedError
+
+	@abc.abstractproperty
+	def n_frame0(self):
+		raise NotImplementedError
+
+	@abc.abstractproperty
+	def n_frame1(self):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def frame0_to_1_inplace(self, in_, out_, clear_output=False, **options):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def frame0_to_1(self, in_, **options):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def frame1_to_0_inplace(self, in_, out_, clear_output=False, **options):
+		raise NotImplementedError
+
+	@abc.abstractmethod
+	def frame1_to_0(self, in_, **options):
+		raise NotImplementedError
+
+class DiscreteMapping(AbstractDiscreteMapping):
 	r"""
 	Generic description of relations between two discrete, finite sets.
 
@@ -72,6 +111,10 @@ class DiscreteMapping(object):
 		""" Vector representation of forward mapping. """
 		return self.__forwardmap
 
+	@property
+	def manifest(self):
+		return {'data': self.vec, 'type': map_type_to_string(type(self))}
+
 	def __getitem__(self, index):
 		return self.vec[index]
 
@@ -85,7 +128,7 @@ class DiscreteMapping(object):
 		""" Number of elements in second frame/discrete set. """
 		return self.__n_frame1
 
-	def frame0_to_1_inplace(self, in_, out_, clear_output=False):
+	def frame0_to_1_inplace(self, in_, out_, clear_output=False, **options):
 		"""
 		Map elements of array ``in_`` to elements of array ``out_``.
 
@@ -137,7 +180,7 @@ class DiscreteMapping(object):
 				dim_in2 != dim_out2):
 			raise ValueError('arguments "in_" and "out_" be vectors or '
 							 'matrices of dimensions M x N, and K x N, '
-							 'respectively, with:\nM = {}\nK={}\n'
+							 'respectively, with:\nM = {}\nK = {}\n'
 							 'Provided:\n input: {}x{}\noutput: {}x{}'
 							 ''.format(self.n_frame0, self.n_frame1,
 							 dim_in1, dim_in2, dim_out1, dim_out2))
@@ -154,7 +197,7 @@ class DiscreteMapping(object):
 
 		return out_
 
-	def frame0_to_1(self, in_):
+	def frame0_to_1(self, in_, **options):
 		"""
 		Map elements of array ``in_`` to a new array.
 
@@ -183,7 +226,7 @@ class DiscreteMapping(object):
 		return self.frame0_to_1_inplace(in_, out_)
 
 
-	def frame1_to_0_inplace(self, in_, out_, clear_output=False):
+	def frame1_to_0_inplace(self, in_, out_, clear_output=False, **options):
 		"""
 		Allocating version of :meth`DiscreteMapping.frame0_to_1`.
 
@@ -236,7 +279,7 @@ class DiscreteMapping(object):
 				dim_in2 != dim_out2):
 			raise ValueError('arguments "in_" and "out_" be vectors or '
 							 'matrices of dimensions K x N, and M x N, '
-							 'respectively, with:\nK = {}\nM={}\n'
+							 'respectively, with:\nK = {}\nM = {}\n'
 							 'Provided:\n input: {}x{}\noutput: {}x{}'
 							 ''.format(self.n_frame1, self.n_frame0,
 							 dim_in1, dim_in2, dim_out1, dim_out2))
@@ -253,7 +296,7 @@ class DiscreteMapping(object):
 
 		return out_
 
-	def frame1_to_0(self, in_):
+	def frame1_to_0(self, in_, **options):
 		"""
 		Allocating version of :meth`DiscreteMapping.frame1_to_0`.
 
@@ -381,7 +424,7 @@ class ClusterMapping(DiscreteMapping):
 					data[idx_cluster, :] *= 1. / w
 
 	def downsample_inplace(self, in_, out_, rescale_output=True,
-						 clear_output=False):
+						   clear_output=False):
 		"""
 		Downsample entries of ``in_``, add to entries of ``out_``.
 
@@ -555,6 +598,294 @@ class PermutationMapping(DiscreteMapping):
 							 'output spaces; some output indices were '
 							 'skipped'.format(PermutationMapping))
 
+class IdentityMapping(AbstractDiscreteMapping):
+	def __init__(self, n):
+		self.__n = max(1, int(n))
+
+	@property
+	def vec(self):
+		return np.array(xrange(self.n_frame0))
+
+	def manifest(self):
+		return {'data': self.__n, 'type': map_type_to_string(type(self))}
+
+	@property
+	def n_frame0(self):
+		return self.__n
+
+	@property
+	def n_frame1(self):
+		return self.__n
+
+	def frame0_to_1_inplace(self, in_, out_, clear_output=False, **options):
+		if clear_output:
+			out_ *= 0
+		out_ += in_
+		return out_
+
+	def frame0_to_1(self, in_, **options):
+		out_ = np.zeros_like(in_)
+		return self.frame0_to_1_inplace(in_, out_, True)
+
+	def frame1_to_0_inplace(self, in_, out_, clear_output=False, **options):
+		return self.frame0_to_1_inplace(in_, out_, clear_output)
+
+	def frame1_to_0(self, in_, **options):
+		return self.frame0_to_1(in_)
+
+class DictionaryMapping(AbstractDiscreteMapping):
+	def __init__(self, mapping_dictionary, key_order=None):
+		self.__maps = {}
+		self.__key_order = None
+		self.__vec = None
+		self.__concatenated_map = None
+		self.__n_frame0 = None
+		self.__n_frame1 = None
+
+		if isinstance(mapping_dictionary, DictionaryMapping):
+			self.__maps.update(mapping_dictionary._DictionaryMapping__maps)
+		else:
+			for key in mapping_dictionary:
+				mapping = mapping_dictionary[key]
+				if isinstance(mapping, AbstractDiscreteMapping):
+					self.__maps[key] = mapping
+				elif isinstance(mapping, dict):
+					self.__maps[key] = string_to_map_constructor(
+							mapping['type'])(mapping['data'])
+
+
+		self.__n_frame0 = sum([m.n_frame0 for m in self.mappings])
+		self.__n_frame1 = sum([m.n_frame1 for m in self.mappings])
+		self.__vec = np.zeros(self.__n_frame0, dtype=int)
+ 		self.key_order = self.keys if key_order is None else key_order
+
+ 	def __contains__(self, key):
+ 		return key in self.__maps
+
+ 	def __getitem__(self, key):
+ 		return self.__maps[key]
+
+ 	@property
+ 	def key_order(self):
+ 		if self.__key_order is None:
+ 			return np.array(self.keys)
+ 		else:
+	 		return self.__key_order
+
+ 	@key_order.setter
+ 	def key_order(self, key_order):
+ 		ko = np.array(key_order).astype(int)
+ 		if not sum(np.sort(ko) - np.sort(self.keys)) == 0:
+ 			raise ValueError(
+ 					'argument `key_order` must be a permutation of the '
+ 					'keys in this `{}`'.format(DictionaryMapping))
+ 		self.__key_order = ko
+ 		self.__rebuild_vec()
+
+ 	@property
+ 	def keys(self):
+ 		return self.__maps.keys()
+
+	@property
+	def mappings(self):
+		return self.__maps.values()
+
+	@property
+	def vec(self):
+		return self.__vec
+
+	def manifest(self):
+		return {
+				'data': {l: m.manifest for l, m in self.__maps.items()},
+				'type': map_type_to_string(type(self))
+		}
+		return self.__maps
+
+	@property
+	def n_frame0(self):
+		return self.__n_frame0
+
+	@property
+	def n_frame1(self):
+		return self.__n_frame1
+
+	def __get_working_form(self, io_object, name):#, apply_from_left=True):
+		if isinstance(io_object, dict):
+			return io_object
+		if isinstance(io_object, SliceCachingVector):
+			return io_object._SliceCachingVector__slices
+		elif isinstance(io_object, SliceCachingVector):
+			return io_object._SliceCachingMatrix__row_slices
+			# if apply_from_left:
+			# 	return io_object._SliceCachingMatrix__row_slices
+			# else:
+			# 	return io_object._SliceCachingMatrix__column_slices
+		else:
+			raise TypeError('argument `{}` must be of types {}'.format(
+					name,
+					(dict, SliceCachingVector, SliceCachingMatrix)))
+
+	def frame0_to_1_inplace(self, in_, out_, clear_output=False, **options):
+		rescale_output = options.pop('rescale_output', False)
+		d_in = self.__get_working_form(in_, 'in_')
+		d_out = self.__get_working_form(out_, 'out_')
+		for key in d_in:
+			m = self[key]
+			if isinstance(m, ClusterMapping):
+				m.downsample_inplace(
+						d_in[key], d_out[key], clear_output=clear_output,
+						rescale_output=rescale_output)
+			else:
+				m.frame0_to_1_inplace(
+						d_in[key], d_out[key], clear_output=clear_output)
+
+	def frame0_to_1(self, in_, **options):
+		rescale_output = options.pop('rescale_output', False)
+		d_in = self.__get_working_form(in_, 'in_')
+		out_ = {}
+		for key in d_in:
+			m = self[key]
+			if isinstance(m, ClusterMapping):
+				out_[key] = m.downsample(
+						d_in[key], rescale_output=rescale_output)
+			else:
+				out_[key] = m.frame0_to_1(d_in[key])
+		return type(in_)(out_)
+
+	def frame1_to_0_inplace(self, in_, out_, clear_output=False, **options):
+		rescale_output = options.pop('rescale_output', False)
+		d_in = self.__get_working_form(in_, 'in_')
+		d_out = self.__get_working_form(out_, 'out_')
+		for key in d_in:
+			m = self[key]
+			if isinstance(m, ClusterMapping):
+				m.upsample_inplace(
+						d_in[key], d_out[key], clear_output=clear_output,
+						rescale_output=rescale_output)
+			else:
+				m.frame1_to_0_inplace(
+						d_in[key], d_out[key], clear_output=clear_output)
+
+
+	def frame1_to_0(self, in_, **options):
+		rescale_output = options.pop('rescale_output', False)
+		d_in = self.__get_working_form(in_, 'in_')
+		out_ = {}
+		for key in d_in:
+			m = self[key]
+			if isinstance(m, ClusterMapping):
+				out_[key] = m.upsample(
+						d_in[key], rescale_output=rescale_output)
+			else:
+				out_[key] = m.frame1_to_0(d_in[key])
+		return type(in_)(out_)
+
+	def __rebuild_vec(self):
+		ko = self.key_order
+		self.__vec *= 0
+		ptr0 = 0
+		ptr1 = 0
+		for k in ko:
+			self.vec[ptr0 : ptr0 + self[k].n_frame0] = self[k].vec + ptr1
+			ptr0 += self[k].n_frame0
+			ptr1 += self[k].n_frame1
+		map_types = listmap(type, self.mappings)
+		#
+		if map_types.count(map_types[0]) == len(map_types):
+			self.__concatenated_map = map_types[0](self.vec)
+		else:
+			self.__concatenated_map = DiscreteMapping(self.vec)
+
+	@property
+	def concatenated_map(self):
+		return self.__concatenated_map
+
+class DictionaryClusterMapping(DictionaryMapping):
+	def __init__(self, mapping_dictionary):
+		input_ = {}
+		valid = True
+		valid_types = (
+				IdentityMapping, PermutationMapping, ClusterMapping)
+
+		if isinstance(mapping_dictionary, DictionaryClusterMapping):
+			input_.update(mapping_dictionary._DictionaryMapping__maps)
+		else:
+			# validate inputs as identity, permutation, or cluster mappings
+			for key in mapping_dictionary:
+				mapping = mapping_dictionary[key]
+				if isinstance(mapping, valid_types):
+					input_[key] = mapping
+				elif isinstance(mapping, AbstractDiscreteMapping):
+					valid = False
+					break
+				elif isinstance(mapping, dict):
+					constructor = string_to_map_constructor(mapping['type'])
+					if not constructor in valid_types:
+						valid = False
+						break
+					input_[key] = constructor(mapping['data'])
+			if not valid:
+				raise TypeError(
+						'input dictionary can only contain objects of '
+						'types {} or dictionary manifests of those '
+						'same object types'.format(valid_types))
+		DictionaryMapping.__init__(self, input_)
+
+
+	@property
+	def n_clusters(self):
+		""" Number of clusters in target set. """
+		return self.n_frame1
+
+	@property
+	def n_points(self):
+		""" Number of elements in source set. """
+		return self.n_frame0
+
+	@property
+	def cluster_weights(self):
+		""" Number of elements mapped to each cluster. """
+		wts = {}
+		for key in self:
+			m = self[key]
+			if isinstance(m, ClusterMapping):
+				wts[key] = self[key].cluster_weights
+
+		return wts
+
+	def downsample_inplace(self, in_, out_, rescale_output=False,
+						   clear_output=False):
+		return self.frame0_to_1_inplace(
+				in_, out_, rescale_output=rescale_output,
+				clear_output=clear_output)
+
+	def downsample(self, in_, rescale_output=False):
+		return self.frame0_to_1(in_, rescale_output=rescale_output)
+
+	def upsample_inplace(self, in_, out_, rescale_output=False,
+						 clear_output=False):
+		return self.frame1_to_0_inplace(
+				in_, out_, rescale_output=rescale_output,
+				clear_output=clear_output)
+
+	def upsample(self, in_, rescale_output=False):
+		return self.frame1_to_0(in_, rescale_output=rescale_output)
+
+	@property
+	def contiguous(self):
+		contiguous = {}
+		for k in self:
+			m = self[k]
+			if isinstance(m, ClusterMapping):
+				contiguous[k] = m.contiguous
+			else:
+				contiguous[k] = m
+		return DictionaryClusterMapping(contiguous)
+
+	@property
+	def concatenated_cluster_map(self):
+		return ClusterMapping(self.vec)
+
 def map_type_to_string(mapping):
 	if isinstance(mapping, PermutationMapping):
 		return 'permutation'
@@ -562,6 +893,12 @@ def map_type_to_string(mapping):
 		return 'cluster'
 	elif isinstance(mapping, DiscreteMapping):
 		return 'discrete'
+	elif isinstance(mapping, IdentityMapping):
+		return 'identity'
+	elif isinstance(mapping, DictionaryMapping):
+		return 'dictionary'
+	elif isinstance(mapping, DictionaryClusterMapping):
+		return 'cluster dictionary'
 	else:
 		raise TypeError('not a valid mapping')
 
@@ -572,17 +909,14 @@ def string_to_map_constructor(string):
 			return PermutationMapping
 		elif string in ('cluster', 'clustering', 'Cluster', 'Clustering'):
 			return ClusterMapping
+		elif string in ('identity', 'Identity'):
+			return IdentityMapping
+		elif string in ('dictionary', 'Dictionary'):
+			return DictionaryMapping
+		elif string in (
+					'dictionary cluster', 'Dictionary Cluster',
+					'dictionary clustering', 'Dictionary Clustering',
+					'cluster dictionary', 'Cluster Dictionary',
+					'clustering dictionary', 'Clustering Dictionary'):
+			return DictionaryClusterMapping
 	return DiscreteMapping
-
-# class HierarchicalMapping
-# class DictionaryMapping
-#	- dictionary of labels->discrete mappings
-#	- should probably also have a dictionary of labels->indices in source space
-# 	- i guess something similar could be achieved by chaining selection mapping
-# 	and another arbitrary mapping
-# class SelectionMapping
-
-
-
-
-

@@ -293,6 +293,119 @@ class PermutationMappingTestCase(ConradTestCase):
 		with self.assertRaises(ValueError):
 			PermutationMapping([1, 1, 2, 3, 4, 5])
 
+class IdentityMappingTestCase(ConradTestCase):
+	def test_identiy_mapping_init(self):
+		im = IdentityMapping(10)
+		self.assertEqual( im.n_frame0, 10 )
+		self.assertEqual( im.n_frame1, 10 )
+		self.assert_vector_equal( im.vec, xrange(10) )
+		x = np.random.rand(10)
+		y = np.zeros(10)
+		for f in (im.frame0_to_1, im.frame1_to_0):
+			self.assert_vector_equal( x, f(x) )
+		for f in (im.frame0_to_1_inplace, im.frame1_to_0_inplace):
+			self.assert_vector_equal( x, f(x, y, clear_output=True) )
+
+class DictionaryMappingTestCase(ConradTestCase):
+	def test_dictionary_mapping_init(self):
+		m0 = IdentityMapping(5)
+		m1 = DiscreteMapping([0, 4])
+		m2 = ClusterMapping([0, 0, 1, 2, 3, 3, 4])
+		m3 = PermutationMapping([0, 3, 2, 1, 4])
+		dm = DictionaryMapping({0: m0, 1: m1, 2: m2, 3: m3})
+
+		maps = [m0, m1, m2, m3]
+		sizes = [m.n_frame0 for m in maps]
+		out_sizes = [m.n_frame1 for m in maps]
+		N_maps = len(maps)
+
+		# key order
+		self.assert_vector_equal( dm.key_order, [0, 1, 2, 3] )
+
+		# contains
+		for i in xrange(4):
+			self.assertIn( i, dm )
+
+		# getitem
+		for i in xrange(4):
+			self.assertIs( dm[i], maps[i] )
+
+		vec = [0, 1, 2, 3, 4, 5, 9, 10, 10, 11, 12, 13, 13, 14, 15, 18, 17, 16, 19]
+		self.assertEqual( dm.n_frame0, sum(sizes) )
+		self.assertEqual( dm.n_frame1, sum(out_sizes) )
+		self.assertIsInstance( dm.concatenated_map, DiscreteMapping )
+		self.assert_vector_equal( dm.concatenated_map.vec, vec )
+
+		x0 = {i: np.random.rand(sizes[i]) for i in xrange(N_maps)}
+		y1_expect = {i: maps[i].frame0_to_1(x0[i]) for i in xrange(N_maps)}
+		y1 = dm.frame0_to_1(x0)
+		for key in x0:
+			self.assert_vector_equal( y1_expect[key], y1[key] )
+
+		y1_expect[2] = m2.downsample(x0[2], rescale_output=True)
+		dm.frame0_to_1_inplace(x0, y1, rescale_output=True, clear_output=True)
+		for key in x0:
+			self.assert_vector_equal( y1_expect[key], y1[key] )
+
+		x1 = {i: np.random.rand(5) for i in xrange(N_maps)}
+		y0_expect = {i: maps[i].frame1_to_0(x1[i]) for i in xrange(N_maps)}
+		y0 = dm.frame1_to_0(x1)
+		for key in x1:
+			self.assert_vector_equal( y0_expect[key], y0[key] )
+
+		y0_expect[2] = m2.upsample(x1[2], rescale_output=True)
+		dm.frame1_to_0_inplace(x1, y0, rescale_output=True, clear_output=True)
+		for key in x1:
+			self.assert_vector_equal( y0_expect[key], y0[key] )
+
+class DictionaryClusterMappingTestCase(ConradTestCase):
+	def test_dictionary_cluster_mapping_init(self):
+		m0 = IdentityMapping(5)
+		m1 = DiscreteMapping([0, 1, 4])
+		m2 = ClusterMapping([0, 0, 1, 2, 3, 3, 4])
+		m3 = PermutationMapping([0, 3, 2, 1, 4])
+		with self.assertRaises(TypeError):
+			dm = DictionaryClusterMapping({0: m0, 1: m1, 2: m2, 3: m3})
+		dm = DictionaryClusterMapping({0: m0, 2: m2, 3: m3})
+
+		maps = [m0, m2, m3]
+		keys = [0, 2, 3]
+		sizes = [m.n_frame0 for m in maps]
+		out_sizes = [m.n_frame1 for m in maps]
+		N_maps = len(maps)
+
+		vec = [0, 1, 2, 3, 4, 5, 5, 6, 7, 8, 8, 9, 10, 13, 12, 11, 14]
+		self.assertEqual( dm.n_frame0, 17 )
+		self.assertEqual( dm.n_frame1, 15 )
+		self.assertIsInstance( dm.concatenated_cluster_map, ClusterMapping )
+		self.assert_vector_equal( dm.concatenated_map.vec, vec )
+
+		x0 = {keys[i]: np.random.rand(sizes[i]) for i in xrange(N_maps)}
+		y1_expect = {
+				keys[i]: maps[i].frame0_to_1(x0[keys[i]])
+				for i in xrange(N_maps)}
+		y1 = dm.downsample(x0)
+		for key in x0:
+			self.assert_vector_equal( y1_expect[key], y1[key] )
+
+		y1_expect[2] = m2.downsample(x0[2], rescale_output=True)
+		dm.downsample_inplace(x0, y1, rescale_output=True, clear_output=True)
+		for key in x0:
+			self.assert_vector_equal( y1_expect[key], y1[key] )
+
+		x1 = {keys[i]: np.random.rand(5) for i in xrange(N_maps)}
+		y0_expect = {
+				keys[i]: maps[i].frame1_to_0(x1[keys[i]])
+				for i in xrange(N_maps)}
+		y0 = dm.upsample(x1)
+		for key in x1:
+			self.assert_vector_equal( y0_expect[key], y0[key] )
+
+		y0_expect[2] = m2.upsample(x1[2], rescale_output=True)
+		dm.upsample_inplace(x1, y0, rescale_output=True, clear_output=True)
+		for key in x1:
+			self.assert_vector_equal( y0_expect[key], y0[key] )
+
 class MappingMethodsTestCase(ConradTestCase):
 	def test_map_type_to_string(self):
 		self.assertEqual(
@@ -301,8 +414,14 @@ class MappingMethodsTestCase(ConradTestCase):
 		self.assertEqual(
 				map_type_to_string(ClusterMapping(range(10))),
 				'cluster' )
-		self.assertEqual( map_type_to_string(
-				DiscreteMapping(range(10))), 'discrete' )
+		self.assertEqual(
+				map_type_to_string(DiscreteMapping(range(10))), 'discrete' )
+		self.assertEqual(
+				map_type_to_string(IdentityMapping(10)), 'identity' )
+		dmap = DictionaryMapping({0: DiscreteMapping(range(10))})
+		self.assertEqual( map_type_to_string(dmap), 'dictionary' )
+		dcmap = DictionaryClusterMapping({0: ClusterMapping(range(10))})
+		self.assertEqual( map_type_to_string(dcmap), 'dictionary' )
 		with self.assertRaises(TypeError):
 			map_type_to_string(range(10))
 
@@ -311,5 +430,12 @@ class MappingMethodsTestCase(ConradTestCase):
 				string_to_map_constructor('permutation'), PermutationMapping )
 		self.assertEqual(
 				string_to_map_constructor('cluster'), ClusterMapping )
+		self.assertEqual(
+				string_to_map_constructor('identity'), IdentityMapping )
+		self.assertEqual(
+				string_to_map_constructor('dictionary'), DictionaryMapping )
+		self.assertEqual(
+				string_to_map_constructor('cluster dictionary'),
+				DictionaryClusterMapping )
 		self.assertEqual(
 				string_to_map_constructor(''), DiscreteMapping )
