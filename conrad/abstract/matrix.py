@@ -111,7 +111,8 @@ def csx_slice_uncompressed(matrix, indices):
 	return type(matrix)((val_sub, ind_sub, ptr_sub), shape=(m, n))
 
 class SliceCachingMatrix(object):
-	def __init__(self, data):
+	def __init__(self, data, transpose=False,
+				 suppress_contiguous_transpose=False):
 		self.__dim1 = None
 		self.__dim2 = None
 		self.__data = None
@@ -119,7 +120,54 @@ class SliceCachingMatrix(object):
 		self.__column_slices = {}
 		self.__double_slices = {}
 
-		self.data = data
+		if isinstance(data, SliceCachingMatrix):
+			if transpose:
+				self.__dim1 = data._SliceCachingMatrix__dim2
+				self.__dim2 = data._SliceCachingMatrix__dim1
+				data_ = data._SliceCachingMatrix__data
+				if data_ and not suppress_contiguous_transpose:
+					self.__data = data_.T
+				else:
+					self.__data = None
+				rs = data._SliceCachingMatrix__row_slices
+				cs = data._SliceCachingMatrix__column_slices
+				ds = data._SliceCachingMatrix__double_slices
+				self.__row_slices = {key: cs[key].T for key in cs}
+				self.__column_slices = {key: rs[key].T for key in rs}
+				self.__double_slices = {(key[1], key[0]): ds[key] for key in ds}
+			else:
+				self.__dim1 = data._SliceCachingMatrix__dim1
+				self.__dim2 = data._SliceCachingMatrix__dim2
+				self.__data = data._SliceCachingMatrix__data
+				self.__row_slices = data._SliceCachingMatrix__row_slices
+				self.__column_slices = data._SliceCachingMatrix__column_slices
+				self.__double_slices = data._SliceCachingMatrix__double_slices
+		else:
+			self.data = data
+
+	def transpose(self, suppress_contiguous_transpose=False):
+		return SliceCachingMatrix(self, True, suppress_contiguous_transpose)
+
+	@property
+	def T(self):
+		return self.transpose(True)
+
+	@property
+	def __manifest(self):
+		manifest = {}
+		if self.data is not None:
+			manifest['contiguous'] = self.data
+		if len(self.__row_slices) > 0:
+			manifest['labeled_by'] = 'rows'
+			manifest.update(self.__row_slices)
+		elif len(self.__column_slices) > 0:
+			manifest['labeled_by'] = 'columns'
+			manifest.update(self.__column_slices)
+		if len(manifest) == 0:
+			raise ValueError(
+					'{} not exportable as manifest: full matrix or '
+					'major axis slices not set')
+		return manifest
 
 	def __contains__(self, comparator):
 		if not isinstance(comparator, (int, tuple)):
@@ -127,8 +175,7 @@ class SliceCachingMatrix(object):
 		if isinstance(comparator, tuple):
 			if not len(comparator) == 2:
 				raise TypeError('comparator must be int or 2-tuple')
-			lookup = comparator[0]
-			comparator = comparator[1]
+			lookup, comparator = comparator
 		else:
 			lookup = 'row'
 
@@ -356,6 +403,7 @@ class SliceCachingMatrix(object):
 	@property
 	def cached_slices(self):
 		return self.__cached_slices
+
 
 	@property
 	def __manifest(self):

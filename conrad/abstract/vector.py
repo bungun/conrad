@@ -15,6 +15,10 @@ class SliceCachingVector(object):
 		return comparator in self.__slices
 
 	@property
+	def keys(self):
+		return self.__slices.keys()
+
+	@property
 	def size(self):
 		return self.__size
 
@@ -49,7 +53,7 @@ class SliceCachingVector(object):
 		if self.size is not None and self.size != size:
 			raise ValueError(
 					'length of input data does not match known length '
-					'of {}'.format(WeightVector))
+					'of {}'.format(SliceCachingVector))
 		else:
 			self.__size = size
 
