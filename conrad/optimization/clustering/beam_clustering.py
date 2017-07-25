@@ -37,8 +37,8 @@ class BeamClusteredProblem(ClusteredProblem):
 	def __init__(self, case, reference_frame_name, clustered_frame_name):
 		ClusteredProblem.__init__(
 				self, case, reference_frame_name, clustered_frame_name)
-		self.__cluster_mapping = case.retrieve_frame_mapping(
-				self.reference_frame, self.clustered_frame)
+		self.__cluster_mapping = case.physics.retrieve_frame_mapping(
+				self.reference_frame, self.clustered_frame).beam_map
 
 	@property
 	def cluster_mapping(self):
@@ -73,7 +73,9 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 	def clear(self):
 		self.__case.problem.solver.clear()
 
-	def build_A_infeas(self, reference_anatomy, beam_prices, k, tol):
+	def build_A_infeas(self, beam_prices, tol):
+		reference_anatomy = self.reference_anatomy
+		k = self.cluster_mapping.n_clusters
 		mu = beam_prices
 
 		n_infeas = min(sum(mu < -tol), k)
@@ -104,8 +106,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		return A_aug
 
 
-	def solve_dual_infeas_pogs(self, A_infeas, voxel_prices, reference_anatomy,
-				**solver_options):
+	def solve_dual_infeas_pogs(self, A_infeas, voxel_prices, **solver_options):
 		"""
 		Problem:
 
@@ -169,7 +170,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 					'`solve_dual_infeas_pogs()`')
 
 		n_voxels, n_beams = A_infeas.shape
-
+		reference_anatomy = self.reference_anatomy
 
 		# build f_conj
 		objective_voxels_conjugate = ok.PogsObjective(
@@ -202,10 +203,15 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		del dual
 		return delta_star, solve_time
 
-	def dual_iterative(self, voxel_prices_dict, k, reference_anatomy, tol,
-					   tol_infeas=1e-2, **solver_options):
+	def dual_iterative(self, voxel_prices_dict, tol, tol_infeas=1e-2,
+					   **solver_options):
+		# TODO: ADD OPTION TO SWTICH BETWEEN CVXPY AND OPTKIT-BASED METHODS
+		# FOR NOW, ONLY USES OPTKIT MODULE/POGS SOLVER
+
 		n_beams = np.size(next(iter(reference_anatomy)).A_mean)
 		sizes = [np.size(nu) for nu in voxel_prices_dict.values()]
+		reference_anatomy = self.reference_anatomy
+		k = self.cluster_mapping.n_clusters
 
 		TMAX = int(np.ceil(float(n)/float(k)))
 		TOL_N = tol_infeas * n_beams
@@ -247,8 +253,12 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 
 		return nu_t, solve_time_total, t
 
-	def solve_and_bound_clustered_problem(self, case, reference_anatomy,
-										  cluster_mapping, **solver_options):
+	def solve_and_bound_clustered_problem(self, **solver_options):
+		self.reload_clustered_frame()
+		case = self.case
+		reference_anatomy = self.reference_anatomy
+		cluster_mapping = self.cluster_mapping
+
 		_, run = case.plan(**solver_options)
 
 		x_star_bclu = run.output.x
@@ -284,12 +294,6 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		run.output.solver_info['dual_time'] = solve_time_total
 
 		return obj_ub, obj_lb, run
-
-	def cluster_and_bound(self, **solver_options):
-		self.reload_clustered_frame()
-		return self.solve_and_bound_clustered_problem(
-				self.case, self.reference_anatomy, self.cluster_mapping,
-				**solver_options)
 
 # class ConstrainedBeamClusteredProblem(VoxelClusteredProblem):
 	# pass

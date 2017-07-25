@@ -39,8 +39,11 @@ class UnconstrainedVoxelClusteredProblem(VoxelClusteredProblem):
 	def clear(self):
 		self.__case.problem.solver.clear()
 
-	def solve_and_bound_clustered_problem(self, case, reference_anatomy,
-										  **solver_options):
+	def solve_and_bound_clustered_problem(self, **solver_options):
+		self.reload_clustered_frame()
+		case = self.case
+		reference_anatomy = self.reference_anatomy
+
 		_, run = self.case.plan(**solver_options)
 
 		x_star_vclu = run.output.x
@@ -55,10 +58,7 @@ class UnconstrainedVoxelClusteredProblem(VoxelClusteredProblem):
 
 		return obj_ub, obj_lb, run
 
-	def cluster_and_bound(self,  **solver_options):
-		self.reload_clustered_frame()
-		return self.solve_and_bound_clustered_problem(
-				self.case, self.reference_anatomy, **solver_options)
+
 
 # class ConstrainedVoxelClusteredProblem(VoxelClusteredProblem):
 	# pass

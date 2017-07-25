@@ -20,12 +20,21 @@ from conrad.compat import *
 
 import abc
 
+from conrad.case import Case
 from conrad.optimization.preprocessing import ObjectiveMethods
 
 @add_metaclass(abc.ABCMeta)
 class ClusteredProblem(object):
 	def __init__(self, case, reference_frame_name, clustered_frame_name):
+		if not isinstance(case, Case):
+			raise TypeError(
+					'argument `case` must be of type {}'.format(Case))
 		self.__case = case
+		for frame_name in (reference_frame_name, clustered_frame_name):
+			if not frame_name in case.physics.available_frames:
+				raise ValueError(
+						'case has no attached frame named {}'
+						''.format(frame_name))
 		self.__reference_frame = reference_frame_name
 		self.__clustered_frame = clustered_frame_name
 		self.__reference_anatomy = None
@@ -44,9 +53,11 @@ class ClusteredProblem(object):
 
 	def reload_reference_frame(self):
 		self.case.physics.load_frame(self.__reference_frame)
+		self.case.load_physics_to_anatomy()
 
 	def reload_clustered_frame(self):
 		self.case.physics.load_frame(self.__clustered_frame)
+		self.case.load_physics_to_anatomy()
 
 	def dose_objective_primal_eval(self, anatomy):
 		return sum(listmap(self.methods.primal_eval, anatomy))
@@ -56,17 +67,11 @@ class ClusteredProblem(object):
 		raise NotImplementedError
 
 	@abc.abstractmethod
-	def solve_and_bound_clustered_problem(self, case, reference_anatomy,
-										  **solver_options):
-		raise NotImplementedError
-
-	@abc.abstractmethod
-	def cluster_and_bound(self, case, reference_frame_name,
-						  clustered_frame_name, **solver_options):
+	def solve_and_bound_clustered_problem(self, **solver_options):
 		raise NotImplementedError
 
 	def plan(self, **solver_options):
-		ub, lb, run = self.cluster_and_bound(**solver_options)
+		ub, lb, run = self.solve_and_bound_clustered_problem(**solver_options)
 		run.output.optimal_variables['upper_bound'] = ub
 		run.output.optimal_variables['lower_bound'] = lb
 		run.output.optimal_variables['suboptimality'] = 100. * (ub - lb) / lb
