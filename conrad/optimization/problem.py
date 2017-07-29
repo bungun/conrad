@@ -69,6 +69,10 @@ class PlanningProblem(object):
 		else:
 			return self.__solver
 
+	def clear(self):
+		if self.solver:
+			self.solver.clear()
+
 	def __update_constraints(self, structure, slack_tol=5e-3):
 		"""
 		Pull solver results pertaining to constraint slacks.
