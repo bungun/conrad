@@ -43,6 +43,8 @@ class TreatmentObjectiveTestImplementation(TreatmentObjective):
 		raise NotImplementedError
 	def dual_eval(self, var, weights):
 		raise NotImplementedError
+	def build_dual_domain_constraints(self, weights):
+		raise NotImplementedError
 	def primal_expr(self, var, weights):
 		raise NotImplementedError
 	def primal_expr_Ax(self, mat, var, weights):

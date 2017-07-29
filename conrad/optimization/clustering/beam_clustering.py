@@ -25,7 +25,7 @@ import abc
 import numpy as np
 
 from conrad.optimization.solvers.environment import OPTKIT_INSTALLED
-from conrad.optimization.clustering.clustering_base import ClusteredProblem
+from conrad.optimization.clustering.clustering_base import *
 
 if OPTKIT_INSTALLED:
 	import optkit as ok
@@ -42,53 +42,30 @@ class BeamClusteredProblem(ClusteredProblem):
 
 	@property
 	def cluster_mapping(self):
-		return self.cluster_mapping
-
-	def split_voxel_prices(self, voxel_prices, structure_order,
-						   rows_per_structure):
-		voxel_price_dict = {}
-		offset = 0
-		for label in structure_order:
-			size = rows_per_structure[label]
-			voxel_price_dict[label] = voxel_prices[offset : offset + size]
-			offset += size
-
-	def join_voxel_prices(self, voxel_price_dict, structure_order):
-		return np.vstack([voxel_price_dict[label] for label in structure_order])
-
-	def dose_objective_dual_eval(self, anatomy, voxel_price_dict):
-		return sum(listmap(
-				lambda s: s.dual_objective_eval(voxel_price_dict[s.label]),
-				anatomy))
-
-	def update_voxel_prices(self, voxel_price_dict, voxel_price_update):
-		for label in voxel_price_dict:
-			voxel_price_dict[label] += voxel_price_update[label]
+		return self.__cluster_mapping
 
 class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 	def __init__(self, case, reference_frame_name, clustered_frame_name):
 		BeamClusteredProblem.__init__(
 				self, case, reference_frame_name, clustered_frame_name)
 
-	def clear(self):
-		self.__case.problem.solver.clear()
-
-	def build_A_infeas(self, beam_prices, tol):
+	def build_A_infeas(self, beam_prices, tol, k=None):
 		reference_anatomy = self.reference_anatomy
-		k = self.cluster_mapping.n_clusters
+		k_ = self.cluster_mapping.n_clusters if k is None else int(k)
+		k = min(k_, self.cluster_mapping.n_clusters)
 		mu = beam_prices
 
 		n_infeas = min(sum(mu < -tol), k)
 		rank = (mu.argsort())[:n_infeas]
 
-		sizes = [1 if s.collapsable else s.size for s in reference_anatomy]
+		sizes = reference_anatomy.working_sizes
 		offsets = np.roll(np.cumsum(sizes), 1)
 		offsets[0] = 0
 		A_infeas = np.zeros((sum(sizes), n_infeas))
 
 		for idx, s in enumerate(reference_anatomy.list):
-			offset = offsets[i]
-			size = sizes[i]
+			offset = offsets[idx]
+			size = sizes[idx]
 			if s.collapsable:
 				for j_new, j in enumerate(rank):
 					A_infeas[offset, j_new] += s.A_mean[j]
@@ -173,16 +150,14 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		reference_anatomy = self.reference_anatomy
 
 		# build f_conj
-		objective_voxels_conjugate = ok.PogsObjective(
-				n_voxels + 1, h='IndBox01')
+		objective_voxels_conjugate = ok.PogsObjective(n_voxels+1, h='IndBox01')
 		ptr = 0
-
 		# structure dual objectives and constraints
 		for s in reference_anatomy:
 			obj_sub = self.methods.dual_fused_expr_constraints_pogs(
-					s, nu_offset=voxel_prices, nonnegative=True)
+					s, nu_offset=voxel_prices[s.label], nonnegative=True)
 			objective_voxels_conjugate.copy_from(obj_sub, ptr)
-			ptr += 1 if s.collapsable else s.size
+			ptr += s.working_size
 
 		# extra term to enforce final term z_{m+1} == 1
 		objective_voxels_conjugate.set(start=-1, h='IndEq0', b=1, d=0)
@@ -190,7 +165,9 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		# build g_conj
 		objective_beams_conjugate = ok.PogsObjective(n_beams, h='IndGe0')
 
-		A_aug = self.build_A_infeas_augmented(A_infeas, voxel_prices)
+
+		A_aug = self.build_A_infeas_augmented(
+				A_infeas, self.join_voxel_prices(voxel_prices))
 
 		dual = ok.PogsSolver(A_aug)
 		dual.solve(
@@ -203,17 +180,29 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		del dual
 		return delta_star, solve_time
 
+	def in_dual_domain(self, voxel_prices_dict):
+		for label in voxel_prices_dict:
+			nu = voxel_prices_dict[label]
+			s = self.reference_anatomy[label]
+			if not self.methods.in_dual_domain(s, nu):
+				return False
+		return True
+
+	def in_dual_cone(self, beam_prices, tol=1e-2):
+		return np.min(beam_prices) >= -tol
+
 	def dual_iterative(self, voxel_prices_dict, tol, tol_infeas=1e-2,
 					   **solver_options):
 		# TODO: ADD OPTION TO SWTICH BETWEEN CVXPY AND OPTKIT-BASED METHODS
 		# FOR NOW, ONLY USES OPTKIT MODULE/POGS SOLVER
-
-		n_beams = np.size(next(iter(reference_anatomy)).A_mean)
-		sizes = [np.size(nu) for nu in voxel_prices_dict.values()]
 		reference_anatomy = self.reference_anatomy
+		n_beams = self.cluster_mapping.n_points
+
+		label_order = reference_anatomy.label_order
+		sizes = reference_anatomy.working_sizes
 		k = self.cluster_mapping.n_clusters
 
-		TMAX = int(np.ceil(float(n)/float(k)))
+		TMAX = int(np.ceil(float(n_beams)/float(k)))
 		TOL_N = tol_infeas * n_beams
 
 		nu_t = voxel_prices_dict
@@ -221,30 +210,33 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		t = 0
 		solve_time_total = 0.
 		offset = 0.
-
 		VERBOSE = True
 		if 'verbose' in solver_options:
 			VERBOSE = solver_options['verbose'] > 0
+		TEST_FEAS = solver_options.pop('test_feasibility', False)
 
-		while sum(mu_t < - tol) > TOL_N and t < TMAX:
-			A_infeas = build_A_infeas(reference_anatomy, mu, k, tol)
-			delta_star, solve_time = solve_dual_infeas_pogs(
-					A_infeas, nu_t, reference_anatomy, **solver_options)
-			delta_t = split_voxel_prices(
-					delta_star, reference_anatomy.label_order, sizes)
+		# while sum(mu_t < - tol) > TOL_N and t < TMAX:
+		while not self.in_dual_cone(mu_t, tol) and t < TMAX:
+			A_infeas = self.build_A_infeas(mu_t, tol)
+			delta_star, solve_time = self.solve_dual_infeas_pogs(
+					A_infeas, nu_t, **solver_options)
+			delta_t = self.split_voxel_prices(delta_star, label_order, sizes)
 			solve_time_total += solve_time
 
 			if VERBOSE:
 				print('# infeas before: {}'.format(sum(mu_t < - tol)))
 
 			self.update_voxel_prices(nu_t, delta_t)
+			if TEST_FEAS:
+				if not self.in_dual_domain(nu_t):
+					raise ValueError('dual variable out of domain')
+
 			mu_t = self.methods.beam_prices(reference_anatomy, nu_t)
 
 			if VERBOSE:
 				print('# infeas after: {}'.format(sum(mu_t < - tol)))
-
-			offset += self.dose_objective_dual_eval(
-					reference_anatomy, delta_star)
+				print('mu min: {}'.format(np.min(mu_t)))
+			offset += self.dose_objective_dual_eval(reference_anatomy, delta_t)
 
 			if VERBOSE:
 				print('CUMULATIVE OFFSET: {}'.format(offset))
@@ -253,44 +245,50 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 
 		return nu_t, solve_time_total, t
 
-	def solve_and_bound_clustered_problem(self, **solver_options):
-		self.reload_clustered_frame()
-		case = self.case
-		reference_anatomy = self.reference_anatomy
-		cluster_mapping = self.cluster_mapping
+	def solve_clustered(self, **solver_options):
+		self.methods.apply_joint_scaling(self.reference_anatomy)
+		self.methods.apply_joint_scaling(self.clustered_anatomy)
 
-		_, run = case.plan(**solver_options)
+		_, run = self.case.plan(frame=self.clustered_frame, **solver_options)
 
 		x_star_bclu = run.output.x
-		x_star_bclu_upsampled = cluster_mapping.upsample(
+		x_star_bclu_upsampled = self.cluster_mapping.upsample(
 				x_star_bclu, rescale_output=True)
-		nu_star_bclu = run.output.nu
+		nu_star_bclu = run.output.optimal_variables['nu']
 		nu_star_bclu_dict = self.split_voxel_prices(
 				nu_star_bclu, run.profile.label_order,
 				run.profile.representation_sizes)
+		return run, x_star_bclu, x_star_bclu_upsampled, nu_star_bclu_dict
 
-		k = np.size(x_star_bclu)
-		mu = self.methods.beam_prices(reference_anatomy, nu_star_bclu_dict)
-		n = np.size(mu)
-		tol = np.abs(mu.min()) * np.log10(n / k)
+	def solve_and_bound_clustered_problem(self, **solver_options):
+		k = self.cluster_mapping.n_clusters
+		n = self.cluster_mapping.n_points
 
-		reference_anatomy.calculate_doses(x_star_bclu_upsampled)
-		obj_ub = self.dose_objective_primal_eval(reference_anatomy)
+		run, x_bclu, x_bclu_upsampled, nu_bclu_dict = self.solve_clustered(
+				**solver_options)
+		mu_clu = self.methods.beam_prices(self.clustered_anatomy, nu_bclu_dict)
+		tol = np.abs(mu_clu.min()) * np.sqrt(float(n) / k)
 
+		print('LB INFEAS {}'.format(self.dose_objective_dual_eval(
+				self.reference_anatomy, nu_bclu_dict)))
+
+		self.reference_anatomy.calculate_doses(x_bclu_upsampled)
+		obj_ub = self.dose_objective_primal_eval(self.reference_anatomy)
 
 		nu_feas, solve_time_total, n_subproblems = self.dual_iterative(
-				nu_star_bclu_dict, k, reference_anatomy, tol, **solver_options)
-		obj_lb = self.dose_objective_dual_eval(reference_anatomy, nu_feas)
+				nu_bclu_dict, tol, **solver_options)
+		obj_lb = self.dose_objective_dual_eval(self.reference_anatomy, nu_feas)
 
-		mu = self.methods.beam_prices(reference_anatomy, nu_feas)
+		mu = self.methods.beam_prices(self.reference_anatomy, nu_feas)
 		print('TOL {}'.format(tol))
-		print('MAX VIOLATION: {}'.format(np.abs(mu.min())))
+		print('MU MIN: {}'.format(mu.min()))
 
-		run.output.optimal_variables['x_full'] = x_star_bclu_upsampled
+		run.output.optimal_variables['x_full'] = x_bclu_upsampled
 		run.output.optimal_variables['nu_feasible'] = self.join_voxel_prices(
 				nu_feas)
 		run.output.solver_info['primal_solve_time'] = float(
-				case.problem.solver.solvetime + case.problem.solver.setuptime)
+				self.clustered_problem.solver.solvetime +
+				self.clustered_problem.solver.setuptime)
 		run.output.solver_info['dual_time'] = solve_time_total
 
 		return obj_ub, obj_lb, run

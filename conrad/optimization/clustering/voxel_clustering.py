@@ -31,26 +31,31 @@ class VoxelClusteredProblem(ClusteredProblem):
 		ClusteredProblem.__init__(
 				self, case, reference_frame_name, clustered_frame_name)
 
+		self.__cluster_mapping = case.physics.retrieve_frame_mapping(
+				self.reference_frame, self.clustered_frame).voxel_map
+
+	@property
+	def cluster_mapping(self):
+		return self.__cluster_mapping
+
 class UnconstrainedVoxelClusteredProblem(VoxelClusteredProblem):
 	def __init__(self, case, reference_frame_name, clustered_frame_name):
 		VoxelClusteredProblem.__init__(
 				self, case, reference_frame_name, clustered_frame_name)
 
-	def clear(self):
-		self.__case.problem.solver.clear()
-
 	def solve_and_bound_clustered_problem(self, **solver_options):
-		self.reload_clustered_frame()
-		case = self.case
-		reference_anatomy = self.reference_anatomy
+		self.methods.apply_joint_scaling(self.reference_anatomy)
+		self.methods.apply_joint_scaling(self.clustered_anatomy)
 
-		_, run = self.case.plan(**solver_options)
+		case = self.case
+
+		_, run = self.case.plan(frame=self.clustered_frame, **solver_options)
 
 		x_star_vclu = run.output.x
 
-		reference_anatomy.calculate_doses(x_star_vclu)
-		obj_ub = self.dose_objective_primal_eval(reference_anatomy)
-		obj_lb = self.dose_objective_primal_eval(case.anatomy)
+		obj_lb = self.dose_objective_primal_eval(self.clustered_anatomy)
+		self.reference_anatomy.calculate_doses(x_star_vclu)
+		obj_ub = self.dose_objective_primal_eval(self.reference_anatomy)
 
 		run.output.optimal_variables['x_full'] = x_star_vclu
 		run.output.solver_info['primal_solve_time'] = float(

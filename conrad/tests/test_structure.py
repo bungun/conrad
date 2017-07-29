@@ -177,6 +177,7 @@ class StructureTestCase(ConradTestCase):
 
 		with self.assertRaises(TypeError):
 			s.reset_matrices()
+
 			s.A_full = np.random.rand()
 
 		with self.assertRaises(TypeError):

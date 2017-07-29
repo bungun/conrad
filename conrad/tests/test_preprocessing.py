@@ -273,6 +273,8 @@ class ObjectiveMethodsTestCase(ConradTestCase):
 
 		# oar
 		# unweighted, weighted: collapsed vs. full
+		self.oar.assign_dose(self.y)
+
 		for wt in [None, self.voxel_weights]:
 			if wt is not None:
 				self.oar.voxel_weights = wt
