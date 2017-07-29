@@ -277,6 +277,10 @@ if module_installed('optkit'):
 						''.format(property_name))
 
 		@property
+		def A_current(self):
+			return self.__A_current
+
+		@property
 		def x(self):
 			r"""
 			Vector variable of beam intensities, :math:`x`.
@@ -417,7 +421,7 @@ if module_installed('optkit'):
 			for s in structures:
 				obj_sub = ObjectiveMethods.primal_expr_pogs(s)
 				self.objective_voxels.copy_from(obj_sub, ptr)
-				ptr += 1 if s.collapsable else s.size
+				ptr += s.working_size
 
 		def __build_beam_objective(self, structures):
 			cols = self._Solver__check_dimensions(structures)

@@ -46,6 +46,8 @@ from conrad.compat import *
 import numpy as np
 import abc
 
+from conrad.optimization.preprocessing import ObjectiveMethods
+
 GAMMA_DEFAULT = 1e-2
 RELTOL_DEFAULT = 1e-3
 ABSTOL_DEFAULT = 1e-4
@@ -152,11 +154,13 @@ class Solver(object):
 
 	def init_problem(self, n_beams, **options):
 		""" Prototype for problem initialization. """
-		raise RuntimeError('solver method "init_problem" not implemented')
+		raise NotImplementedError(
+				'solver method "init_problem" not implemented')
 
 	def clear(self):
 		""" Prototype for solver tear-down. """
-		raise RuntimeError('solver method "clear" not implemented')
+		raise NotImplementedError(
+				'solver method "clear" not implemented')
 
 	def __check_dimensions(self, structures):
 		"""
@@ -234,16 +238,10 @@ class Solver(object):
 		return report
 
 	def __set_scaling(self, structures):
-		weight_scaling = 1.
-		dose_scaling = 1.
-		for s in structures:
-			if s.is_target:
-				weight_scaling = max(weight_scaling, float(s.weighted_size))
-				dose_scaling = max(dose_scaling, float(s.dose))
+		weight_scaling, dose_scaling = ObjectiveMethods.apply_joint_scaling(
+				structures)
 		self.__global_dose_scaling = dose_scaling
 		self.__global_weight_scaling = weight_scaling
-		for s in structures:
-			s.objective.global_scaling = self.global_weight_scaling
 
 	def build(self, structures, exact=False, **options):
 		""" Prototype for problem construction. """
