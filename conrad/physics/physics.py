@@ -26,7 +26,8 @@ import numpy as np
 import scipy.sparse as sp
 
 from conrad.defs import vec
-from conrad.abstract.mapping import DiscreteMapping, map_type_to_string
+from conrad.abstract.mapping import AbstractDiscreteMapping, DiscreteMapping, \
+									map_type_to_string
 from conrad.physics.beams import BeamSet
 from conrad.physics.voxels import VoxelGrid
 from conrad.physics.containers import WeightVector, DoseMatrix
@@ -71,7 +72,7 @@ class DoseFrame(object):
 
 	def __init__(self, voxels=None, beams=None, data=None, voxel_labels=None,
 				 beam_labels=None, voxel_weights=None, beam_weights=None,
-				 frame_name=None):
+				 frame_name=None, **options):
 		"""
 		Initialize :class:`DoseFrame`.
 
@@ -452,13 +453,14 @@ class DoseFrameMapping(object):
 
 	@voxel_map.setter
 	def voxel_map(self, voxel_map):
-		if not isinstance(voxel_map, DiscreteMapping):
+		if not isinstance(voxel_map, AbstractDiscreteMapping):
 			voxel_map = DiscreteMapping(voxel_map)
 
-		if not isinstance(voxel_map, DiscreteMapping):
+		if not isinstance(voxel_map, AbstractDiscreteMapping):
 			raise TypeError(
-					'`voxel_map` must be of type (or castable as) {}'
-					''.format(DiscreteMapping))
+					'`voxel_map` must be derived from {} (or castable '
+					'as {})'
+					''.format(AbstractDiscreteMapping, DiscreteMapping))
 		else:
 			self.__voxel_map = voxel_map
 
@@ -632,7 +634,7 @@ class Physics(object):
 		Switch between dose frames already attached to :class:`Physics`.
 		"""
 		if not key in self.__frames:
-			raise KeyError('no dose data frame found for key {}')
+			raise KeyError('no dose data frame found for key "{}"'.format(key))
 		self.__dose_frame = self.__frames[key]
 		self.__FRAME_LOAD_FLAG = False
 
