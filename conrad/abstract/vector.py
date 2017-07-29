@@ -1,8 +1,63 @@
 from conrad.compat import *
 
 import numpy as np
+from six.moves import queue
 
 from conrad.defs import vec
+
+class VectorConstraintQueue(object):
+	def __init__(self):
+		self.constraint_queue = queue.Queue()
+		self.relop_to_method = {}
+		for key in [
+				'<', '<=', 'lt', 'LT', 'leq', 'LEQ', 'less than',
+				'less_than', 'less equals', 'less_equals']:
+			self.relop_to_method[key] = self.satisfies_less_than
+		for key in [
+				'>', '>=', 'gt', 'GT', 'geq', 'GEQ', 'greater than',
+				'greater_than', 'greater equals', 'greater_equals']:
+			self.relop_to_method[key] = self.satisfies_greater_than
+		for key in ['=', '==', 'eq', 'EQ', 'equals']:
+			self.relop_to_method[key] = self.satisfies_equals
+
+	def __iter__(self):
+		return self.constraint_queue.queue.__iter__()
+
+	def enqueue(self, relop, bound):
+		self.constraint_queue.put((bound, self.relop_to_method[relop]))
+
+	def enqueue_multi(self, *relop_bound_pairs):
+		for relop, bound in bound_relop_pairs:
+			self.enqueue(bound_relop_pairs)
+
+	def dequeue(self):
+		return self.constraint_queue.get()
+
+	def clear(self):
+		self.constraint_queue = queue.Queue()
+
+	def dequeue_and_test(self, variable, reltol=1e-3, abstol=1e-4):
+		bound, test = self.constraint_queue.get()
+		return test(variable, reltol, abstol)
+
+	def satisfies_all(self, variable, reltol=1e-3, abstol=1e-4):
+		for bound, test in self.constraint_queue.queue:
+			if not test(variable, bound, reltol, abstol):
+				return False
+		return True
+
+	def tol(self, bound, reltol, abstol):
+		return np.abs(reltol) * np.abs(bound) + np.abs(abstol)
+
+	def satisfies_greater_than(self, variable, bound, reltol, abstol):
+		return np.all(variable >= bound - self.tol(bound, reltol, abstol))
+
+	def satisfies_less_than(self, variable, bound, reltol, abstol):
+		return np.all(variable <= bound + self.tol(bound, reltol, abstol))
+
+	def satisfies_equals(self, variable, bound, reltol, abstol):
+		return np.all(np.abs(variable - bound) <= self.tol(
+				bound, reltol, abstol))
 
 class SliceCachingVector(object):
 	def __init__(self, data):
