@@ -82,7 +82,7 @@ class ObjectiveHinge(TreatmentObjective):
 	def primal_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
 			weights = 1. if voxel_weights is None else vec(voxel_weights)
-			return ok.PogsObjective(
+			return ok.api.PogsObjective(
 					size, h='Abs', b=float(self.deadzone_dose),
 					c=weights * self.weight / 2.,
 					d=weights * self.weight / 2.)
@@ -92,7 +92,7 @@ class ObjectiveHinge(TreatmentObjective):
 	def dual_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
 			weights = 1. if voxel_weights is None else vec(voxel_weights)
-			return ok.PogsObjective(
+			return ok.api.PogsObjective(
 					size, h='Zero', d=-float(self.deadzone_dose) * weights)
 		else:
 			raise NotImplementedError

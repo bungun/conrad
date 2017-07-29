@@ -106,7 +106,7 @@ class TargetObjectivePWL(TargetObjectiveTwoSided):
 	def primal_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
 			weights = 1. if voxel_weights is None else vec(voxel_weights)
-			return ok.PogsObjective(
+			return ok.api.PogsObjective(
 					size, h='Abs', b=float(self.target_dose),
 					c=weights * self.weight_abs,
 					d=weights * self.weight_linear)
@@ -116,7 +116,7 @@ class TargetObjectivePWL(TargetObjectiveTwoSided):
 	def dual_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
 			weights = 1. if voxel_weights is None else vec(voxel_weights)
-			return ok.PogsObjective(
+			return ok.api.PogsObjective(
 					size, h='Zero', d=-float(self.target_dose) * weights)
 		else:
 			raise NotImplementedError

@@ -81,14 +81,14 @@ class NontargetObjectiveLinear(TreatmentObjective):
 	def primal_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
 			weight_vec = 1. if voxel_weights is None else voxel_weights
-			return ok.PogsObjective(
+			return ok.api.PogsObjective(
 					size, h='Zero', c=0, d=weight_vec * self.weight)
 		else:
 			raise NotImplementedError
 
 	def dual_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
-			return ok.PogsObjective(size, h='Zero')
+			return ok.api.PogsObjective(size, h='Zero')
 		else:
 			raise NotImplementedError
 
