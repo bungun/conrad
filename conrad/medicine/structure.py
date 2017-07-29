@@ -120,6 +120,7 @@ class Structure(object):
 		self.__y_mean = np.nan
 		self.dvh = None
 		self.constraints = ConstraintList()
+		self.__resizing_allowed = True
 
 		objective = options.pop('objective', None)
 		if objective is not None:
@@ -138,6 +139,9 @@ class Structure(object):
 
 		self.A_full = options.pop('A', None)
 		self.A_mean = options.pop('A_mean', None)
+
+	def allow_resizing(self):
+		self.__resizing_allowed = True
 
 	@property
 	def plannable(self):
@@ -176,16 +180,22 @@ class Structure(object):
 			raise ValueError('argument "size" must be a positive int')
 		else:
 			self.__size = int(size)
+			self.__y = None
 			self.dvh = DVH(self.size)
 
 			# default to uniformly weighted voxels
 			self.voxel_weights = np.ones(self.size)
+			self.__resizing_allowed = False
 
 	@property
 	def weighted_size(self):
 		if self.voxel_weights is None:
 			return self.size
 		return self.__weighted_size
+
+	@property
+	def working_size(self):
+		return 1 if self.collapsable else self.size
 
 	@property
 	def objective(self):
@@ -251,13 +261,13 @@ class Structure(object):
 			raise TypeError('input A must by a numpy or scipy csr/csc '
 							'sparse matrix')
 
-		if self.size is not None:
+		if self.__resizing_allowed:
+			self.size = A_full.shape[0]
+		else:
 			if A_full.shape[0] != self.size:
 				raise ValueError('# rows of "A_full" must correspond to '
 								 'value  of property size ({}) of {} '
 								 'object'.format(self.size, Structure))
-		else:
-			self.size = A_full.shape[0]
 
 		self.__A_full = A_full
 
@@ -491,16 +501,18 @@ class Structure(object):
 		u.value = 1
 		return u
 
-	def clone(self):
+	def clone(self, copy_matrices=True):
 		s = Structure(self.label, self.name, self.is_target, self.size)
-		s._Structure__A_full = self.__A_full
-		s._Structure__A_mean = self.__A_mean
-		s._Structure__voxel_weights = self.__voxel_weights
+		if copy_matrices:
+			s._Structure__A_full = np.copy(self.__A_full)
+			s._Structure__A_mean = np.copy(self.__A_mean)
+			s._Structure__voxel_weights = self.__voxel_weights
 		s._Structure__weighted_size = self.__weighted_size
 		s._Structure__dose = self.__dose
 		s._Structure__boost = self.__boost
 		s._Structure__objective = self.__objective
 		s.constraints = self.constraints
+		return s
 
 	def assign_dose(self, voxel_doses):
 		""" Alias for :meth:`Structure.assign_y`. """
@@ -524,6 +536,15 @@ class Structure(object):
 			ValueError: if structure size is known and incompatible with
 				length of ``y``.
 		"""
+		if np.size(y) == 1:
+			if self.collapsable:
+				self.__y_mean = y
+				return
+			else:
+				raise ValueError(
+						'scalar dose provided to non-collapsable '
+						'structure')
+
 		y = vec(y)
 		if self.size is None:
 			self.size = y.size

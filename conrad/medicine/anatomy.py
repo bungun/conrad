@@ -76,11 +76,22 @@ class Anatomy(object):
 		elif structures:
 			self.structures = structures
 
-	def clone(self):
+	def clone(self, copy_matrices=True):
 		a = Anatomy()
 		for s in self:
-			a += s.clone()
-		a._Anatomy__label_order = self.__label_order
+			a += s.clone(copy_matrices=copy_matrices)
+		a._Anatomy__label_order = self.label_order[:]
+		return a
+
+	def transfer_objectives(self, other, copy_from=True):
+		if copy_from:
+			for s in other:
+				self[s.label].objective = s.objective
+			return self
+		else:
+			for s in self:
+				other[s.label].objective = s.objective
+			return other
 
 	def __contains__(self, comparator):
 		for s in self:
@@ -183,6 +194,14 @@ class Anatomy(object):
 			return np.nan
 		else:
 			return sum([s.size for s in self])
+
+	@property
+	def working_sizes(self):
+		return [s.working_size for s in self.list]
+
+	@property
+	def total_working_size(self):
+		return sum([s.working_size for s in self])
 
 	@property
 	def labels(self):
