@@ -81,14 +81,16 @@ class Case(object):
 				structures in :attr:`Case.anatomy`.
 		"""
 		self.__physics = None
-		self.__anatomy = None
+		# self.__anatomy = None
 		self.__prescription = None
-		self.__problem = None
+		self.__anatomies_by_frame = {}
+		self.__problems_by_frame = {}
+		self.__curr_frame = None
 
 		self.physics = physics
 		self.anatomy = anatomy
 		self.prescription = prescription
-		self.__problem = PlanningProblem()
+		self.__problems_by_frame[self.__curr_frame] = PlanningProblem()
 
 		# append prescription constraints unless suppressed:
 		if not suppress_rx_constraints:
@@ -109,11 +111,37 @@ class Case(object):
 	@property
 	def anatomy(self):
 		""" Container for all planning structures. """
-		return self.__anatomy
+		curr_frame = self.physics.frame.name
+		if curr_frame == self.__curr_frame:
+			pass
+		elif curr_frame in self.__anatomies_by_frame:
+			self.__anatomies_by_frame[curr_frame].transfer_objectives(
+					self.__anatomies_by_frame[self.__curr_frame])
+		else:
+			self.__anatomies_by_frame[curr_frame] = self.__anatomies_by_frame[
+					self.__curr_frame].clone(copy_matrices=False)
+		self.__curr_frame = curr_frame
+		return self.__anatomies_by_frame[curr_frame]
 
 	@anatomy.setter
 	def anatomy(self, anatomy):
-		self.__anatomy = Anatomy(anatomy)
+		if self.__curr_frame is None:
+			self.__curr_frame = self.physics.frame.name
+		self.__anatomies_by_frame[self.physics.frame.name] = Anatomy(anatomy)
+
+	def anatomy_for_frame(self, frame_name):
+		"""
+		"""
+		if frame_name not in self.__anatomies_by_frame:
+			raise KeyError(
+					'case has no attached physical frame named {}'
+					''.format(frame_name))
+		f_curr = self.__anatomies_by_frame[frame_name]
+		if frame_name == self.__curr_frame:
+			return f_curr
+		else:
+			f_out = self.__anatomies_by_frame[frame_name]
+			return f_out.transfer_objectives(f_curr)
 
 	@property
 	def prescription(self):
@@ -135,7 +163,7 @@ class Case(object):
 	@property
 	def problem(self):
 		""" Object managing numerical optimization setup and results. """
-		return self.__problem
+		return self.problem_for_frame(self.__curr_frame)
 
 	@property
 	def structures(self):
@@ -298,7 +326,7 @@ class Case(object):
 		# if w_over is not None:
 		# 	self.anatomy[label].w_over = w_over
 
-	def load_physics_to_anatomy(self, overwrite=False):
+	def load_physics_to_anatomy(self, overwrite=False, frame='active'):
 		"""
 		Transfer data from physics to each structure.
 
@@ -325,6 +353,12 @@ class Case(object):
 				``False``.
 
 		"""
+		if frame == self.physics.frame.name:
+			frame = 'active'
+		if frame != 'active':
+			original_frame = self.physics.frame.name
+			self.physics.change_dose_frame(frame)
+
 		if not overwrite:
 			if self.anatomy.plannable and self.physics.data_loaded:
 				raise ValueError('case.anatomy already has valid dose '
@@ -336,6 +370,7 @@ class Case(object):
 				return
 
 		for structure in self.anatomy:
+			structure.allow_resizing()
 			A = self.physics.dose_matrix_by_label(structure.label)
 			if A.shape[0] == 1:
 				structure.A_mean = A
@@ -350,6 +385,9 @@ class Case(object):
 				structure.voxel_weights = vw
 
 		self.physics.mark_data_as_loaded()
+
+		if frame != 'active':
+			self.physics.change_dose_frame(original_frame)
 
 	def gather_physics_from_anatomy(self):
 		"""
@@ -417,6 +455,19 @@ class Case(object):
 				self.load_physics_to_anatomy()
 		return self.anatomy.plannable
 
+	def problem_for_frame(self, frame='active'):
+		frame = self.__curr_frame if frame in ('active', None) else frame
+		if frame not in self.__problems_by_frame:
+			if frame in self.physics.available_frames:
+				self.__problems_by_frame[frame] = PlanningProblem()
+			else:
+				raise ValueError(
+						'no problem constructed for frame "{}"'.format(frame))
+		return self.__problems_by_frame[frame]
+
+	def clear_problem(self, frame='active'):
+		self.problem_for_frame(frame).clear()
+
 	def plan(self, use_slack=True, use_2pass=False, **options):
 		"""
 		Invoke numerical solver to optimize plan, given state of :class:`Case`.
@@ -445,6 +496,10 @@ class Case(object):
 		Raises:
 			ValueError: If case not plannable due to missing information.
 		"""
+		frame = options.pop('frame', 'active')
+		if not frame in ('active', self.physics.frame.name):
+			self.physics.change_dose_frame(frame)
+
 		if not self.plannable:
 			raise ValueError('case not plannable in current state.\n'
 							 'minimum requirements:\n'
