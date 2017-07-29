@@ -38,6 +38,14 @@ class NontargetObjectiveLinear(TreatmentObjective):
 		""" Return ``0``"""
 		return 0
 
+	def build_dual_domain_constraints(self, voxel_weights):
+		"""
+		Append the constraints :math:`0 \le \nu \le w` to
+		:attr:`TreatmentObjective.dual_constraint_queue` for use in
+		:meth:`TreatmentObjective.satisfies_dual_domain_constraints`.
+		"""
+		self.dual_constraint_queue.enqueue('==', self.weight * voxel_weights)
+
 	def primal_expr(self, y_var, voxel_weights=None):
 		r"""
 		Return :math:`c * \omega^T y`, for :math:`\omega\equiv```voxel_weights``
@@ -80,7 +88,7 @@ class NontargetObjectiveLinear(TreatmentObjective):
 
 	def dual_expr_pogs(self, size, voxel_weights=None):
 		if OPTKIT_INSTALLED:
-			return ok.PogsObjective(0)
+			return ok.PogsObjective(size, h='Zero')
 		else:
 			raise NotImplementedError
 
@@ -91,7 +99,7 @@ class NontargetObjectiveLinear(TreatmentObjective):
 		else:
 			raise NotImplementedError
 
-	def dual_fused_expr_constraints_pogs(self, structure, voxel_weights=None,
+	def dual_fused_expr_constraints_pogs(self, size, voxel_weights=None,
 										 nu_offset=None, nonnegative=False):
 		"""
 		simulatenously give dual expression
@@ -111,7 +119,6 @@ class NontargetObjectiveLinear(TreatmentObjective):
 			offset = 0. if nu_offset is None else vec(nu_offset)
 			return ok.api.PogsObjective(
 					size, h='IndEq0', b=self.weight * weights - offset,
-					d=-float(self.deadzone_dose) * weights
 			)
 		else:
 		        raise NotImplementedError

@@ -25,6 +25,8 @@ import numpy as np
 import numpy.linalg as la
 import unittest
 
+from conrad.defs import vec
+
 class ConradTestCase(unittest.TestCase):
 	"""
 	Base test class for :mod:`conrad` unit testing, extends :class:`unittest.TestCase`.
@@ -35,6 +37,7 @@ class ConradTestCase(unittest.TestCase):
 		Assert ``first`` and ``second`` equal, entrywise, within tolerance.
 		"""
 		atol *= len(first)**0.5
+		first = vec(first) if isinstance(first, list) else first
 		self.assertLessEqual(
 				la.norm(first - second), atol + rtol * la.norm(second) )
 

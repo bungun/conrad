@@ -54,6 +54,17 @@ class TargetObjectivePWL(TargetObjectiveTwoSided):
 		else:
 			return -float(self.target_dose) * np.dot(voxel_weights, nu)
 
+	def build_dual_domain_constraints(self, voxel_weights):
+		"""
+		Append the constraints :math:`-w_- \le \nu \le w_+` to
+		:attr:`TreatmentObjective.dual_constraint_queue` for use in
+		:meth:`TreatmentObjective.satisfies_dual_domain_constraints`.
+		"""
+		self.dual_constraint_queue.enqueue(
+				'<', self.weight_overdose * voxel_weights)
+		self.dual_constraint_queue.enqueue(
+				'>', -self.weight_underdose * voxel_weights)
+
 	def primal_expr(self, y_var, voxel_weights=None):
 		residuals = y_var.T - float(self.target_dose)
 		if voxel_weights is not None:
@@ -106,7 +117,7 @@ class TargetObjectivePWL(TargetObjectiveTwoSided):
 		if OPTKIT_INSTALLED:
 			weights = 1. if voxel_weights is None else vec(voxel_weights)
 			return ok.PogsObjective(
-					size, h='Zero', c=-float(self.target_dose) * weights)
+					size, h='Zero', d=-float(self.target_dose) * weights)
 		else:
 			raise NotImplementedError
 
@@ -117,7 +128,7 @@ class TargetObjectivePWL(TargetObjectiveTwoSided):
 		else:
 			raise NotImplementedError
 
-	def dual_fused_expr_constraints_pogs(self, structure, voxel_weights=None,
+	def dual_fused_expr_constraints_pogs(self, size, voxel_weights=None,
 										 nu_offset=None, nonnegative=False):
 		"""
 		simulatenously give dual expression
@@ -148,15 +159,15 @@ class TargetObjectivePWL(TargetObjectiveTwoSided):
 			# return f_fused
 
 			weights = 1. if voxel_weights is None else vec(voxel_weights)
-			w_over = self.weight_overdose * voxel_weights
-			w_under = self.weight_underdose * voxel_weights
+			w_over = self.weight_overdose * weights
+			w_under = self.weight_underdose * weights
 			offset = 0. if nu_offset is None else vec(nu_offset)
 
 			lower_limit = np.maximum(-(w_under + offset), 0)
 			upper_limit = np.maximum(w_over - offset, 0)
 
-			expr = __box01_pogs(size, lower_limit, upper_limit)
-			expr.set(d=-float(self.deadzone_dose) * weights)
+			expr = box01_pogs(size, lower_limit, upper_limit)
+			expr.set(d=float(self.dose) * weights)
 			return expr
 		else:
 			raise NotImplementedError

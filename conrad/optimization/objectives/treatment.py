@@ -6,6 +6,7 @@ import operator as op
 import cvxpy
 
 from conrad.defs import vec
+from conrad.abstract.vector import VectorConstraintQueue
 from conrad.physics.units import Gy, DeliveredDose
 from conrad.physics.string import dose_from_string
 from conrad.optimization.solvers.environment import OPTKIT_INSTALLED
@@ -13,33 +14,30 @@ from conrad.optimization.objectives.default_weights import *
 
 if OPTKIT_INSTALLED:
 	import optkit as ok
-	from optkit.libs.enums import OKFunctionEnums as fn_enums
-
-	def __box01_pogs(size, lower_limit, upper_limit):
+	from optkit.libs.enums import OKFunctionEnums
+	fn_enums = OKFunctionEnums()
+	def box01_pogs(size, lower_limit, upper_limit):
 		if not OPTKIT_INSTALLED:
 			raise RuntimeError('module `optkit` not installed')
 
 		expr = ok.api.PogsObjective(size, h='IndBox01')
-		h = expr.h
-		a = expr.a
-		b = expr.b
 
 		U_minus_L = upper_limit - lower_limit
 
 		for i in xrange(size):
-			if U_minus_L > 0:
-				a[i] = 1. / U_minus_L[i]
-				b[i] = lower_limit[i] / U_minus_L[i]
+			if U_minus_L[i] > 0:
+				expr.a[i] = 1. / U_minus_L[i]
+				expr.b[i] = lower_limit[i] / U_minus_L[i]
 			else:
-				a[i] = 1.
-				b[i] = 0.
-				h[i] = fn_enums.dict['IndEq0']
-		expr.set(h=h, a=a, b=b, c=1, d=0, e=0)
+				expr.a[i] = 1.
+				expr.b[i] = 0.
+				expr.h[i] = fn_enums.dict['IndEq0']
+		return expr
 
 else:
 	ok = NotImplemented
 	fn_enums = NotImplemented
-	__box01_pogs = NotImplemented
+	box01_pogs = NotImplemented
 
 @add_metaclass(abc.ABCMeta)
 class TreatmentObjective(object):
@@ -49,7 +47,8 @@ class TreatmentObjective(object):
 		self.__weights = {}
 		self.__doses = {}
 		self.__aliases = {}
-		self.__structure = None
+		self.dual_constraint_queue = VectorConstraintQueue()
+
 		alias_dict = dose_and_weight_params.pop('aliases', {})
 		for k, v in dose_and_weight_params.items():
 			self.__setattr__(str(k), v)
@@ -136,6 +135,21 @@ class TreatmentObjective(object):
 		self.scale(other)
 		return self
 
+	def __eq__(self, other):
+		if not isinstance(other, TreatmentObjective):
+			raise TypeError(
+					'equality comparison only defined when compared '
+					'object also of type {}'.format(TreatmentObjective))
+		param_other = other.parameters
+		param_self = self.parameters
+		eq = other.global_scaling == self.global_scaling
+		eq &= other.normalization == self.normalization
+		for k in param_self:
+			eq &=k in param_other
+			if eq:
+				eq &= param_other[k] == param_self[k]
+		return eq
+
 	def eval(self, y, voxel_weights=None):
 		return self.primal_eval(y, voxel_weights)
 
@@ -163,6 +177,19 @@ class TreatmentObjective(object):
 
 	@abc.abstractmethod
 	def dual_eval(self, y_dual, voxel_weights=None):
+		raise NotImplementedError
+
+	def in_dual_domain(self, nu, voxel_weights=None, nu_offset=None,
+					   nonnegative=False, reltol=1e-3, abstol=1e-4):
+		weight_vec = 1. if voxel_weights is None else vec(voxel_weights)
+		offset = 0. if nu_offset is None else vec(nu_offset)
+		self.dual_constraint_queue.clear()
+		self.build_dual_domain_constraints(weight_vec)
+		return self.dual_constraint_queue.satisfies_all(
+				nu + offset, reltol=reltol, abstol=abstol)
+
+	@abc.abstractmethod
+	def build_dual_domain_constraints(self, voxel_weights):
 		raise NotImplementedError
 
 	@abc.abstractmethod
@@ -223,7 +250,12 @@ class TreatmentObjective(object):
 		parameters = self.parameters
 		for param in parameters:
 			string += offset + param + ': ' + str(parameters[param]) + '\n'
+		string += offset + 'current normalization: %f\n' %self.normalization
+		string += offset + 'current global scaling: %f\n' %self.global_scaling
 		return string
 
 	def __str__(self):
+		return self.string()
+
+	def __repr__(self):
 		return self.string()

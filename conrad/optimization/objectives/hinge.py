@@ -38,6 +38,15 @@ class ObjectiveHinge(TreatmentObjective):
 		else:
 			return -float(self.deadzone_dose) * np.dot(voxel_weights, nu)
 
+	def build_dual_domain_constraints(self, voxel_weights):
+		"""
+		Append the constraints :math:`0 \le \nu \le w` to
+		:attr:`TreatmentObjective.dual_constraint_queue` for use in
+		:meth:`TreatmentObjective.satisfies_dual_domain_constraints`.
+		"""
+		self.dual_constraint_queue.enqueue('<', self.weight * voxel_weights)
+		self.dual_constraint_queue.enqueue('>', 0)
+
 	def primal_expr(self, y_var, voxel_weights=None):
 		residuals = cvxpy.pos(y_var.T - float(self.deadzone_dose))
 		if voxel_weights is not None:
@@ -115,7 +124,7 @@ class ObjectiveHinge(TreatmentObjective):
 		each element nu_i to be:
 
 			0 <= (nu_i - L) / (U - L) <= 1  ; U - L > 0
-			nu_i == 0                                               ; U - L <= 0.
+			nu_i == 0                       ; U - L <= 0.
 
 		"""
 		if OPTKIT_INSTALLED:
@@ -128,8 +137,12 @@ class ObjectiveHinge(TreatmentObjective):
 			weights = 1. if voxel_weights is None else vec(voxel_weights)
 			offset = 0. if nu_offset is None else vec(nu_offset)
 
-			lower_limit = np.maximum(-offset, 0)
-			upper_limit = np.maximum(weights - offset, 0)
+			if nonnegative:
+				lower_limit = np.maximum(-offset, 0)
+				upper_limit = np.maximum(weights - offset, 0)
+			else:
+				lower_limit = -offset
+				upper_limit = weights - offset
 
 			expr = __box01_pogs(size, lower_limit, upper_limit)
 			expr.set(d=-float(self.deadzone_dose) * weights)
