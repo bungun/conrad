@@ -32,7 +32,7 @@ from conrad.abstract.matrix import SliceCachingMatrix
 # TODO: Change this to DiscreteMap?
 # TODO: left and right application to matrices
 # TODO: HierarchicalMapping type or recursive capabilities for
-# 	DictionaryMapping
+#	DictionaryMapping
 @add_metaclass(abc.ABCMeta)
 class AbstractDiscreteMapping(object):
 	@abc.abstractproperty
@@ -50,6 +50,10 @@ class AbstractDiscreteMapping(object):
 	@abc.abstractproperty
 	def n_frame1(self):
 		raise NotImplementedError
+
+	@property
+	def shape(self):
+		return (self.n_frame0, self.n_frame1)
 
 	@abc.abstractmethod
 	def frame0_to_1_inplace(self, in_, out_, clear_output=False, **options):
@@ -113,7 +117,7 @@ class DiscreteMapping(AbstractDiscreteMapping):
 
 	@property
 	def manifest(self):
-		return {'data': self.vec, 'type': map_type_to_string(type(self))}
+		return {'data': self.vec, 'type': map_type_to_string(self)}
 
 	def __getitem__(self, index):
 		return self.vec[index]
@@ -135,7 +139,7 @@ class DiscreteMapping(AbstractDiscreteMapping):
 		Procedure::
 			# let forward_map be the map: SET_0 --> SET_1.
 			# for each INDEX_0, INDEX_1 in forward_map, do
-			# 	out_[INDEX_1] += in_[INDEX_0]
+			#	out_[INDEX_1] += in_[INDEX_0]
 			# end for
 
 		If arrays are matrices, mapping operates on rows. If arrays are
@@ -233,7 +237,7 @@ class DiscreteMapping(AbstractDiscreteMapping):
 		Procedure::
 			# let reverse_map be the map: SET_1 --> SET_0.
 			# for each INDEX_1, INDEX_0 in forward_map, do
-			# 	out_[INDEX_0] += in_[INDEX_1]
+			#	out_[INDEX_0] += in_[INDEX_1]
 			# end for
 
 		If arrays are matrices, mapping operates on rows. If arrays are
@@ -607,7 +611,7 @@ class IdentityMapping(AbstractDiscreteMapping):
 		return np.array(xrange(self.n_frame0))
 
 	def manifest(self):
-		return {'data': self.__n, 'type': map_type_to_string(type(self))}
+		return {'data': self.__n, 'type': map_type_to_string(self)}
 
 	@property
 	def n_frame0(self):
@@ -657,34 +661,34 @@ class DictionaryMapping(AbstractDiscreteMapping):
 		self.__n_frame0 = sum([m.n_frame0 for m in self.mappings])
 		self.__n_frame1 = sum([m.n_frame1 for m in self.mappings])
 		self.__vec = np.zeros(self.__n_frame0, dtype=int)
- 		self.key_order = self.keys if key_order is None else key_order
+		self.key_order = self.keys if key_order is None else key_order
 
- 	def __contains__(self, key):
- 		return key in self.__maps
+	def __contains__(self, key):
+		return key in self.__maps
 
- 	def __getitem__(self, key):
- 		return self.__maps[key]
+	def __getitem__(self, key):
+		return self.__maps[key]
 
- 	@property
- 	def key_order(self):
- 		if self.__key_order is None:
- 			return np.array(self.keys)
- 		else:
-	 		return self.__key_order
+	@property
+	def key_order(self):
+		if self.__key_order is None:
+			return np.array(self.keys)
+		else:
+			return self.__key_order
 
- 	@key_order.setter
- 	def key_order(self, key_order):
- 		ko = np.array(key_order).astype(int)
- 		if not sum(np.sort(ko) - np.sort(self.keys)) == 0:
- 			raise ValueError(
- 					'argument `key_order` must be a permutation of the '
- 					'keys in this `{}`'.format(DictionaryMapping))
- 		self.__key_order = ko
- 		self.__rebuild_vec()
+	@key_order.setter
+	def key_order(self, key_order):
+		ko = [int(k) for k in key_order]
+		if not (len(ko) == len(self.keys)) and all([k in self.keys for k in ko]):
+			raise ValueError(
+					'argument `key_order` must be a permutation of the '
+					'keys in this `{}`'.format(DictionaryMapping))
+		self.__key_order = ko
+		self.__rebuild_vec()
 
- 	@property
- 	def keys(self):
- 		return self.__maps.keys()
+	@property
+	def keys(self):
+		return self.__maps.keys()
 
 	@property
 	def mappings(self):
@@ -697,7 +701,7 @@ class DictionaryMapping(AbstractDiscreteMapping):
 	def manifest(self):
 		return {
 				'data': {l: m.manifest for l, m in self.__maps.items()},
-				'type': map_type_to_string(type(self))
+				'type': map_type_to_string(self)
 		}
 		return self.__maps
 
@@ -717,9 +721,9 @@ class DictionaryMapping(AbstractDiscreteMapping):
 		elif isinstance(io_object, SliceCachingVector):
 			return io_object._SliceCachingMatrix__row_slices
 			# if apply_from_left:
-			# 	return io_object._SliceCachingMatrix__row_slices
+			#	return io_object._SliceCachingMatrix__row_slices
 			# else:
-			# 	return io_object._SliceCachingMatrix__column_slices
+			#	return io_object._SliceCachingMatrix__column_slices
 		else:
 			raise TypeError('argument `{}` must be of types {}'.format(
 					name,
@@ -846,10 +850,12 @@ class DictionaryClusterMapping(DictionaryMapping):
 	def cluster_weights(self):
 		""" Number of elements mapped to each cluster. """
 		wts = {}
-		for key in self:
+		for key in self._DictionaryMapping__maps:
 			m = self[key]
 			if isinstance(m, ClusterMapping):
-				wts[key] = self[key].cluster_weights
+				wts[key] = m.cluster_weights
+			else:
+				wts[key] = np.ones(m.n_frame1)
 
 		return wts
 

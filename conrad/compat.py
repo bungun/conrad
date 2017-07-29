@@ -40,3 +40,4 @@ if six.PY3:
 	from six.moves import xrange
 	from six.moves import reduce
 
+from six.moves import queue
