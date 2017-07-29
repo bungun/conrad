@@ -103,7 +103,7 @@ class RunProfile(object):
 				'name' : s.name,
 				'objective' : obj.dict if obj is not None else None
 			}
-			self.representation_sizes[s.label] = 1 if s.collapsable else s.size
+			self.representation_sizes[s.label] = s.working_size
 
 	def pull_constraints(self, structures):
 		"""
