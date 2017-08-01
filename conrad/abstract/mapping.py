@@ -610,6 +610,7 @@ class IdentityMapping(AbstractDiscreteMapping):
 	def vec(self):
 		return np.array(xrange(self.n_frame0))
 
+	@property
 	def manifest(self):
 		return {'data': self.__n, 'type': map_type_to_string(self)}
 
@@ -698,6 +699,7 @@ class DictionaryMapping(AbstractDiscreteMapping):
 	def vec(self):
 		return self.__vec
 
+	@property
 	def manifest(self):
 		return {
 				'data': {l: m.manifest for l, m in self.__maps.items()},
