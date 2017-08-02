@@ -176,7 +176,7 @@ class CaseIO(object):
 				case, case_name, directory)
 		self.__active_case_entry = self.DB.get(self.__active_case_ID)
 		self.__active_case_object = case
-		self.__active_case_directory = directory
+		self.__active_case_directory = self.FS.join_mkdir(directory, case_name)
 		self.__cases[case_name] = self.__active_case_ID
 
 	def save_active_case(self, directory=None):
@@ -195,7 +195,7 @@ class CaseIO(object):
 					self.active_meta, self.active_case, directory,
 					case_ID=self.__active_case_ID)
 			self.__cases[self.active_meta.name] = self.__active_case_ID = cid
-			self.__active_case_directory = directory
+			self.__active_case_directory = self.FS.join_mkdir(directory, case_name)
 
 	def rename_active_case(self, name):
 		if self.active_case is not None:
