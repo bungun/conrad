@@ -476,13 +476,14 @@ class DoseFrameMapping(object):
 
 	@beam_map.setter
 	def beam_map(self, beam_map):
-		if not isinstance(beam_map, DiscreteMapping):
-			beam_map = DiscreteMapping(beam_map)
+		if not isinstance(beam_map, AbstractDiscreteMapping):
+			beam_map = AbstractDiscreteMapping(beam_map)
 
-		if not isinstance(beam_map, DiscreteMapping):
+		if not isinstance(beam_map, AbstractDiscreteMapping):
 			raise TypeError(
-					'`beam_map` must be of type (or castable as) {}'
-					''.format(DiscreteMapping))
+					'`voxel_map` must be derived from {} (or castable '
+					'as {})'
+					''.format(AbstractDiscreteMapping, DiscreteMapping))
 		else:
 			self.__beam_map = beam_map
 
