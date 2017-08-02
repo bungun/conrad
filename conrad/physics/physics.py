@@ -320,14 +320,14 @@ class DoseFrame(object):
 
 	@voxel_weights.setter
 	def voxel_weights(self, voxel_weights):
-		weights = WeightVector(voxel_weights)
+		voxel_weights = WeightVector(voxel_weights)
 		if self.voxels in (None, np.nan):
-			self.voxels = weigths.size
-		if weights.size != self.voxels:
+			self.voxels = voxel_weights.size
+		if voxel_weights.size != self.voxels:
 			raise ValueError('length of `voxel_weights` ({}) must match '
 							 'number of voxels in frame ({})'
 							 ''.format(voxel_weights.size, self.voxels))
-		self.__voxel_weights = weights
+		self.__voxel_weights = voxel_weights
 
 	@property
 	def beam_weights(self):

@@ -144,11 +144,11 @@ class CaseAccessor(ConradDBAccessor):
 				physics_entry.frame_mappings, source_frame, target_frame))
 
 	def save_solver_cache(self, case_entry, solver, cache_name, frame_name,
-						  directory):
+						  directory, overwrite=False):
 		case_entry = self.DB.get(case_entry)
 		validate_case_entry(case_entry)
 		cache_ID = self.solver_cache_accessor.save_solver_cache(
-				solver, cache_name, frame_name, directory)
+				solver, cache_name, frame_name, directory, overwrite=overwrite)
 		case_entry.add_solver_caches(cache_ID)
 		return cache_ID
 
