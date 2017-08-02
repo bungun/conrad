@@ -1739,7 +1739,8 @@ class SolverCacheEntry(ConradDatabaseEntry):
 				'left_preconditioner': cdb_util.expand_if_db_entry(
 						self.left_preconditioner),
 				'matrix': cdb_util.expand_if_db_entry(self.matrix),
-				'right_preconditioner': self.right_preconditioner,
+				'right_preconditioner': cdb_util.expand_if_db_entry(
+						self.right_preconditioner),
 				'projector': {
 						'type': self.projector_type,
 						'matrix': cdb_util.expand_if_db_entry(
