@@ -139,12 +139,14 @@ class FrameMappingAccessor(ConradDBAccessor):
 		# un-nest manifests for dictionary clusterings
 		if vmap is not None:
 			if 'dictionary' in frame_mapping.voxel_map_type:
-				vmap_meta = {key: vmap[key]['type'] for key in vmap}
-				vmap = {key: vmap[key]['data'] for key in vmap}
+				data = vmap['data']
+				vmap_meta = {key: data[key]['type'] for key in data}
+				vmap = {key: data[key]['data'] for key in data}
 		if bmap is not None:
 			if 'dictionary' in frame_mapping.beam_map_type:
-				bmap_meta = {key: bmap[key]['type'] for key in bmap}
-				bmap = {key: bmap[key]['data'] for key in bmap}
+				data = bmap['data']
+				bmap_meta = {key: data[key]['type'] for key in data}
+				bmap = {key: data[key]['data'] for key in data}
 
 		return self.DB.set_next(DoseFrameMappingEntry(
 				source_frame=frame_mapping.source,
