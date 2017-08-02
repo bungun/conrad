@@ -840,9 +840,13 @@ class DoseFrameMappingEntry(ConradDatabaseEntry):
 		self.source_frame = frame_mapping_dictionary.pop('source_frame', None)
 		self.target_frame = frame_mapping_dictionary.pop('target_frame', None)
 		self.voxel_map = frame_mapping_dictionary.pop('voxel_map', None)
+		self.voxel_map_meta = frame_mapping_dictionary.pop(
+				'voxel_map_meta', None)
 		self.voxel_map_type = frame_mapping_dictionary.pop(
 				'voxel_map_type', None)
 		self.beam_map = frame_mapping_dictionary.pop('beam_map', None)
+		self.beam_map_meta = frame_mapping_dictionary.pop(
+				'beam_map_meta', None)
 		self.beam_map_type = frame_mapping_dictionary.pop(
 				'beam_map_type', None)
 
