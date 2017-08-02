@@ -159,7 +159,7 @@ class CaseIO(object):
 		self.__active_case_object = self.accessor.load_case(ce)
 		return self.active_case
 
-	def save_new_case(self, case, case_name, directory=None):
+	def save_new_case(self, case, case_name, directory=None, overwrite=False):
 		self.close_active_case()
 		if case_name in self.__cases:
 			raise ValueError('case name `%s` already used' %case_name)
@@ -173,13 +173,13 @@ class CaseIO(object):
 			directory = self.working_directory
 
 		self.__active_case_ID = self.accessor.save_case(
-				case, case_name, directory)
+				case, case_name, directory, overwrite=overwrite)
 		self.__active_case_entry = self.DB.get(self.__active_case_ID)
 		self.__active_case_object = case
 		self.__active_case_directory = self.FS.join_mkdir(directory, case_name)
 		self.__cases[case_name] = self.__active_case_ID
 
-	def save_active_case(self, directory=None):
+	def save_active_case(self, directory=None, overwrite=False):
 		if self.working_directory is None and directory is None:
 			raise ValueError(
 					'no directory specified. please call with keyword '
@@ -193,7 +193,7 @@ class CaseIO(object):
 		else:
 			cid = self.accessor.update_case_entry(
 					self.active_meta, self.active_case, directory,
-					case_ID=self.__active_case_ID)
+					overwrite=overwrite, case_ID=self.__active_case_ID)
 			self.__cases[self.active_meta.name] = self.__active_case_ID = cid
 			self.__active_case_directory = self.FS.join_mkdir(
 					directory, self.active_meta.name)
@@ -236,7 +236,7 @@ class CaseIO(object):
 			case.physics.add_frame_mapping(self.accessor.load_frame_mapping(
 					entry, source_frame, target_frame))
 
-	def save_solver_cache(self, cache_name, directory=None):
+	def save_solver_cache(self, cache_name, directory=None, overwrite=False):
 		if self.working_directory is None and directory is None:
 			raise ValueError(
 					'no directory specified. please call with keyword '
@@ -253,7 +253,8 @@ class CaseIO(object):
 
 		self.accessor.save_solver_cache(
 				self.active_meta, self.active_case.problem.solver,
-				cache_name, self.active_frame_name, directory)
+				cache_name, self.active_frame_name, directory,
+				overwrite=overwrite)
 
 	def load_solver_cache(self, cache_name):
 		if self.active_meta is None or self.active_case is None:
@@ -292,8 +293,9 @@ class CaseIO(object):
 		return self.accessor.load_solution(
 				self.active_meta.history, frame_name, solution_name)
 
-	def dump_active_to_YAML(self, directory=None, yaml_directory=None):
-		self.save_active_case(directory=directory)
+	def dump_active_to_YAML(self, directory=None, yaml_directory=None,
+							overwrite=False):
+		self.save_active_case(directory=directory, overwrite=overwrite)
 		return self.accessor.write_case_yaml_from_entry(
 				self.active_meta, self.__active_case_directory,
 				single_document=True, yaml_directory=yaml_directory)
