@@ -195,7 +195,8 @@ class CaseIO(object):
 					self.active_meta, self.active_case, directory,
 					case_ID=self.__active_case_ID)
 			self.__cases[self.active_meta.name] = self.__active_case_ID = cid
-			self.__active_case_directory = self.FS.join_mkdir(directory, case_name)
+			self.__active_case_directory = self.FS.join_mkdir(
+					directory, self.active_meta.name)
 
 	def rename_active_case(self, name):
 		if self.active_case is not None:
