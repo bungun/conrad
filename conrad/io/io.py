@@ -291,7 +291,7 @@ class CaseIO(object):
 
 	def dump_active_to_YAML(self, directory=None, yaml_directory=None):
 		self.save_active_case(directory=directory)
-		return write_case_yaml_from_entry(
+		return self.accessor.write_case_yaml_from_entry(
 				self.active_meta, self.__active_case_directory,
 				single_document=True, yaml_directory=yaml_directory)
 
