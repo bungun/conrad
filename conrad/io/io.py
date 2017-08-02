@@ -290,19 +290,10 @@ class CaseIO(object):
 				self.active_meta.history, frame_name, solution_name)
 
 	def dump_active_to_YAML(self, directory=None, yaml_directory=None):
-		if self.active_meta is None or self.active_case is None:
-			raise ValueError('no active case')
-		if self.working_directory is None and directory is None:
-			raise ValueError(
-					'no directory specified. please call with keyword '
-					'`directory`, or specify a default directory by '
-					'setting attribute `CaseIO.working_directory`')
-		elif directory is None:
-			directory = self.working_directory
-
+		self.save_active_case(directory=directory)
 		return write_case_yaml_from_entry(
-				self.active_meta, directory, single_document=True,
-				yaml_directory=yaml_directory)
+				self.active_meta, self.__active_case_directory,
+				single_document=True, yaml_directory=yaml_directory)
 
 	def case_to_YAML(self, case, case_name, directory=None,
 					 yaml_directory=None):
