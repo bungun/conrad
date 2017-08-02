@@ -739,8 +739,10 @@ class DoseFrameMappingEntry(ConradDatabaseEntry):
 		self.__source_frame = None
 		self.__target_frame = None
 		self.__voxel_map = None
+		self.__voxel_map_meta = None
 		self.__voxel_map_type = None
 		self.__beam_map = None
+		self.__beam_map_meta = None
 		self.__beam_map_type = None
 		self.ingest_dictionary(**entry_dictionary)
 
@@ -789,6 +791,15 @@ class DoseFrameMappingEntry(ConradDatabaseEntry):
 			self.__voxel_map = voxel_map
 
 	@property
+	def voxel_map_meta(self):
+		return self.__voxel_map_meta
+
+	@voxel_map_meta.setter
+	def voxel_map_meta(self, voxel_map_metadata):
+		if isinstance(voxel_map_metadata, dict):
+			self.__voxel_map_meta = voxel_map_metadata
+
+	@property
 	def voxel_map_type(self):
 		return self.__voxel_map_type
 
@@ -806,6 +817,15 @@ class DoseFrameMappingEntry(ConradDatabaseEntry):
 		beam_map = cdb_util.route_data_fragment(beam_map)
 		if cdb_util.isinstance_or_db_pointer(beam_map, DataFragmentEntry):
 			self.__beam_map = beam_map
+
+	@property
+	def beam_map_meta(self):
+		return self.__beam_map_meta
+
+	@beam_map_meta.setter
+	def beam_map_meta(self, beam_map_metadata):
+		if isinstance(beam_map_metadata, dict):
+			self.__beam_map_meta = beam_map_metadata
 
 	@property
 	def beam_map_type(self):
@@ -849,8 +869,10 @@ class DoseFrameMappingEntry(ConradDatabaseEntry):
 				'source_frame': self.source_frame,
 				'target_frame': self.target_frame,
 				'voxel_map': cdb_util.expand_if_db_entry(self.voxel_map),
+				'voxel_map_meta': self.voxel_map_meta,
 				'voxel_map_type': self.voxel_map_type,
 				'beam_map': cdb_util.expand_if_db_entry(self.beam_map),
+				'beam_map_meta': self.beam_map_meta,
 				'beam_map_type': self.beam_map_type,
 		}
 
@@ -868,8 +890,10 @@ class DoseFrameMappingEntry(ConradDatabaseEntry):
 				'source_frame': self.source_frame,
 				'target_frame': self.target_frame,
 				'voxel_map': self.voxel_map,
+				'voxel_map_meta': self.voxel_map_meta,
 				'voxel_map_type': self.voxel_map_type,
 				'beam_map': self.beam_map,
+				'beam_map_type': self.beam_map_type,
 				'beam_map_type': self.beam_map_type,
 		}
 

@@ -131,17 +131,31 @@ class FrameMappingAccessor(ConradDBAccessor):
 		subdir = self.FS.join_mkdir(directory, 'frame_mappings', map_name)
 
 		fm = frame_mapping
-		vmap = fm.voxel_map.manifest['data'] if fm.voxel_map is not None else None
-		bmap = fm.beam_map.manifest['data'] if fm.beam_map is not None else None
+		vmap = fm.voxel_map.manifest if fm.voxel_map is not None else None
+		bmap = fm.beam_map.manifest if fm.beam_map is not None else None
+		vmap_meta = None
+		bmap_meta = None
+
+		# un-nest manifests for dictionary clusterings
+		if vmap is not None:
+			if 'dictionary' in frame_mapping.voxel_map_type:
+				vmap_meta = {key: vmap[key]['type'] for key in vmap}
+				vmap = {key: vmap[key]['data'] for key in vmap}
+		if bmap is not None:
+			if 'dictionary' in frame_mapping.beam_map_type:
+				bmap_meta = {key: bmap[key]['type'] for key in bmap}
+				bmap = {key: bmap[key]['data'] for key in bmap}
 
 		return self.DB.set_next(DoseFrameMappingEntry(
 				source_frame=frame_mapping.source,
 				target_frame=frame_mapping.target,
 				voxel_map=self.record_entry(
 						subdir, 'voxel_map', vmap, overwrite=overwrite),
+				voxel_map_meta=vmap_meta,
 				voxel_map_type=frame_mapping.voxel_map_type,
 				beam_map=self.record_entry(
 						subdir, 'beam_map', bmap, overwrite=overwrite),
+				beam_map_meta=bmap_meta,
 				beam_map_type=frame_mapping.beam_map_type
 		))
 
@@ -158,11 +172,27 @@ class FrameMappingAccessor(ConradDBAccessor):
 
 		vmap = self.load_entry(frame_mapping_entry.voxel_map)
 		if vmap is not None:
+			# re-nest manifests for dictionary clusterings
+			if 'dictionary' in frame_mapping_entry.voxel_map_type:
+				vmap = {
+						{
+								'data': vmap[key],
+								'type': frame_mapping_entry.voxel_map_meta[key]}
+						for key in vmap
+				}
 			vmap = string_to_map_constructor(
 					frame_mapping_entry.voxel_map_type)(vmap)
 
 		bmap = self.load_entry(frame_mapping_entry.beam_map)
 		if bmap is not None:
+			# re-nest manifests for dictionary clusterings
+			if 'dictionary' in frame_mapping_entry.beam_map_type:
+				bmap = {
+						{
+								'data': bmap[key],
+								'type': frame_mapping_entry.beam_map_meta[key]}
+						for key in bmap
+				}
 			bmap = string_to_map_constructor(
 					frame_mapping_entry.beam_map_type)(bmap)
 
