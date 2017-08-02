@@ -94,6 +94,8 @@ class CaseIO(object):
 
 	@property
 	def working_directory(self):
+		if self.active_case is not None:
+			return self.__active_case_directory
 		return self.__working_directory
 
 	@working_directory.setter
