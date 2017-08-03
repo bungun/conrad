@@ -334,7 +334,7 @@ class Anatomy(object):
 		for s in constraint_dict:
 			if constraint_dict[s] in self:
 				if not self[s].satisfies_all(
-						constraint_dict[s], satisfaction_tol=satisfaction_tol)
+						constraint_dict[s], satisfaction_tol=satisfaction_tol):
 					return False
 		return True
 
