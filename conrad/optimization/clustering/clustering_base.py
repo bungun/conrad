@@ -42,8 +42,9 @@ class ClusteredProblem(object):
 		self.__clustered_anatomy = None
 		self.methods = ObjectiveMethods
 
-		case.load_physics_to_anatomy(frame=self.reference_frame)
-		case.load_physics_to_anatomy(frame=self.clustered_frame)
+		for frame in [reference_frame_name, clustered_frame_name]:
+			case.physics.change_dose_frame(self.reference_frame)
+			case.plannable
 
 	@property
 	def case(self):
