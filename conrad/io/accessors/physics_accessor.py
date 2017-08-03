@@ -176,12 +176,13 @@ class FrameMappingAccessor(ConradDBAccessor):
 		if vmap is not None:
 			# re-nest manifests for dictionary clusterings
 			if 'dictionary' in frame_mapping_entry.voxel_map_type:
-				vmap = {
-						{
-								'data': vmap[key],
-								'type': frame_mapping_entry.voxel_map_meta[key]}
-						for key in vmap
-				}
+				vmap_ = {}
+				for key in vmap:
+					vmap_[key] = {
+							'data': vmap[key],
+							'type': frame_mapping_entry.voxel_map_meta[key]
+						}
+				vmap = vmap_
 			vmap = string_to_map_constructor(
 					frame_mapping_entry.voxel_map_type)(vmap)
 
