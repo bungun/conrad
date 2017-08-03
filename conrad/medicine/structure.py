@@ -613,7 +613,7 @@ class Structure(object):
 			return np.nan * Gy
 		return self.dvh.max_dose * self.dose_unit
 
-	def satisfies(self, constraint):
+	def satisfies(self, constraint, satisfaction_tol=0.):
 		"""
 		Test whether structure's voxel doses satisfy ``constraint``.
 
@@ -647,7 +647,12 @@ class Structure(object):
 							 '(assign dose by setting field "{}.y")'
 							 ''.format(Structure))
 
-		relop = operator.le if constraint.relop == RELOPS.LEQ else operator.ge
+		if constraint.relop == RELOPS.LEQ:
+			relop = operator.le
+			dose = (1. + satisfaction_tol) * constraint.dose + satisfaction_tol
+		else:
+			relop = operator.ge
+			dose = (1. - satisfaction_tol) * constraint.dose - satisfaction_tol
 
 		if isinstance(constraint.threshold, str):
 			if constraint.threshold == 'mean':
@@ -660,16 +665,18 @@ class Structure(object):
 			dose_achieved = self.dvh.dose_at_percentile(
 				constraint.threshold)
 
-		status = relop(float(dose_achieved), float(constraint.dose))
-		dose = float(dose_achieved) / float(constraint.dose) * constraint.dose
+		status = relop(float(dose_achieved), float(dose))
+		dose = float(dose_achieved) / float(dose) * dose
 		return (status, dose)
 
-	def satisfies_all(self, constraint_list):
-		return all(listmap(
-				lambda status_dose_tuple: status_dose_tuple[0],
-				listmap(
-						self.satisfies,
-						ConstraintList(constraint_list).list)))
+	def satisfies_all(self, constraint_list, satisfaction_tol=0.):
+		for s in constraint_list:
+			sat, dose = self[s].satisfies(
+					ConstraintList(constraint_list),
+					satisfaction_tol=satisfaction_tol):
+			if not sat:
+				return False
+		return True
 
 	def plotting_data(self, constraints_only=False, maxlength=None):
 		"""

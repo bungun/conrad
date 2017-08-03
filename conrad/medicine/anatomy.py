@@ -320,7 +320,7 @@ class Anatomy(object):
 					**{k: str(line[k]) for k in line})
 		return out
 
-	def satisfies_prescription(self, constraint_dict):
+	def satisfies_prescription(self, constraint_dict, satisfaction_tol=0.):
 		"""
 		Check whether anatomy satisfies supplied constraints.
 
@@ -331,9 +331,12 @@ class Anatomy(object):
 		Returns:
 			:obj:`int`: True if each structure in
 		"""
-		audit = lambda label_constrs: self[label_constrs[0]].satisfies_all(
-				label_constrs[1]) if label_constrs[0] in self else True
-		return all(map(audit, constraint_dict.items()))
+		for s in constraint_dict:
+			if constraint_dict[s] in self:
+				if not self[s].satisfies_all(
+						constraint_dict[s], satisfaction_tol=satisfaction_tol)
+					return False
+		return True
 
 	def __iadd__(self, other):
 		"""
