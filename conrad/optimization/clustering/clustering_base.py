@@ -42,8 +42,9 @@ class ClusteredProblem(object):
 		self.__clustered_anatomy = None
 		self.methods = ObjectiveMethods
 
+		# force-load anatomies
 		for frame in [reference_frame_name, clustered_frame_name]:
-			case.physics.change_dose_frame(self.reference_frame)
+			case.physics.change_dose_frame(frame)
 			case.plannable
 
 	@property
