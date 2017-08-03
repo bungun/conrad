@@ -94,8 +94,6 @@ class CaseIO(object):
 
 	@property
 	def working_directory(self):
-		if self.active_case is not None:
-			return self.__active_case_directory
 		return self.__working_directory
 
 	@working_directory.setter
@@ -176,7 +174,7 @@ class CaseIO(object):
 				case, case_name, directory, overwrite=overwrite)
 		self.__active_case_entry = self.DB.get(self.__active_case_ID)
 		self.__active_case_object = case
-		self.__active_case_directory = self.FS.join_mkdir(directory, case_name)
+		self.__active_case_directory = directory
 		self.__cases[case_name] = self.__active_case_ID
 
 	def save_active_case(self, directory=None, overwrite=False):
@@ -195,8 +193,7 @@ class CaseIO(object):
 					self.active_meta, self.active_case, directory,
 					overwrite=overwrite, case_ID=self.__active_case_ID)
 			self.__cases[self.active_meta.name] = self.__active_case_ID = cid
-			self.__active_case_directory = self.FS.join_mkdir(
-					directory, self.active_meta.name)
+			self.__active_case_directory = directory
 
 	def rename_active_case(self, name):
 		if self.active_case is not None:
@@ -248,12 +245,14 @@ class CaseIO(object):
 		if self.active_meta is None or self.active_case is None:
 			raise ValueError('no active case')
 
+		subdir = self.FS.join_mkdir(directory, self.active_meta.name)
+
 		if self.active_case.problem.solver is None:
 			raise ValueError('active case has no built solver')
 
 		self.accessor.save_solver_cache(
 				self.active_meta, self.active_case.problem.solver,
-				cache_name, self.active_frame_name, directory,
+				cache_name, self.active_frame_name, subdir,
 				overwrite=overwrite)
 
 	def load_solver_cache(self, cache_name):
@@ -276,11 +275,13 @@ class CaseIO(object):
 		if self.active_meta is None or self.active_case is None:
 			raise ValueError('no active case')
 
+		subdir = self.FS.join_mkdir(directory, self.active_meta.name)
+
 		if frame_name is None:
 			frame_name = self.active_frame_name
 
 		self.accessor.save_solution(
-				self.active_meta, frame_name, solution_name, directory,
+				self.active_meta, frame_name, solution_name, subdir,
 				**solution_data)
 
 	def load_solution(self, solution_name, frame_name=None):
@@ -297,8 +298,8 @@ class CaseIO(object):
 							overwrite=False):
 		self.save_active_case(directory=directory, overwrite=overwrite)
 		return self.accessor.write_case_yaml_from_entry(
-				self.active_meta, self.__active_case_directory,
-				single_document=True, yaml_directory=yaml_directory)
+				self.active_meta, directory, single_document=True,
+				yaml_directory=yaml_directory)
 
 	def case_to_YAML(self, case, case_name, directory=None,
 					 yaml_directory=None):
@@ -316,4 +317,9 @@ class CaseIO(object):
 
 	def YAML_to_case(self, yaml_file):
 		self.close_active_case()
-		return self.accessor.load_case_yaml(yaml_file)
+		case, entry, ptr = self.accessor.load_case_yaml(yaml_file)
+		self.__active_case_entry = entry
+		self.__active_case_object = case
+		self.__cases[case_name] = ptr
+		return case
+

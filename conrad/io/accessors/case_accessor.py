@@ -204,7 +204,10 @@ class CaseAccessor(ConradDBAccessor):
 			case_dictionary = yaml.safe_load(f)
 			ce = CaseEntry(**case_dictionary)
 			f.close()
-			return self.load_case(ce)
+			case = self.load_case(ce)
+			ce.flatten(self.DB)
+			ptr = self.DB.set_next(ce)
+			return case, ce, ptr
 
 		# otherwise, return None
 		return None
@@ -223,7 +226,7 @@ class CaseAccessor(ConradDBAccessor):
 			raise ValueError('name not set for case')
 
 		if single_document:
-			if os.path.exists(directory):
+			if os.path.exists(yaml_directory):
 				filename = os.path.join(yaml_directory, entry.name + '.yaml')
 				f = open(filename, 'w')
 				f.write(yaml.safe_dump(
