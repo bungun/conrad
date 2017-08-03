@@ -671,7 +671,7 @@ class Structure(object):
 
 	def satisfies_all(self, constraint_list, satisfaction_tol=0.):
 		for s in constraint_list:
-			sat, dose = self[s].satisfies(
+			sat, dose = self.satisfies(
 					ConstraintList(constraint_list),
 					satisfaction_tol=satisfaction_tol)
 			if not sat:
