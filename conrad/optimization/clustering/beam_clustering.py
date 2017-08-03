@@ -150,7 +150,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		reference_anatomy = self.reference_anatomy
 
 		# build f_conj
-		objective_voxels_conjugate = ok.PogsObjective(n_voxels+1, h='IndBox01')
+		objective_voxels_conjugate = ok.api.PogsObjective(n_voxels+1, h='IndBox01')
 		ptr = 0
 		# structure dual objectives and constraints
 		for s in reference_anatomy:
@@ -163,13 +163,13 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		objective_voxels_conjugate.set(start=-1, h='IndEq0', b=1, d=0)
 
 		# build g_conj
-		objective_beams_conjugate = ok.PogsObjective(n_beams, h='IndGe0')
+		objective_beams_conjugate = ok.api.PogsObjective(n_beams, h='IndGe0')
 
 
 		A_aug = self.build_A_infeas_augmented(
 				A_infeas, self.join_voxel_prices(voxel_prices))
 
-		dual = ok.PogsSolver(A_aug)
+		dual = ok.api.PogsSolver(A_aug)
 		dual.solve(
 				objective_beams_conjugate, objective_voxels_conjugate,
 				**solver_options)

@@ -147,7 +147,7 @@ if module_installed('optkit'):
 			"""
 			if self.pogs_solver:
 				del self.pogs_solver
-				ok.backend.reset_device()
+				ok.api.backend.reset_device()
 				self.pogs_solver = None
 
 		@staticmethod
@@ -438,7 +438,7 @@ if module_installed('optkit'):
 				return
 			else:
 				self.clear()
-				ok.set_backend(gpu=gpu, double=double)
+				ok.api.set_backend(gpu=gpu, double=double)
 
 		def build(self, structures, solver_cache=None, **options):
 			"""
