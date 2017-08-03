@@ -670,10 +670,9 @@ class Structure(object):
 		return (status, dose)
 
 	def satisfies_all(self, constraint_list, satisfaction_tol=0.):
-		for s in constraint_list:
-			sat, dose = self.satisfies(
-					ConstraintList(constraint_list).list,
-					satisfaction_tol=satisfaction_tol)
+		constraint_list = ConstraintList(constraint_list).list
+		for c in constraint_list:
+			sat, dose = self.satisfies(c, satisfaction_tol=satisfaction_tol)
 			if not sat:
 				return False
 		return True
