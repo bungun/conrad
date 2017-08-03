@@ -673,7 +673,7 @@ class Structure(object):
 		for s in constraint_list:
 			sat, dose = self[s].satisfies(
 					ConstraintList(constraint_list),
-					satisfaction_tol=satisfaction_tol):
+					satisfaction_tol=satisfaction_tol)
 			if not sat:
 				return False
 		return True
