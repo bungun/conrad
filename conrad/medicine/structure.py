@@ -652,7 +652,7 @@ class Structure(object):
 			dose = (1. + satisfaction_tol) * constraint.dose + satisfaction_tol
 		else:
 			relop = operator.ge
-			dose = (1. - satisfaction_tol) * constraint.dose - satisfaction_tol
+			dose = (1. - satisfaction_tol) * constraint.dose + -satisfaction_tol
 
 		if isinstance(constraint.threshold, str):
 			if constraint.threshold == 'mean':
@@ -672,7 +672,7 @@ class Structure(object):
 	def satisfies_all(self, constraint_list, satisfaction_tol=0.):
 		for s in constraint_list:
 			sat, dose = self.satisfies(
-					ConstraintList(constraint_list),
+					ConstraintList(constraint_list).list,
 					satisfaction_tol=satisfaction_tol)
 			if not sat:
 				return False
