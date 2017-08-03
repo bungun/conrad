@@ -113,10 +113,11 @@ class ClusteredProblem(object):
 		for label in voxel_price_dict:
 			voxel_price_dict[label] += voxel_price_update[label]
 
-
 	def clear(self):
-		self.reference_problem.clear()
-		self.clustered_problem.clear()
+		if self.reference_problem.solver_pogs is not None:
+			self.reference_problem.solver_pogs.clear()
+		if self.clustered_problem.solver_pogs is not None:
+			self.clustered_problem.solver_pogs.clear()
 
 	@abc.abstractmethod
 	def solve_and_bound_clustered_problem(self, **solver_options):
