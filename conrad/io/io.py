@@ -320,6 +320,6 @@ class CaseIO(object):
 		case, entry, ptr = self.accessor.load_case_yaml(yaml_file)
 		self.__active_case_entry = entry
 		self.__active_case_object = case
-		self.__cases[case_name] = ptr
+		self.__cases[entry.name] = ptr
 		return case
 
