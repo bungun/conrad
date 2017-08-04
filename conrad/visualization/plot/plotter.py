@@ -486,7 +486,7 @@ else:
 				run_aesthetics[-1].weight = max_weight
 				if darken_reference:
 					run_aesthetics[-1].color_attenuation = max_attenuation
-				if no_markers_reference
+				if no_markers_reference:
 					run_aesthetics[-1].marker = None
 
 			# get single x-window appropriate across all compared series
