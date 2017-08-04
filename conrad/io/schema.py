@@ -1516,11 +1516,10 @@ class SolutionEntry(ConradDatabaseEntry):
 	def solver_info(self, solver_info):
 		if isinstance(solver_info, dict):
 			for k in solver_info:
-				if not isinstance(solver_info[k], (int, float, str)):
-					raise ValueError(
-							'`solver_info` must be a dictinoary of elementary '
-							'values {}'.format((str, int, float)))
-			self.__solver_info.update(solver_info)
+				if isinstance(solver_info[k], (int, str)):
+					self.__solver_info[k] = solver_info[k]
+				else:
+					self.__solver_info[k] = float(solver_info[k])
 
 	def ingest_dictionary(self, **solution_dictionary):
 		self.name = solution_dictionary.pop('name', None)
