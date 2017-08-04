@@ -142,11 +142,15 @@ class FrameMappingAccessor(ConradDBAccessor):
 			if 'dictionary' in frame_mapping.voxel_map_type:
 				vmap_meta = {key: data[key]['type'] for key in data}
 				vmap = {key: data[key]['data'] for key in data}
+			else:
+				vmap = data
 		if bmap is not None:
 			data = bmap['data']
 			if 'dictionary' in frame_mapping.beam_map_type:
 				bmap_meta = {key: data[key]['type'] for key in data}
 				bmap = {key: data[key]['data'] for key in data}
+			else:
+				bmap = data
 
 		return self.DB.set_next(DoseFrameMappingEntry(
 				source_frame=frame_mapping.source,
