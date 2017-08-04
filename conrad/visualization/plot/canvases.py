@@ -168,7 +168,7 @@ else:
 			self.xaxis = self.bottom
 
 			# conditional (left) y axis formatting
-			self.ylabel = ylabel if self.left or not minimal_axes else ''
+			self.ylabel = ylabel if self.left else ''
 			self.yaxis = self.left or not minimal_axes
 
 	class DVHPlot(object):
