@@ -126,6 +126,13 @@ class RunProfile(object):
 					'constraint' : str(s.constraints[cid])
 				}
 
+	@property
+	def manifest(self):
+		return {
+			'objectives': self.objectives,
+			'constraints': self.constraints
+		}
+
 class RunOutput(object):
 	"""
 	Record of solver outputs associated with a treatment planning run.
@@ -178,6 +185,12 @@ class RunOutput(object):
 		""" Run time for second-pass solve (exact dose constraints). """
 		return self.solver_info['time_exact']
 
+	@property
+	def manifest(self):
+		manifest = {}
+		manifest.update(self.optimal_variables)
+		manifest['solver_info'] = self.solver_info
+		return manifest
 
 class RunRecord(object):
 	"""
@@ -278,6 +291,13 @@ class RunRecord(object):
 	def solvetime_exact(self):
 		""" Run time for second-pass solve (exact dose constraints). """
 		return self.output.solvetime
+
+	@property
+	def manifest(self):
+		manifest = {}
+		manifest.update(self.profile.manifest)
+		manifest.update(self.output.manifest)
+		return manifest
 
 class PlanningHistory(object):
 	"""
@@ -439,3 +459,17 @@ class PlanningHistory(object):
 					'no optimization runs performed, cannot apply tag '
 					'"{}" to most recent plan'.format(tag))
 		self.run_tags[tag] = len(self.runs) - 1
+
+	@property
+	def indexed_manifest(self):
+		manifest = {}
+		for idx, run in enumerate(self.runs):
+			manifest[idx] = run.manifest
+		return manifest
+
+	@property
+	def manifest(self):
+		manifest = {}
+		for t in self.run_tags:
+			manifest[t] = self[t].manifest
+		return manifest

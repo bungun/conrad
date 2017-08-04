@@ -1430,6 +1430,7 @@ class SolutionEntry(ConradDatabaseEntry):
 		self.__y = None
 		self.__x_dual = None
 		self.__y_dual = None
+		self.__solver_info = {}
 		self.ingest_dictionary(**entry_dictionary)
 
 	@property
@@ -1507,6 +1508,20 @@ class SolutionEntry(ConradDatabaseEntry):
 		if cdb_util.isinstance_or_db_pointer(y_dual_entry, DataFragmentEntry):
 			self.__y_dual = y_dual_entry
 
+	@property
+	def solver_info(self):
+		return self.__solver_info
+
+	@solver_info.setter
+	def solver_info(self, solver_info):
+		if isinstance(solver_info, dict):
+			for k in solver_info:
+				if not isinstance(solver_info[k], (int, float, str)):
+					raise ValueError(
+							'`solver_info` must be a dictinoary of elementary '
+							'values {}'.format((str, int, float)))
+			self.__solver_info.update(solver_info)
+
 	def ingest_dictionary(self, **solution_dictionary):
 		self.name = solution_dictionary.pop('name', None)
 		self.frame = solution_dictionary.pop('frame', None)
@@ -1518,6 +1533,7 @@ class SolutionEntry(ConradDatabaseEntry):
 				solution_dictionary, 'x_dual', 'mu', 'beam_prices')
 		self.y_dual = cdb_util.try_keys(
 				solution_dictionary, 'y_dual', 'nu', 'voxel_prices')
+		self.solver_info = solution_dictionary.pop('solver_info', None)
 
 	def flatten(self, conrad_db):
 		cdb_util.validate_db(conrad_db)
@@ -1553,6 +1569,7 @@ class SolutionEntry(ConradDatabaseEntry):
 				'y': cdb_util.expand_if_db_entry(self.y),
 				'x_dual': cdb_util.expand_if_db_entry(self.x_dual),
 				'y_dual': cdb_util.expand_if_db_entry(self.y_dual),
+				'solver_info': self.solver_info
 		}
 
 	@property
@@ -1572,6 +1589,7 @@ class SolutionEntry(ConradDatabaseEntry):
 				'y': self.y,
 				'x_dual': self.x_dual,
 				'y_dual': self.y_dual,
+				'solver_info': self.solver_info,
 		}
 
 class SolverCacheEntry(ConradDatabaseEntry):

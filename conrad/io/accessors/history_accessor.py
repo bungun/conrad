@@ -22,6 +22,7 @@ along with CONRAD.  If not, see <http://www.gnu.org/licenses/>.
 from conrad.compat import *
 
 from conrad.physics.physics import DEFAULT_FRAME0_NAME
+from conrad.optimization.history import RunOutput, RunRecord
 from conrad.io.schema import HistoryEntry, SolutionEntry, cdb_util
 from conrad.io.accessors.base_accessor import ConradDBAccessor
 
@@ -40,6 +41,10 @@ class SolutionAccessor(ConradDBAccessor):
 				directory, 'solutions', 'frame_{}'.format(frame_name),
 				solution_name)
 
+		run = solution_components.pop('run', None)
+		if isinstance(run, (RunRecord, RunOutput)):
+			solution_components.update(run.manifest)
+
 		s = SolutionEntry(frame=frame_name, name=solution_name)
 		s.x = self.pop_and_record(
 				solution_components, 'x', subdir,
@@ -57,9 +62,10 @@ class SolutionAccessor(ConradDBAccessor):
 				solution_components, 'y_dual', subdir,
 				alternate_keys=['nu', 'voxel_prices'],
 				overwrite=overwrite)
+		s.solver_info = solution_components.pop('solver_info', None)
 		return self.DB.set_next(s)
 
-	def load_solution(self, solution_entry):
+	def load_solution(self, solution_entry, cast_as_run=False):
 		solution_entry = self.DB.get(solution_entry)
 		if not isinstance(solution_entry, SolutionEntry):
 			raise ValueError(
@@ -73,12 +79,17 @@ class SolutionAccessor(ConradDBAccessor):
 		y = self.load_entry(solution_entry.y)
 		x_dual = self.load_entry(solution_entry.x_dual)
 		y_dual = self.load_entry(solution_entry.y_dual)
-		return {
-				'x': x,
-				'y': y,
-				'x_dual': x_dual,
-				'y_dual': y_dual,
-		}
+		info = solution_entry.solver_info
+
+		out_ = {'x': x, 'y': y, 'x_dual': x_dual, 'y_dual': y_dual}
+		if cast_as_run:
+			run = RunRecord()
+			run.output.optimal_variables.update(out_)
+			run.output.solver_info.update(info)
+			return run
+		else:
+			out_['solver_info'] = info
+			return out_
 
 	def select_solution_entry(self, solution_list, frame_name, solution_name):
 		for sol in map(self.DB.get, solution_list):
@@ -105,7 +116,6 @@ class HistoryAccessor(ConradDBAccessor):
 		for key in history_dictionary:
 			subdir = self.FS.join_mkdir(directory, 'solutions', key)
 
-			solution_dictionary = history_dictionary[key]
 			h.add_solutions(self.solution_accessor.save_solution(
 					subdir, key, solution_dictionary.pop('frame', 'default'),
 					overwrite=overwrite, **solution_dictionary))
