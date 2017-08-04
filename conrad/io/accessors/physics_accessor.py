@@ -318,5 +318,5 @@ class PhysicsAccessor(ConradDBAccessor):
 
 	@property
 	def available_frame_mappings(self):
-		return [(fm.source, fm.target) for fm in self.__frame_mapping_cache]
+		return [(fm.source_frame, fm.target_frame) for fm in self.__frame_mapping_cache]
 

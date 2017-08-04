@@ -295,11 +295,11 @@ class CaseIO(object):
 				self.active_meta.history, frame_name, solution_name)
 
 	def dump_active_to_YAML(self, directory=None, yaml_directory=None,
-							overwrite=False):
+							yaml_name_modifier='', overwrite=False):
 		self.save_active_case(directory=directory, overwrite=overwrite)
 		return self.accessor.write_case_yaml_from_entry(
-				self.active_meta, directory, single_document=True,
-				yaml_directory=yaml_directory)
+				self.active_meta, directory, name_modifier=yaml_name_modifier,
+				single_document=True, yaml_directory=yaml_directory)
 
 	def case_to_YAML(self, case, case_name, directory=None,
 					 yaml_directory=None):
