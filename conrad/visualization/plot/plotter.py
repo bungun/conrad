@@ -23,6 +23,7 @@ from conrad.compat import *
 
 from numpy import linspace
 
+from conrad.medicine import Anatomy
 from conrad.case import Case
 from conrad.optimization.history import RunRecord
 from conrad.visualization.plot.elements import LineAesthetic
@@ -54,7 +55,7 @@ else:
 			>>> # plot the output emitted by the case.plan() call
 			>>> plotter.plot(run, **options)
 		"""
-		def __init__(self, case, subset=None):
+		def __init__(self, case_or_anatomy, subset=None):
 			"""
 			Initialize :class:`CasePlotter`.
 
@@ -63,24 +64,31 @@ else:
 			structure associated with the case.
 
 			Args:
-				case (:class:`Case`): Treatment planning case to use as
-					basis for configuring object's :class:`DVHPlot`
+				case_or_anatomy (:class:`Case`): Treatment planning case
+					to use as basis for configuring object's
+					:class:`DVHPlot`
 				subset (:obj:`list`, optional): List of labels of
 					structures to use in a restricted plotting context.
 
 			Raises:
-				TypeError: If argument is not of type :class:`Case`
+				TypeError: If argument is not of type :class:`Case` or
+				:class:`Anatomy`
 			"""
-			if not isinstance(case, Case):
-				raise TypeError('argument "case" must be of type conrad.Case')
+			if not isinstance(case_or_anatomy, (Case, Anatomy)):
+				raise TypeError(
+						'argument "case" must be of type conrad.Case')
+			if isinstance(case_or_anatomy, Anatomy):
+				anatomy = case_or_anatomy
+			else:
+				anatomy = case_or_anatomy.anatomy
 
 			# plot setup
 			self.__dvh_plot = None
 			self.__dvh_set = None
-			self.__structure_subset = case.anatomy.label_order
+			self.__structure_subset = anatomy.label_order
 			self.__structure_colors = {}
-			self.__tag2label = {s.label: s.label for s in case.anatomy}
-			self.__tag2label.update({s.name: s.label for s in case.anatomy})
+			self.__tag2label = {s.label: s.label for s in anatomy}
+			self.__tag2label.update({s.name: s.label for s in anatomy})
 			self.__grouping = 'together'
 
 			if subset is not None:
@@ -350,7 +358,8 @@ else:
 				 	   marker_size_increasing=True,
 				 	   universal_marker=None, vary_line_weights=False,
 				 	   vary_line_colors=False, vary_line_styles=False,
-				 	   darken_reference=True, series_labels_on_plot=False,
+				 	   darken_reference=True, no_markers_reference=True,
+				 	   series_labels_on_plot=False,
 				 	   series_label_coordinates=None, **options):
 			"""
 			Plot data from multiple runs.
@@ -409,6 +418,8 @@ else:
 					attenuate color assigned to each structure's DVH
 					curve (use weighted average of specified color and
 					black) when plotting reference series.
+				no_markers_reference(:obj:`bool`, optional): If ``True``,
+					draw DVH curves without markers for reference series.
 				series_labels_on_plot(:obj:`bool`, optional): If ``True``,
 					structure names will be printed on the corresponding
 					subplots.
@@ -475,6 +486,8 @@ else:
 				run_aesthetics[-1].weight = max_weight
 				if darken_reference:
 					run_aesthetics[-1].color_attenuation = max_attenuation
+				if no_markers_reference
+					run_aesthetics[-1].marker = None
 
 			# get single x-window appropriate across all compared series
 			options['xmax'] = options.pop(
