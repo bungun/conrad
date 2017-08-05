@@ -465,11 +465,16 @@ class Case(object):
 						'no problem constructed for frame "{}"'.format(frame))
 		return self.__problems_by_frame[frame]
 
+	def change_dose_frame(self, frame):
+		self.physics.change_dose_frame(frame)
+		self.anatomy.plannable
+
 	def delete_dose_frame(self, frame):
 		if frame is None:
 			return
-		if frame == self.__curr_frame:
+		if frame == self.physics.frame.name:
 			raise ValueError('cannot delete current dose frame')
+		self.clear_problem(frame=frame)
 		self.__problems_by_frame.pop(frame, None)
 		self.__anatomies_by_frame.pop(frame, None)
 		self.physics.delete_dose_frame()
@@ -477,7 +482,8 @@ class Case(object):
 		# eliminate references to possibly bulky datasets?
 
 	def clear_problem(self, frame='active'):
-		self.problem_for_frame(frame).clear()
+		if frame is not None:
+			self.problem_for_frame(frame).clear()
 
 	def plan(self, use_slack=True, use_2pass=False, **options):
 		"""
