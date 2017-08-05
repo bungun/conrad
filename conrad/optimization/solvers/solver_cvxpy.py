@@ -22,8 +22,7 @@ This file is part of CONRAD.
 CONRAD is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
+(at your option) any later versionsel
 CONRAD is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -91,11 +90,12 @@ if CVXPY_INSTALLED:
 					:meth:`SolverCVXPY.init_problem`.
 			"""
 			Solver.__init__(self)
-			self.problem = None
+			self.cvxpy_problem = None
 			self.__x = cvxpy.Variable(0)
 			self.__constraint_indices = {}
 			self.constraint_dual_vars = {}
 			self.__solvetime = np.nan
+			self.__unbuilt = True
 
 			if isinstance(n_beams, int):
 				self.init_problem(n_beams, **options)
@@ -142,14 +142,20 @@ if CVXPY_INSTALLED:
 
 			The minmal representation consists of:
 				- An empty objective (Minimize 0),
-				- A nonnegativity constraint on the vector of beam intensities (:math:`x \ge 0`).
+				- A nonnegativity constraint on the vector of beam intensities
+				(:math:`x \ge 0`).
 
 			Reset dictionaries of:
 				- Slack variables (all dose constraints),
 				- Dual variables (all dose constraints), and
-				- Slope variables for convex restrictions (percentile dose constraints).
+				- Slope variables for convex restrictions (percentile dose
+				constraints).
 			"""
-			self.problem = cvxpy.Problem(cvxpy.Minimize(0), [self.__x >= 0])
+			if self.__unbuilt:
+				return
+
+			self.cvxpy_problem = cvxpy.Problem(
+					cvxpy.Minimize(0), [self.__x >= 0])
 			self.dvh_vars = {}
 			self.slack_vars = {}
 			self.constraint_dual_vars = {}
@@ -297,30 +303,32 @@ if CVXPY_INSTALLED:
 					gamma = self.gamma_prioritized(c.priority)
 					slack = cvxpy.Variable(1)
 					self.slack_vars[cid] = slack
-					self.problem.objective += cvxpy.Minimize(gamma * slack)
-					self.problem.constraints += [slack >= 0]
+					self.cvxpy_problem.objective += cvxpy.Minimize(
+							gamma * slack)
+					self.cvxpy_problem.constraints += [slack >= 0]
 					if not c.upper:
-						self.problem.constraints += [slack <= c.dose.value]
+						self.cvxpy_problem.constraints += [
+							slack <= c.dose.value]
 				else:
 					slack = 0.
 					self.slack_vars[cid] = None
 
 				if isinstance(c, MeanConstraint):
 					if c.upper:
-						self.problem.constraints += [
+						self.cvxpy_problem.constraints += [
 								structure.A_mean * self.__x - slack <=
 								c.dose.value]
 					else:
-						self.problem.constraints += [
+						self.cvxpy_problem.constraints += [
 								structure.A_mean * self.__x + slack >=
 								c.dose.value]
 
 				elif isinstance(c, MinConstraint):
-					self.problem.constraints += \
+					self.cvxpy_problem.constraints += \
 						[structure.A * self.__x >= c.dose.value]
 
 				elif isinstance(c, MaxConstraint):
-					self.problem.constraints += \
+					self.cvxpy_problem.constraints += \
 						[structure.A * self.__x <= c.dose.value]
 
 				elif isinstance(c, PercentileConstraint):
@@ -331,23 +339,24 @@ if CVXPY_INSTALLED:
 								had_slack=self.use_slack)
 
 						# add it to problem
-						self.problem.constraints += [ dvh_constr ]
+						self.cvxpy_problem.constraints += [ dvh_constr ]
 
 					else:
 						# beta = 1 / slope for DVH constraint approximation
 						beta = cvxpy.Variable(1)
 						self.dvh_vars[cid] = beta
-						self.problem.constraints += [ beta >= 0 ]
+						self.cvxpy_problem.constraints += [ beta >= 0 ]
 
 						# build convex restriction to constraint
 						dvh_constr = self.__percentile_constraint_restricted(
 							structure.A, self.__x, c, beta, slack)
 
 						# add it to problem
-						self.problem.constraints += [ dvh_constr ]
+						self.cvxpy_problem.constraints += [ dvh_constr ]
 
 				self.__constraint_indices[cid] = None
-				self.__constraint_indices[cid] = len(self.problem.constraints) - 1
+				self.__constraint_indices[cid] = len(
+						self.cvxpy_problem.constraints) - 1
 
 		def get_slack_value(self, constr_id):
 			"""
@@ -383,7 +392,7 @@ if CVXPY_INSTALLED:
 				otherwise.
 			"""
 			if constr_id in self.__constraint_indices:
-				dual_var = self.problem.constraints[
+				dual_var = self.cvxpy_problem.constraints[
 						self.__constraint_indices[constr_id]].dual_value
 				if dual_var is not None:
 					if not isinstance(dual_var, float):
@@ -423,7 +432,7 @@ if CVXPY_INSTALLED:
 		def x_dual(self):
 			""" Dual variable corresponding to constraint x >= 0. """
 			try:
-				return conrad_vec(self.problem.constraints[0].dual_value)
+				return conrad_vec(self.cvxpy_problem.constraints[0].dual_value)
 			except:
 				return None
 
@@ -440,12 +449,12 @@ if CVXPY_INSTALLED:
 		@property
 		def status(self):
 			""" Solver status. """
-			return self.problem.status
+			return self.cvxpy_problem.status
 
 		@property
 		def objective_value(self):
 			""" Objective value at end of solve. """
-			return self.problem.value
+			return self.cvxpy_problem.value
 
 		@property
 		def solveiters(self):
@@ -489,19 +498,20 @@ if CVXPY_INSTALLED:
 			# A, dose, weight_abs, weight_lin = \
 					# self._Solver__gather_matrix_and_coefficients(structures)
 
-			self.problem.objective = cvxpy.Minimize(0)
+			self.cvxpy_problem.objective = cvxpy.Minimize(0)
 			for s in structures:
-				self.problem.objective += cvxpy.Minimize(
+				self.cvxpy_problem.objective += cvxpy.Minimize(
 						ObjectiveMethods.expr(s, self.__x))
 				self.__add_constraints(s, exact=exact)
 
-			# self.problem.objective = cvxpy.Minimize(
+			# self.cvxpy_problem.objective = cvxpy.Minimize(
 			# 		weight_abs.T * cvxpy.abs(A * self.__x - dose) +
 			# 		weight_lin.T * (A * self.__x - dose))
 
 			# for s in structures:
 				# self.__add_constraints(s, exact=exact)
 
+			self.__unbuilt = False
 			return self._Solver__construction_report(structures)
 
 		def solve(self, **options):
@@ -535,7 +545,7 @@ if CVXPY_INSTALLED:
 			PRINT('running solver...')
 			start = time.clock()
 			if solver == cvxpy.ECOS:
-				ret = self.problem.solve(
+				ret = self.cvxpy_problem.solve(
 						solver=cvxpy.ECOS,
 						verbose=VERBOSE,
 						max_iters=maxiter,
@@ -545,14 +555,14 @@ if CVXPY_INSTALLED:
 						feastol_inacc=reltol)
 			elif solver == cvxpy.SCS:
 				if use_gpu:
-					ret = self.problem.solve(
+					ret = self.cvxpy_problem.solve(
 							solver=cvxpy.SCS,
 							verbose=VERBOSE,
 							max_iters=maxiter,
 							eps=reltol,
 							gpu=use_gpu)
 				else:
-					ret = self.problem.solve(
+					ret = self.cvxpy_problem.solve(
 							solver=cvxpy.SCS,
 							verbose=VERBOSE,
 							max_iters=maxiter,
@@ -564,8 +574,8 @@ if CVXPY_INSTALLED:
 			self.__solvetime = time.clock() - start
 
 
-			PRINT("status: {}".format(self.problem.status))
-			PRINT("optimal value: {}".format(self.problem.value))
+			PRINT("status: {}".format(self.cvxpy_problem.status))
+			PRINT("optimal value: {}".format(self.cvxpy_problem.value))
 
 			return ret != np.inf and not isinstance(ret, str)
 

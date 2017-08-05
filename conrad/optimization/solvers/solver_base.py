@@ -63,6 +63,7 @@ PRIORITY_3 = 1
 PROJECTOR_POGS_DENSE_DIRECT = 'cholesky(identity + gramian)'
 PROJECTOR_INDIRECT = 'indirect'
 
+@add_metaclass(abc.ABCMeta)
 class Solver(object):
 	"""
 	Base class for translating :mod:`conrad` planning requests to convex
@@ -152,11 +153,13 @@ class Solver(object):
 			raise ValueError('argument "priority" must be one of: '
 							 '{1, 2, 3}')
 
+	@abc.abstractmethod
 	def init_problem(self, n_beams, **options):
 		""" Prototype for problem initialization. """
 		raise NotImplementedError(
 				'solver method "init_problem" not implemented')
 
+	@abc.abstractmethod
 	def clear(self):
 		""" Prototype for solver tear-down. """
 		raise NotImplementedError(
@@ -243,16 +246,19 @@ class Solver(object):
 		self.__global_dose_scaling = dose_scaling
 		self.__global_weight_scaling = weight_scaling
 
+	@abc.abstractmethod
 	def build(self, structures, exact=False, **options):
 		""" Prototype for problem construction. """
 		raise NotImplementedError(
 				'solver method "build" not implemented')
 
+	@abc.abstractmethod
 	def get_slack_value(Self, constraint_id):
 		""" Prototype for querying slack variable values. """
 		raise NotImplementedError(
 				'solver method "get_slack_value" not implemented')
 
+	@abc.abstractmethod
 	def get_dvh_slope(self, constraint_id):
 		"""
 		Prototype for querying slopes of restricted percentile constraints.
