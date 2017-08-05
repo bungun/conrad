@@ -299,7 +299,7 @@ class DiscreteMapping(AbstractDiscreteMapping):
 		else:
 			expectA = 'right'
 			expectB = 'M x K, and M x N'
-			expectC = '\nK = {}\nN = {}'.format(self.n_frame1, self.n_frame-)
+			expectC = '\nK = {}\nN = {}'.format(self.n_frame1, self.n_frame0)
 			dimension_match = dim_in2 == self.n_frame1
 			dimension_match &= dim_out2 == self.n_frame0
 			dimension_match &= dim_in1 == dim_out1
@@ -350,8 +350,8 @@ class DiscreteMapping(AbstractDiscreteMapping):
 			dim2 = in_.shape[1] if apply_from_left else self.__n_frame0
 			out_ = np.zeros((dim1, dim2))
 
-		return self.frame1_to_0_inplace(i
-				n_, out_, apply_from_left=apply_from_left, **options)
+		return self.frame1_to_0_inplace(
+				in_, out_, apply_from_left=apply_from_left, **options)
 
 class ClusterMapping(DiscreteMapping):
 	""" Map ``M`` elements to ``K`` clusters, with ``K`` <= ``M``. """
@@ -793,7 +793,7 @@ class DictionaryMapping(AbstractDiscreteMapping):
 
 	def frame1_to_0_inplace(self, in_, out_, clear_output=False, **options):
 		rescale_output = options.pop('rescale_output', False)
-		d_in = self.__get_working_form(in_, 'in_'. **options)
+		d_in = self.__get_working_form(in_, 'in_', **options)
 		d_out = self.__get_working_form(out_, 'out_', **options)
 		for key in d_in:
 			m = self[key]
