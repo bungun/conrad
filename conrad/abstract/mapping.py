@@ -165,40 +165,52 @@ class DiscreteMapping(AbstractDiscreteMapping):
 		"""
 		vector_processing = is_vector(in_) and is_vector(out_)
 		matrix_processing = sparse_or_dense(in_) and sparse_or_dense(out_)
+		apply_from_left = apply_from_left=options.pop('apply_from_left', True)
 		if not (vector_processing or matrix_processing):
 			raise TypeError('arguments "in_" and "out_" be numpy or '
 							'scipy vectors or matrices')
 
-		dim_in1 = in_.shape[0]
-		dim_out1 = out_.shape[0]
 		if vector_processing:
-			dim_in2 = 1
-			dim_out2 = 1
+			dim_in1, dim_in2 = in_.size, 1
+			dim_out1, dim_out2 = out_.size, 1
 		else:
-			dim_in2 = in_.shape[1]
-			dim_out2 = out_.shape[1]
+			dim_in1, dim_in2 = in_.shape
+			dim_out1, dim_out2 = out_.shape
 
-		if bool(
-				dim_in1 != self.n_frame0 or
-				dim_out1 != self.n_frame1 or
-				dim_in2 != dim_out2):
-			raise ValueError('arguments "in_" and "out_" be vectors or '
-							 'matrices of dimensions M x N, and K x N, '
-							 'respectively, with:\nM = {}\nK = {}\n'
+		if apply_from_left:
+			expectA = 'left'
+			expectB = 'M x N, and K x N'
+			expectC = '\nM = {}\nK = {}'.format(self.n_frame0, self.n_frame1)
+			dimension_match = dim_in1 == self.n_frame0
+			dimension_match &= dim_out1 == self.n_frame1
+			dimension_match &= dim_in2 == dim_out2
+		else:
+			expectA = 'right'
+			expectB = 'M x N, and M x K'
+			expectC = '\nN = {}\nK = {}'.format(self.n_frame0, self.n_frame1)
+			dimension_match = dim_in2 == self.n_frame0
+			dimension_match &= dim_out2 == self.n_frame1
+			dimension_match &= dim_in1 == dim_out1
+
+		if not dimension_match:
+			raise ValueError('to apply mapping transformation from {}, '
+							 'arguments "in_" and "out_" be vectors or '
+							 'matrices of dimensions {}, '
+							 'respectively, with:\n'
 							 'Provided:\n input: {}x{}\noutput: {}x{}'
-							 ''.format(self.n_frame0, self.n_frame1,
+							 ''.format(expectA, expectB, expectC,
 							 dim_in1, dim_in2, dim_out1, dim_out2))
 		if clear_output:
 			out_ *= 0
 
-		if vector_processing:
+		if apply_from_left:
 			for idx_0, idx_1 in enumerate(self.vec):
-				out_[idx_1] += in_[idx_0]
+				out_[idx_1, ...] += in_[idx_0, ...]
 		else:
 			for idx_0, idx_1 in enumerate(self.vec):
-				out_[idx_1, :] += in_[idx_0, :]
-		# TODO: use efficient slicing when input is sparse. warn when output sparse??
+				out_[..., idx_1] += in_[..., idx_0]
 
+		# TODO: use efficient slicing when input is sparse. warn when output sparse??
 		return out_
 
 	def frame0_to_1(self, in_, **options):
@@ -220,14 +232,16 @@ class DiscreteMapping(AbstractDiscreteMapping):
 			Input entries are mapped one-to-one or one-to-many *into*
 			output.
 		"""
+		apply_from_left = options.pop('apply_from_left', True)
 		if is_vector(in_):
 			out_ = np.zeros(self.__n_frame1)
 		elif sparse_or_dense(in_):
-			dim1 = self.__n_frame1
-			dim2 = in_.shape[1]
+			dim1 = self.__n_frame1 if apply_from_left else in_.shape[0]
+			dim2 = in_.shape[1] if apply_from_left else self.__n_frame1
 			out_ = np.zeros((dim1, dim2))
 
-		return self.frame0_to_1_inplace(in_, out_)
+		return self.frame0_to_1_inplace(
+				in_, out_, apply_from_left=apply_from_left, **options)
 
 
 	def frame1_to_0_inplace(self, in_, out_, clear_output=False, **options):
@@ -263,41 +277,52 @@ class DiscreteMapping(AbstractDiscreteMapping):
 		"""
 		vector_processing = is_vector(in_) and is_vector(out_)
 		matrix_processing = sparse_or_dense(in_) and sparse_or_dense(out_)
-
+		apply_from_left = apply_from_left=options.pop('apply_from_left', True)
 		if not (vector_processing or matrix_processing):
 			raise TypeError('arguments "in_" and "out_" be numpy or '
 							'scipy vectors or matrices')
 
-		dim_in1 = in_.shape[0]
-		dim_out1 = out_.shape[0]
 		if vector_processing:
-			dim_in2 = 1
-			dim_out2 = 1
+			dim_in1, dim_in2 = in_.size, 1
+			dim_out1, dim_out2 = out_.size, 1
 		else:
-			dim_in2 = in_.shape[1]
-			dim_out2 = out_.shape[1]
+			dim_in1, dim_in2 = in_.shape
+			dim_out1, dim_out2 = out_.shape
 
-		if bool(
-				dim_in1 != self.n_frame1 or
-				dim_out1 != self.n_frame0 or
-				dim_in2 != dim_out2):
-			raise ValueError('arguments "in_" and "out_" be vectors or '
-							 'matrices of dimensions K x N, and M x N, '
-							 'respectively, with:\nK = {}\nM = {}\n'
+		if apply_from_left:
+			expectA = 'left'
+			expectB = 'K x N, and M x N'
+			expectC = '\nK = {}\nM = {}'.format(self.n_frame1, self.n_frame0)
+			dimension_match = dim_in1 == self.n_frame1
+			dimension_match &= dim_out1 == self.n_frame0
+			dimension_match &= dim_in2 == dim_out2
+		else:
+			expectA = 'right'
+			expectB = 'M x K, and M x N'
+			expectC = '\nK = {}\nN = {}'.format(self.n_frame1, self.n_frame-)
+			dimension_match = dim_in2 == self.n_frame1
+			dimension_match &= dim_out2 == self.n_frame0
+			dimension_match &= dim_in1 == dim_out1
+
+		if not dimension_match:
+			raise ValueError('to apply mapping transformation from {}, '
+							 'arguments "in_" and "out_" be vectors or '
+							 'matrices of dimensions {}, '
+							 'respectively, with:\n'
 							 'Provided:\n input: {}x{}\noutput: {}x{}'
-							 ''.format(self.n_frame1, self.n_frame0,
+							 ''.format(expectA, expectB, expectC,
 							 dim_in1, dim_in2, dim_out1, dim_out2))
 		if clear_output:
 			out_ *= 0
 
-		if vector_processing:
+		if apply_from_left:
 			for idx_0, idx_1 in enumerate(self.vec):
-				out_[idx_0] += in_[idx_1]
-
-		if matrix_processing:
+				out_[idx_0, ...] += in_[idx_1, ...]
+		else:
 			for idx_0, idx_1 in enumerate(self.vec):
-				out_[idx_0, :] += in_[idx_1, :]
+				out_[..., idx_0] += in_[..., idx_1]
 
+		# TODO: use efficient slicing when input is sparse. warn when output sparse??
 		return out_
 
 	def frame1_to_0(self, in_, **options):
@@ -317,14 +342,16 @@ class DiscreteMapping(AbstractDiscreteMapping):
 			columns as input. Input entries are mapped one-to-one or
 			many-to-one *into* output.
 		"""
+		apply_from_left = options.pop('apply_from_left', True)
 		if is_vector(in_):
 			out_ = np.zeros(self.__n_frame0)
 		elif sparse_or_dense(in_):
-			dim1 = self.__n_frame0
-			dim2 = in_.shape[1]
+			dim1 = self.__n_frame0 if apply_from_left else in_.shape[0]
+			dim2 = in_.shape[1] if apply_from_left else self.__n_frame0
 			out_ = np.zeros((dim1, dim2))
 
-		return self.frame1_to_0_inplace(in_, out_)
+		return self.frame1_to_0_inplace(i
+				n_, out_, apply_from_left=apply_from_left, **options)
 
 class ClusterMapping(DiscreteMapping):
 	""" Map ``M`` elements to ``K`` clusters, with ``K`` <= ``M``. """
@@ -363,7 +390,7 @@ class ClusterMapping(DiscreteMapping):
 		""" Number of elements mapped to each cluster. """
 		return self.__cluster_weights
 
-	def __rescale_len_points(self, data):
+	def __rescale_len_points(self, data, apply_from_left=True, **options):
 		"""
 		Scale input array's entries by corresponding cluster's weight.
 
@@ -386,16 +413,18 @@ class ClusterMapping(DiscreteMapping):
 		Returns:
 			None
 		"""
-		vector = data.shape[0] == data.size
-		for idx_point, idx_cluster in enumerate(self.vec):
-			w = self.cluster_weights[idx_cluster]
-			if w > 0:
-				if vector:
-					data[idx_point] *= 1. / w
-				else:
-					data[idx_point, :] *= 1. / w
+		if apply_from_left:
+			for idx_point, idx_cluster in enumerate(self.vec):
+				w = self.cluster_weights[idx_cluster]
+				if w > 0:
+					data[idx_point, ...] *= 1. / w
+		else:
+			for idx_point, idx_cluster in enumerate(self.vec):
+				w = self.cluster_weights[idx_cluster]
+				if w > 0:
+					data[..., idx_point] *= 1. / w
 
-	def __rescale_len_clusters(self, data):
+	def __rescale_len_clusters(self, data, apply_from_left=True, **options):
 		"""
 		Scale input array's entries by corresponding cluster's weight.
 
@@ -419,16 +448,17 @@ class ClusterMapping(DiscreteMapping):
 		Returns:
 			None
 		"""
-		vector = data.shape[0] == data.size
-		for idx_cluster, w in enumerate(self.cluster_weights):
-			if w > 0:
-				if vector:
-					data[idx_cluster] *= 1. / w
-				else:
-					data[idx_cluster, :] *= 1. / w
+		if apply_from_left:
+			for idx_cluster, w in enumerate(self.cluster_weights):
+				if w > 0:
+						data[idx_cluster, ...] *= 1. / w
+		else:
+			for idx_cluster, w in enumerate(self.cluster_weights):
+				if w > 0:
+						data[..., idx_cluster] *= 1. / w
 
 	def downsample_inplace(self, in_, out_, rescale_output=True,
-						   clear_output=False):
+						   clear_output=False, **options):
 		"""
 		Downsample entries of ``in_``, add to entries of ``out_``.
 
@@ -457,12 +487,13 @@ class ClusterMapping(DiscreteMapping):
 		Returns:
 			Updated version of array ``out_``, modified in-place.
 		"""
-		out_ = self.frame0_to_1_inplace(in_, out_, clear_output=clear_output)
+		out_ = self.frame0_to_1_inplace(
+				in_, out_, clear_output=clear_output, **options)
 		if rescale_output:
-			self.__rescale_len_clusters(out_)
+			self.__rescale_len_clusters(out_, **options)
 		return out_
 
-	def downsample(self, in_, rescale_output=True):
+	def downsample(self, in_, rescale_output=True, **options):
 		"""
 		Allocating version of :meth:`ClusterMapping.downsample_inplace`.
 
@@ -480,13 +511,13 @@ class ClusterMapping(DiscreteMapping):
 			A new array of size ``k`` x ``n`` containing downsampled
 			data.
 		"""
-		out_ = self.frame0_to_1(in_)
+		out_ = self.frame0_to_1(in_, **options)
 		if rescale_output:
-			self.__rescale_len_clusters(out_)
+			self.__rescale_len_clusters(out_, **options)
 		return out_
 
 	def upsample_inplace(self, in_, out_, rescale_output=False,
-						 clear_output=False):
+						 clear_output=False, **options):
 		"""
 		Upsample entries of ``in_``, add to entries of ``out_``.
 
@@ -515,12 +546,13 @@ class ClusterMapping(DiscreteMapping):
 		Returns:
 			Updated version of array ``out_``, modified in-place.
 		"""
-		out_ = self.frame1_to_0_inplace(in_, out_, clear_output=clear_output)
+		out_ = self.frame1_to_0_inplace(
+				in_, out_, clear_output=clear_output, **options)
 		if rescale_output:
-			self.__rescale_len_points(out_)
+			self.__rescale_len_points(out_, **options)
 		return out_
 
-	def upsample(self, in_, rescale_output=False):
+	def upsample(self, in_, rescale_output=False, **options):
 		"""
 		Allocating version of :meth:`ClusterMapping.upsample_inplace`.
 
@@ -537,9 +569,9 @@ class ClusterMapping(DiscreteMapping):
 		Returns:
 			A new array of size ``m`` x ``n`` containing upsampled data.
 		"""
-		out_ = self.frame1_to_0(in_)
+		out_ = self.frame1_to_0(in_, **options)
 		if rescale_output:
-			self.__rescale_len_points(out_)
+			self.__rescale_len_points(out_, **options)
 		return out_
 
 	@property
@@ -630,13 +662,13 @@ class IdentityMapping(AbstractDiscreteMapping):
 
 	def frame0_to_1(self, in_, **options):
 		out_ = np.zeros_like(in_)
-		return self.frame0_to_1_inplace(in_, out_, True)
+		return self.frame0_to_1_inplace(in_, out_, True, **options)
 
 	def frame1_to_0_inplace(self, in_, out_, clear_output=False, **options):
-		return self.frame0_to_1_inplace(in_, out_, clear_output)
+		return self.frame0_to_1_inplace(in_, out_, clear_output **options)
 
 	def frame1_to_0(self, in_, **options):
-		return self.frame0_to_1(in_)
+		return self.frame0_to_1(in_, **options)
 
 class DictionaryMapping(AbstractDiscreteMapping):
 	def __init__(self, mapping_dictionary, key_order=None):
@@ -715,17 +747,16 @@ class DictionaryMapping(AbstractDiscreteMapping):
 	def n_frame1(self):
 		return self.__n_frame1
 
-	def __get_working_form(self, io_object, name):#, apply_from_left=True):
+	def __get_working_form(self, io_object, name, apply_from_left=True, **options):
 		if isinstance(io_object, dict):
 			return io_object
 		if isinstance(io_object, SliceCachingVector):
 			return io_object._SliceCachingVector__slices
 		elif isinstance(io_object, SliceCachingVector):
-			return io_object._SliceCachingMatrix__row_slices
-			# if apply_from_left:
-			#	return io_object._SliceCachingMatrix__row_slices
-			# else:
-			#	return io_object._SliceCachingMatrix__column_slices
+			if apply_from_left:
+				return io_object._SliceCachingMatrix__row_slices
+			else:
+				return io_object._SliceCachingMatrix__column_slices
 		else:
 			raise TypeError('argument `{}` must be of types {}'.format(
 					name,
@@ -733,57 +764,61 @@ class DictionaryMapping(AbstractDiscreteMapping):
 
 	def frame0_to_1_inplace(self, in_, out_, clear_output=False, **options):
 		rescale_output = options.pop('rescale_output', False)
-		d_in = self.__get_working_form(in_, 'in_')
-		d_out = self.__get_working_form(out_, 'out_')
+		d_in = self.__get_working_form(in_, 'in_', **options)
+		d_out = self.__get_working_form(out_, 'out_', **options)
 		for key in d_in:
 			m = self[key]
 			if isinstance(m, ClusterMapping):
 				m.downsample_inplace(
 						d_in[key], d_out[key], clear_output=clear_output,
-						rescale_output=rescale_output)
+						rescale_output=rescale_output, **options)
 			else:
 				m.frame0_to_1_inplace(
-						d_in[key], d_out[key], clear_output=clear_output)
+						d_in[key], d_out[key], clear_output=clear_output,
+						**options)
 
 	def frame0_to_1(self, in_, **options):
 		rescale_output = options.pop('rescale_output', False)
-		d_in = self.__get_working_form(in_, 'in_')
+		d_in = self.__get_working_form(in_, 'in_', **options)
 		out_ = {}
 		for key in d_in:
 			m = self[key]
 			if isinstance(m, ClusterMapping):
 				out_[key] = m.downsample(
-						d_in[key], rescale_output=rescale_output)
+						d_in[key], rescale_output=rescale_output, **options)
 			else:
-				out_[key] = m.frame0_to_1(d_in[key])
+				out_[key] = m.frame0_to_1(
+						d_in[key], **options)
 		return type(in_)(out_)
 
 	def frame1_to_0_inplace(self, in_, out_, clear_output=False, **options):
 		rescale_output = options.pop('rescale_output', False)
-		d_in = self.__get_working_form(in_, 'in_')
-		d_out = self.__get_working_form(out_, 'out_')
+		d_in = self.__get_working_form(in_, 'in_'. **options)
+		d_out = self.__get_working_form(out_, 'out_', **options)
 		for key in d_in:
 			m = self[key]
 			if isinstance(m, ClusterMapping):
 				m.upsample_inplace(
 						d_in[key], d_out[key], clear_output=clear_output,
-						rescale_output=rescale_output)
+						rescale_output=rescale_output, **options)
 			else:
 				m.frame1_to_0_inplace(
-						d_in[key], d_out[key], clear_output=clear_output)
+						d_in[key], d_out[key], clear_output=clear_output,
+						**options)
 
 
 	def frame1_to_0(self, in_, **options):
 		rescale_output = options.pop('rescale_output', False)
-		d_in = self.__get_working_form(in_, 'in_')
+		d_in = self.__get_working_form(in_, 'in_', **options)
 		out_ = {}
 		for key in d_in:
 			m = self[key]
 			if isinstance(m, ClusterMapping):
 				out_[key] = m.upsample(
-						d_in[key], rescale_output=rescale_output)
+						d_in[key], rescale_output=rescale_output, **options)
 			else:
-				out_[key] = m.frame1_to_0(d_in[key])
+				out_[key] = m.frame1_to_0(
+						d_in[key], **options)
 		return type(in_)(out_)
 
 	def __rebuild_vec(self):
@@ -862,22 +897,24 @@ class DictionaryClusterMapping(DictionaryMapping):
 		return wts
 
 	def downsample_inplace(self, in_, out_, rescale_output=False,
-						   clear_output=False):
+						   clear_output=False, **options):
 		return self.frame0_to_1_inplace(
 				in_, out_, rescale_output=rescale_output,
-				clear_output=clear_output)
+				clear_output=clear_output, **options)
 
-	def downsample(self, in_, rescale_output=False):
-		return self.frame0_to_1(in_, rescale_output=rescale_output)
+	def downsample(self, in_, rescale_output=False, **options):
+		return self.frame0_to_1(
+				in_, rescale_output=rescale_output, **options)
 
 	def upsample_inplace(self, in_, out_, rescale_output=False,
-						 clear_output=False):
+						 clear_output=False, **options):
 		return self.frame1_to_0_inplace(
 				in_, out_, rescale_output=rescale_output,
-				clear_output=clear_output)
+				clear_output=clear_output, **options)
 
 	def upsample(self, in_, rescale_output=False):
-		return self.frame1_to_0(in_, rescale_output=rescale_output)
+		return self.frame1_to_0(
+				in_, rescale_output=rescale_output, **options)
 
 	@property
 	def contiguous(self):
