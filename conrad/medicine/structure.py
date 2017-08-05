@@ -341,6 +341,21 @@ class Structure(object):
 		return self.__A_full
 
 	@property
+	def A_working(self):
+		return self.A_mean if self.collapsable else self.A
+
+	@property
+	def A_working_adjoint(self):
+		if self.collapsable:
+			return self.A_mean[:, None].T if self.A_mean.ndim == 1 else self.A_mean
+		else:
+			return self.A.T
+
+	@property
+	def implied_beam_dimension(self):
+		return self.A_mean.size if self.collapsable else self.A.shape[0]
+
+	@property
 	def voxel_weights(self):
 		"""
 		Voxel weights, or relative volumes of voxels.
