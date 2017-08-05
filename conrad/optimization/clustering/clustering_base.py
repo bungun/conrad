@@ -127,6 +127,6 @@ class ClusteredProblem(object):
 		ub, lb, run = self.solve_and_bound_clustered_problem(**solver_options)
 		run.output.solver_info['upper_bound'] = ub
 		run.output.solver_info['lower_bound'] = lb
-		run.output.solver_info['suboptimality'] = 100. * (ub - lb) / lb
+		run.output.solver_info['suboptimality'] = 100. * (ub - lb) / ub
 		return run
 
