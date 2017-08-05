@@ -620,8 +620,9 @@ class Physics(object):
 				:class:`Physics` object's dictionary of dose frames.
 		"""
 		if key in self.__frames:
-			raise ValueError('key `{}` already exists in {} frame '
-							 'dictionary'.format(key, Physics))
+			raise ValueError(
+					'key `{}` already exists in {} frame dictionary'
+					''.format(key, Physics))
 
 		f = frame_args.pop('dose_frame', None)
 		if not isinstance(f, DoseFrame):
@@ -629,6 +630,19 @@ class Physics(object):
 
 		self.__frames[key] = f
 		self.__frames[key].name = key
+
+	def delete_dose_frame(self, key):
+		if key is None:
+			return
+		if key not in self.__frames:
+			raise ValueError(
+					'no frame named {} attached to this {} instance'
+					''.format(key, Physics))
+		if key == self.frame.name:
+			raise ValueError('cannot delete active frame')
+		self.__frames.pop(key, None)
+		# TODO: catch the popped frame, delete it explicitly to eliminate
+		# references to possibly bulky data sets?
 
 	def change_dose_frame(self, key):
 		"""
