@@ -279,14 +279,21 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 				run.profile.representation_sizes)
 		return run, x_star_bclu, x_star_bclu_upsampled, nu_star_bclu_dict
 
-	def solve_and_bound_clustered_problem(self, **solver_options):
+	def solve_and_bound_clustered_problem(self, tol_scaling='default',
+										  **solver_options):
 		k = self.cluster_mapping.n_clusters
 		n = self.cluster_mapping.n_points
 
 		run, x_bclu, x_bclu_upsampled, nu_bclu_dict = self.solve_clustered(
 				**solver_options)
 		mu_clu = self.methods.beam_prices(self.clustered_anatomy, nu_bclu_dict)
-		tol = np.abs(mu_clu.min()) * np.sqrt(float(n) / k)
+		tol = np.abs(mu_clu.min())
+		if isinstance(tol_scaling, (int, float)):
+			tol *= float(tol_scaling)
+		elif tol_scaling == 'reverse_scaling':
+			tol *= np.sqrt(float(k) / n)
+		else:
+			tol *= np.sqrt(float(n) / k)
 
 		print('LB INFEAS {}'.format(self.dose_objective_dual_eval(
 				self.reference_anatomy, nu_bclu_dict)))
