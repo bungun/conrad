@@ -89,7 +89,7 @@ if module_installed('optkit'):
 			Solver.__init__(self)
 			self.objective_voxels = None
 			self.objective_beams = None
-			self.pogs_solver = None
+			self.__pogs_solver = None
 			self.__A_current = None
 			self.__A_dict = {}
 			self.__n_beams = None
@@ -110,6 +110,10 @@ if module_installed('optkit'):
 			"""
 			if n_beams is not None:
 				self.__n_beams = int(n_beams)
+
+		@property
+		def pogs_solver(self):
+			return self.__pogs_solver
 
 		@property
 		def n_beams(self):
@@ -145,10 +149,11 @@ if module_installed('optkit'):
 			Returns:
 				None
 			"""
-			if self.pogs_solver:
-				del self.pogs_solver
-				ok.api.backend.reset_device()
-				self.pogs_solver = None
+			if self.pogs_solver is not None:
+				del self.__pogs_solver
+				if ok.api.backend.device_reset_allowed:
+					ok.api.backend.reset_device()
+				self.__pogs_solver = None
 
 		@staticmethod
 		def __percentile_constraint_restricted(A, constr, slack=False):
@@ -507,8 +512,10 @@ if module_installed('optkit'):
 				self.__update_beam_objective(structures)
 
 			if self.pogs_solver is None or matrix_updated:
+				if self.pogs_solver is not None:
+					self.clear()
 				cache_options = self.__preprocess_solver_cache(solver_cache)
-				self.pogs_solver = ok.api.PogsSolver(A, **cache_options)
+				self.__pogs_solver = ok.api.PogsSolver(A, **cache_options)
 				self.__resume = False
 			else:
 				self.__resume = True
