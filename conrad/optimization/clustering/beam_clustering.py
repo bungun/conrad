@@ -39,7 +39,6 @@ class BeamClusteredProblem(ClusteredProblem):
 				self, case, reference_frame_name, clustered_frame_name)
 		self.__cluster_mapping = case.physics.retrieve_frame_mapping(
 				self.reference_frame, self.clustered_frame).beam_map
-
 	@property
 	def cluster_mapping(self):
 		return self.__cluster_mapping
@@ -48,6 +47,19 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 	def __init__(self, case, reference_frame_name, clustered_frame_name):
 		BeamClusteredProblem.__init__(
 				self, case, reference_frame_name, clustered_frame_name)
+		self.__infeasible_frame = None
+
+	def infeasible_frame(self):
+		return self.__infeasible_frame
+
+	def infeasible_anatomy(self):
+		if self.infeasible_frame is None:
+			raise ValueError('no infeasible frame built')
+		return self.case.anatomy_for_frame(self.infeasible_frame)
+
+	def teardown_infeasible_frame(self):
+		self.case.delete_dose_frame(self.infeasible_frame)
+		self.__infeasible_frame = None
 
 	def build_A_infeas(self, beam_prices, tol, k=None):
 		reference_anatomy = self.reference_anatomy
@@ -55,24 +67,24 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		k = min(k_, self.cluster_mapping.n_clusters)
 		mu = beam_prices
 
-		n_infeas = min(sum(mu < -tol), k)
+		# UPDATE: IGNORE TOLERANCE, JUST STRICT FEASIBILITY
+		voxels = reference_anatomy.total_working_size
+		infeas_beams = min(sum(mu < 0), k)
 		rank = (mu.argsort())[:n_infeas]
 
-		sizes = reference_anatomy.working_sizes
-		offsets = np.roll(np.cumsum(sizes), 1)
-		offsets[0] = 0
-		A_infeas = np.zeros((sum(sizes), n_infeas))
+		A_infeas = np.zeros((voxels, infeas_beams))
+		A_dict_infeas = {
+				s.label: s.A_mean[rank][:, None].T if s.collapsable
+				else s.A[:, rank]
+				for s in self.reference_anatomy}
+		ptr = 0
+		for s in self.reference_anatomy.list:
+			A_infeas[ptr:ptr + s.working_size, :] = A_dict_infeas[s.label]
+			ptr += s.working_size
 
-		for idx, s in enumerate(reference_anatomy.list):
-			offset = offsets[idx]
-			size = sizes[idx]
-			if s.collapsable:
-				for j_new, j in enumerate(rank):
-					A_infeas[offset, j_new] += s.A_mean[j]
-			else:
-				for j_new, j in enumerate(rank):
-					A_infeas[offset : offset + size, j_new] += s.A[:, j]
-
+		self.case.physics.add_dose_frame(
+				'infeas', data=A_dict_infeas,
+				voxel_weights=self.case.physics.frame.voxel_weights.manifest)
 		return A_infeas
 
 	def build_A_infeas_augmented(self, A_infeas, voxel_prices):
@@ -81,7 +93,6 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		A_aug[:, :m] = A_infeas.T
 		A_aug[:, -1] = A_infeas.T.dot(voxel_prices)
 		return A_aug
-
 
 	def solve_dual_infeas_pogs(self, A_infeas, voxel_prices, **solver_options):
 		"""
@@ -147,13 +158,13 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 					'`solve_dual_infeas_pogs()`')
 
 		n_voxels, n_beams = A_infeas.shape
-		reference_anatomy = self.reference_anatomy
 
 		# build f_conj
-		objective_voxels_conjugate = ok.api.PogsObjective(n_voxels+1, h='IndBox01')
+		objective_voxels_conjugate = ok.api.PogsObjective(
+				n_voxels + 1, h='IndBox01')
 		ptr = 0
 		# structure dual objectives and constraints
-		for s in reference_anatomy:
+		for s in self.infeasible_anatomy:
 			obj_sub = self.methods.dual_fused_expr_constraints_pogs(
 					s, nu_offset=voxel_prices[s.label], nonnegative=True)
 			objective_voxels_conjugate.copy_from(obj_sub, ptr)
@@ -199,7 +210,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		n_beams = self.cluster_mapping.n_points
 
 		label_order = reference_anatomy.label_order
-		sizes = reference_anatomy.working_sizes
+		sizes = {s.label: s.working_size for s in reference_anatomy}
 		k = self.cluster_mapping.n_clusters
 
 		TMAX = int(np.ceil(float(n_beams)/float(k)))
@@ -240,7 +251,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 
 			if VERBOSE:
 				print('CUMULATIVE OFFSET: {}'.format(offset))
-
+			self.teardown_infeasible_frame()
 			t += 1
 
 		return nu_t, solve_time_total, t
@@ -292,6 +303,12 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		run.output.solver_info['dual_time'] = solve_time_total
 
 		return obj_ub, obj_lb, run
+
+# TODO: objective methods - build primal objective; build dual objective;
+# build dose matrix; build dual feasibility matrix, build dual feasibility objective;
+# pogs versions thereof
+
+
 
 # class ConstrainedBeamClusteredProblem(VoxelClusteredProblem):
 	# pass
