@@ -28,9 +28,21 @@ from conrad.medicine.dose import D, Gy
 from conrad.optimization.solvers.solver_base import *
 from conrad.tests.base import *
 
+class SolverMock(Solver):
+	def init_problem(self, n_beams, **options):
+		raise NotImplementedError
+	def clear(self):
+		raise NotImplementedError
+	def build(self, structures, exact=False, **options):
+		raise NotImplementedError
+	def get_slack_value(Self, constraint_id):
+		raise NotImplementedError
+	def get_dvh_slope(self, constraint_id):
+		raise NotImplementedError
+
 class SolverTestCase(ConradTestCase):
 	def test_solver_init(self):
-		s = Solver()
+		s = SolverMock()
 		self.assertFalse( s.use_2pass )
 		self.assertTrue( s.use_slack )
 		self.assertIsNone( s._Solver__x )
@@ -60,7 +72,7 @@ class SolverTestCase(ConradTestCase):
 		n = 50
 		n_mismatch = 52
 
-		s = Solver()
+		s = SolverMock()
 		structures = []
 		structures.append(Structure(0, 'tumor', True, A=np.random.rand(m0, n)))
 		structures.append(Structure(1, 'OAR', False, A=np.random.rand(m1, n)))
