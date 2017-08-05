@@ -49,42 +49,50 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 				self, case, reference_frame_name, clustered_frame_name)
 		self.__infeasible_frame = None
 
+	@property
 	def infeasible_frame(self):
 		return self.__infeasible_frame
 
+	@property
 	def infeasible_anatomy(self):
 		if self.infeasible_frame is None:
 			raise ValueError('no infeasible frame built')
 		return self.case.anatomy_for_frame(self.infeasible_frame)
 
-	def teardown_infeasible_frame(self):
-		self.case.delete_dose_frame(self.infeasible_frame)
-		self.__infeasible_frame = None
-
-	def build_A_infeas(self, beam_prices, tol, k=None):
-		reference_anatomy = self.reference_anatomy
+	def build_infeasible_frame(self, beam_prices, k=None):
 		k_ = self.cluster_mapping.n_clusters if k is None else int(k)
 		k = min(k_, self.cluster_mapping.n_clusters)
-		mu = beam_prices
 
 		# UPDATE: IGNORE TOLERANCE, JUST STRICT FEASIBILITY
-		voxels = reference_anatomy.total_working_size
-		infeas_beams = min(sum(mu < 0), k)
-		rank = (mu.argsort())[:n_infeas]
+		voxels = self.reference_anatomy.total_working_size
+		infeas_beams = min(sum(beam_prices < 0), k)
+		rank = (beam_prices.argsort())[:infeas_beams]
 
-		A_infeas = np.zeros((voxels, infeas_beams))
 		A_dict_infeas = {
 				s.label: s.A_mean[rank][:, None].T if s.collapsable
 				else s.A[:, rank]
 				for s in self.reference_anatomy}
-		ptr = 0
-		for s in self.reference_anatomy.list:
-			A_infeas[ptr:ptr + s.working_size, :] = A_dict_infeas[s.label]
-			ptr += s.working_size
-
+		self.__infeasible_frame = 'infeas'
 		self.case.physics.add_dose_frame(
 				'infeas', data=A_dict_infeas,
 				voxel_weights=self.case.physics.frame.voxel_weights.manifest)
+
+	def teardown_infeasible_frame(self):
+		self.case.change_dose_frame(self.clustered_frame)
+		self.case.delete_dose_frame(self.infeasible_frame)
+		self.__infeasible_frame = None
+
+	def build_A_infeas(self, beam_prices, tol, k=None):
+		self.build_infeasible_frame(beam_prices, k=k)
+		self.case.physics.change_dose_frame(self.infeasible_frame)
+		self.case.plannable
+		voxels, infeas_beams = self.case.n_voxels, self.case.n_beams
+
+		ptr = 0
+		A_infeas = np.zeros((voxels, infeas_beams))
+		for s in self.infeasible_anatomy.list:
+			A_infeas[ptr:ptr + s.working_size, :] = s.A_working
+			ptr += s.working_size
 		return A_infeas
 
 	def build_A_infeas_augmented(self, A_infeas, voxel_prices):
