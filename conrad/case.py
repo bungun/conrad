@@ -477,7 +477,7 @@ class Case(object):
 		self.clear_problem(frame=frame)
 		self.__problems_by_frame.pop(frame, None)
 		self.__anatomies_by_frame.pop(frame, None)
-		self.physics.delete_dose_frame()
+		self.physics.delete_dose_frame(frame)
 		# TODO: catch the popped anatomy & problem, delete them explicitly to
 		# eliminate references to possibly bulky datasets?
 
