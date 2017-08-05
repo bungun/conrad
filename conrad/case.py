@@ -465,6 +465,17 @@ class Case(object):
 						'no problem constructed for frame "{}"'.format(frame))
 		return self.__problems_by_frame[frame]
 
+	def delete_dose_frame(self, frame):
+		if frame is None:
+			return
+		if frame == self.__curr_frame:
+			raise ValueError('cannot delete current dose frame')
+		self.__problems_by_frame.pop(frame, None)
+		self.__anatomies_by_frame.pop(frame, None)
+		self.physics.delete_dose_frame()
+		# TODO: catch the popped anatomy & problem, delete them explicitly to
+		# eliminate references to possibly bulky datasets?
+
 	def clear_problem(self, frame='active'):
 		self.problem_for_frame(frame).clear()
 
