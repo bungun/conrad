@@ -280,8 +280,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		return run, x_star_bclu, x_star_bclu_upsampled, nu_star_bclu_dict
 
 	def solve_and_bound_clustered_problem(self, tol_scaling='default',
-										  use_tol_for_build=False,
-										  tighten_tol_for_build=False,
+										  tolmin=0.1, tolmax=1.0,
 										  **solver_options):
 		k = self.cluster_mapping.n_clusters
 		n = self.cluster_mapping.n_points
@@ -294,7 +293,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 			tol *= float(tol_scaling)
 		else:
 			tol *= np.sqrt(float(n) / k)
-
+		tol = max(min(tol, float(tolmax)), tolmin)
 
 		print('LB INFEAS {}'.format(self.dose_objective_dual_eval(
 				self.reference_anatomy, nu_bclu_dict)))
@@ -324,7 +323,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 # TODO: objective methods - build primal objective; build dual objective;
 # build dose matrix; build dual feasibility matrix, build dual feasibility objective;
 # pogs versions thereof
-
+# TODO: WINDOW THE TOLERANCE. tolerance should be at least -0.1, at most -1. give optinos tolmin, tolmax
 
 
 # class ConstrainedBeamClusteredProblem(VoxelClusteredProblem):
