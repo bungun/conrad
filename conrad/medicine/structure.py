@@ -662,12 +662,15 @@ class Structure(object):
 							 '(assign dose by setting field "{}.y")'
 							 ''.format(Structure))
 
+		dose = float(constraint.dose)
 		if constraint.relop == RELOPS.LEQ:
 			relop = operator.le
-			dose = (1. + satisfaction_tol) * constraint.dose + satisfaction_tol
+			dose = (1. + satisfaction_tol) * dose + satisfaction_tol
 		else:
 			relop = operator.ge
-			dose = (1. - satisfaction_tol) * constraint.dose + -satisfaction_tol
+			dose = (1. - satisfaction_tol) * dose - satisfaction_tol
+			if dose <= 0:
+				return (True, 0 * constraint.dose)
 
 		if isinstance(constraint.threshold, str):
 			if constraint.threshold == 'mean':
@@ -680,9 +683,10 @@ class Structure(object):
 			dose_achieved = self.dvh.dose_at_percentile(
 				constraint.threshold)
 
-		status = relop(float(dose_achieved), float(dose))
-		dose = float(dose_achieved) / float(dose) * dose
-		return (status, dose)
+		status = relop(float(dose_achieved), dose)
+		dose_out = 0 * constraint.dose
+		dose_out.value = dose_achieved
+		return (status, dose_out)
 
 	def satisfies_all(self, constraint_list, satisfaction_tol=0.):
 		constraint_list = ConstraintList(constraint_list).list
