@@ -65,7 +65,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 
 		# UPDATE: IGNORE TOLERANCE, JUST STRICT FEASIBILITY
 		voxels = self.reference_anatomy.total_working_size
-		infeas_beams = min(sum(beam_prices < 0, k))
+		infeas_beams = min(sum(beam_prices < 0), k)
 		rank = (beam_prices.argsort())[:infeas_beams]
 
 		A_dict_infeas = {
