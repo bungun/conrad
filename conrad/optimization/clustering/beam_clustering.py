@@ -65,7 +65,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 
 		# UPDATE: IGNORE TOLERANCE, JUST STRICT FEASIBILITY
 		voxels = self.reference_anatomy.total_working_size
-		infeas_beams = min(sum(beam_prices < 0), k)
+		infeas_beams = min(sum(beam_prices < 0, k))
 		rank = (beam_prices.argsort())[:infeas_beams]
 
 		A_dict_infeas = {
@@ -280,6 +280,8 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		return run, x_star_bclu, x_star_bclu_upsampled, nu_star_bclu_dict
 
 	def solve_and_bound_clustered_problem(self, tol_scaling='default',
+										  use_tol_for_build=False,
+										  tighten_tol_for_build=False,
 										  **solver_options):
 		k = self.cluster_mapping.n_clusters
 		n = self.cluster_mapping.n_points
@@ -290,10 +292,9 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		tol = np.abs(mu_clu.min())
 		if isinstance(tol_scaling, (int, float)):
 			tol *= float(tol_scaling)
-		elif tol_scaling == 'reverse_scaling':
-			tol *= np.sqrt(float(k) / n)
 		else:
 			tol *= np.sqrt(float(n) / k)
+
 
 		print('LB INFEAS {}'.format(self.dose_objective_dual_eval(
 				self.reference_anatomy, nu_bclu_dict)))
@@ -304,6 +305,7 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		nu_feas, solve_time_total, n_subproblems = self.dual_iterative(
 				nu_bclu_dict, tol, **solver_options)
 		obj_lb = self.dose_objective_dual_eval(self.reference_anatomy, nu_feas)
+		obj_lb = max(obj_lb, 0.)
 
 		mu = self.methods.beam_prices(self.reference_anatomy, nu_feas)
 		print('TOL {}'.format(tol))
