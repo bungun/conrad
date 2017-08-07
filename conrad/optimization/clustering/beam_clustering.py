@@ -233,12 +233,18 @@ class UnconstrainedBeamClusteredProblem(BeamClusteredProblem):
 		if 'verbose' in solver_options:
 			VERBOSE = solver_options['verbose'] > 0
 		TEST_FEAS = solver_options.pop('test_feasibility', False)
+		dual_options = {}
+		dual_options.update(solver_options)
+		if 'dual_reltol' in solver_options:
+			dual_options['reltol'] = float(solver_options['dual_reltol'])
+		if 'dual_maxiters' in solver_options:
+			dual_options['maxiters'] = float(solver_options['dual_maxiters'])
 
 		# while sum(mu_t < - tol) > TOL_N and t < TMAX:
 		while not self.in_dual_cone(mu_t, tol) and t < TMAX:
 			A_infeas = self.build_A_infeas(mu_t, tol)
 			delta_star, solve_time = self.solve_dual_infeas_pogs(
-					A_infeas, nu_t, **solver_options)
+					A_infeas, nu_t, **dual_options)
 			delta_t = self.split_voxel_prices(delta_star, label_order, sizes)
 			solve_time_total += solve_time
 
