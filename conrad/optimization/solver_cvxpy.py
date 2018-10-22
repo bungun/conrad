@@ -91,7 +91,7 @@ if module_installed('cvxpy'):
 			"""
 			Solver.__init__(self)
 			self.problem = None
-			self.__x = cvxpy.Variable(0)
+			self.__x = cvxpy.Variable()
 			self.__constraint_indices = {}
 			self.constraint_dual_vars = {}
 			self.__solvetime = np.nan
@@ -289,6 +289,13 @@ if module_installed('cvxpy'):
 									 '(structure dose: {})\n'
 									 ''.format(self.use_2pass, structure.y))
 
+			if self.problem is not None:
+				self.objective = self.problem.objective
+				self.constraints = self.problem.constraints
+			else:
+				self.objective = cvxpy.Minimize(0)
+				self.constraints = []
+			
 			for cid in structure.constraints:
 				c = structure.constraints[cid]
 				cslack = not exact and self.use_slack and c.priority > 0
@@ -296,30 +303,30 @@ if module_installed('cvxpy'):
 					gamma = self.gamma_prioritized(c.priority)
 					slack = cvxpy.Variable(1)
 					self.slack_vars[cid] = slack
-					self.problem.objective += cvxpy.Minimize(gamma * slack)
-					self.problem.constraints += [slack >= 0]
+					self.objective += cvxpy.Minimize(gamma * slack)
+					self.constraints += [slack >= 0]
 					if not c.upper:
-						self.problem.constraints += [slack <= c.dose.value]
+						self.constraints += [slack <= c.dose.value]
 				else:
 					slack = 0.
 					self.slack_vars[cid] = None
 
 				if isinstance(c, MeanConstraint):
 					if c.upper:
-						self.problem.constraints += [
+						self.constraints += [
 								structure.A_mean * self.__x - slack <=
 								c.dose.value]
 					else:
-						self.problem.constraints += [
+						self.constraints += [
 								structure.A_mean * self.__x + slack >=
 								c.dose.value]
 
 				elif isinstance(c, MinConstraint):
-					self.problem.constraints += \
+					self.constraints += \
 						[structure.A * self.__x >= c.dose.value]
 
 				elif isinstance(c, MaxConstraint):
-					self.problem.constraints += \
+					self.constraints += \
 						[structure.A * self.__x <= c.dose.value]
 
 				elif isinstance(c, PercentileConstraint):
@@ -330,21 +337,22 @@ if module_installed('cvxpy'):
 								had_slack=self.use_slack)
 
 						# add it to problem
-						self.problem.constraints += [ dvh_constr ]
+						self.constraints += [ dvh_constr ]
 
 					else:
 						# beta = 1 / slope for DVH constraint approximation
 						beta = cvxpy.Variable(1)
 						self.dvh_vars[cid] = beta
-						self.problem.constraints += [ beta >= 0 ]
+						self.constraints += [ beta >= 0 ]
 
 						# build convex restriction to constraint
 						dvh_constr = self.__percentile_constraint_restricted(
 							structure.A, self.__x, c, beta, slack)
 
 						# add it to problem
-						self.problem.constraints += [ dvh_constr ]
-
+						self.constraints += [ dvh_constr ]
+				
+				self.problem = cvxpy.Problem(self.objective, self.constraints)
 				self.__constraint_indices[cid] = None
 				self.__constraint_indices[cid] = len(self.problem.constraints) - 1
 
@@ -482,11 +490,11 @@ if module_installed('cvxpy'):
 				structures = structures.list
 			# A, dose, weight_abs, weight_lin = \
 					# self._Solver__gather_matrix_and_coefficients(structures)
-
-			self.problem.objective = cvxpy.Minimize(0)
+			
+			self.problem = cvxpy.Problem(cvxpy.Minimize(0), self.problem.constraints)
 			for s in structures:
-				self.problem.objective += cvxpy.Minimize(
-						ObjectiveMethods.expr(s, self.__x))
+				objective = cvxpy.Minimize(ObjectiveMethods.expr(s, self.__x))
+				self.problem = cvxpy.Problem(self.problem.objective + objective, self.problem.constraints)
 				self.__add_constraints(s, exact=exact)
 
 			# self.problem.objective = cvxpy.Minimize(

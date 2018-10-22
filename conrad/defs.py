@@ -36,6 +36,7 @@ import pip
 import operator as op
 import numpy as np
 import scipy.sparse as sp
+from pip._internal.utils.misc import get_installed_distributions
 
 def println(*args):
 	print(args)
@@ -114,7 +115,7 @@ def module_installed(name, version_string=None):
 		dictionary values returned by
 		:func:`pip.get_installed_distributions`.
 	"""
-	modules = pip.get_installed_distributions()
+	modules = get_installed_distributions()
 	index = -1
 
 	installed = False

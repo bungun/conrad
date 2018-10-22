@@ -225,7 +225,7 @@ class RunRecord(object):
 
 	@property
 	def x(self):
-		""" Optimal beam intensitites from first-pass solution. """
+		""" Optimal beam intensities from first-pass solution. """
 		return self.output.x
 
 	@property

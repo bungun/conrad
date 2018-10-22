@@ -298,10 +298,10 @@ else:
 				None
 			"""
 			if isinstance(data, RunRecord):
-				if second_pass and data['exact'] is not None:
-					data = data['exact']
+				if second_pass and data.x_exact is not None:
+					data = data.x_exact
 				else:
-					data = data[0]
+					data = data.x
 
 			if subset is not None:
 				self.subset = subset
@@ -321,7 +321,7 @@ else:
 						 plotfile=None, aesthetics=None, **options):
 			if isinstance(data, (dict, RunRecord)):
 
-				data = [data[0], data['exact']]
+				data = [data.x, data.x_exact]
 			else:
 				if len(data) != 2:
 					raise ValueError('argument `data` must be of type '
