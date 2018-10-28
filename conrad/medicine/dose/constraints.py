@@ -265,6 +265,10 @@ class Constraint(object):
 
 	@slack.setter
 	def slack(self, slack):
+		# TODO: Remove this once we find bug that is turning slack into 1-element array.
+		if isinstance(slack, np.ndarray) and slack.size == 1:
+			slack = np.asscalar(slack)
+		
 		if isinstance(slack, (int, float)):
 			if slack < 0:
 				raise ValueError('argument "slack" must be nonnegative '

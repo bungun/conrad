@@ -199,7 +199,7 @@ if module_installed('cvxpy'):
 			dose = constr.dose.value
 			if slack is None:
 				slack = 0.
-			return cvxpy.sum_entries(cvxpy.pos(
+			return cvxpy.sum(cvxpy.pos(
 					beta + sign * (A*x - (dose + sign * slack)) )) <= beta * p
 
 		@staticmethod
@@ -301,7 +301,7 @@ if module_installed('cvxpy'):
 				cslack = not exact and self.use_slack and c.priority > 0
 				if cslack:
 					gamma = self.gamma_prioritized(c.priority)
-					slack = cvxpy.Variable(1)
+					slack = cvxpy.Variable()
 					self.slack_vars[cid] = slack
 					self.objective += cvxpy.Minimize(gamma * slack)
 					self.constraints += [slack >= 0]
@@ -341,7 +341,7 @@ if module_installed('cvxpy'):
 
 					else:
 						# beta = 1 / slope for DVH constraint approximation
-						beta = cvxpy.Variable(1)
+						beta = cvxpy.Variable()
 						self.dvh_vars[cid] = beta
 						self.constraints += [ beta >= 0 ]
 
@@ -433,6 +433,10 @@ if module_installed('cvxpy'):
 				return conrad_vec(self.problem.constraints[0].dual_value)
 			except:
 				return None
+		
+		@property
+		def x_var(self):
+			return self.__x
 
 		@property
 		def solvetime(self):
