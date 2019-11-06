@@ -3,6 +3,9 @@ from mpc_funcs import *
 from data_utils import *
 from plot_utils import *
 
+# TODO: Allow user to add constraints on health status.
+# TODO: Allow user to add constraints during recovery period.
+
 # Problem data.
 # m = 10000
 # n = 1000
@@ -19,6 +22,7 @@ rx_dose = [66] + (K-1)*[0]
 w_under = K*[1]
 w_over = [2] + (K-1)*[1]
 rx_weights = [w_under, w_over]
+patient_rx = {"dose": rx_dose, "weights": rx_weights}
 
 # Beam-to-dose matrix.
 A_full = np.abs(100 + 10*np.random.randn(m,n))
@@ -46,13 +50,20 @@ h_prog = health_prognosis_gen(F, h_init, T, health_map = health_map)
 curves = {"Untreated": h_prog}
 
 # Single treatment.
-res_single = single_treatment(A, rx_dose, rx_weights, solver = "MOSEK")
+res_single = single_treatment(A, patient_rx, solver = "MOSEK")
 print("Single Treatment")
 print("Status:", res_single["status"])
 print("Objective:", res_single["obj"])
 
 # Dynamic treatment.
-res_dynamic = dynamic_treat_recover(A_list, F, G, h_init, rx_dose, rx_weights, T_recov, health_map = health_map, solver = "MOSEK")
+dose_lower = np.full((T_treat,K), -np.inf)
+dose_upper = np.full((T_treat,K), np.inf)
+dose_lower[:,0] = np.concatenate([np.full(5, 25), np.full(15, -np.inf)])
+dose_upper[:,0] = 75
+dose_upper[:,1:] = 25
+patient_rx["constraints"] = {"lower": dose_lower, "upper": dose_upper}
+
+res_dynamic = dynamic_treat_recover(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
 print("\nDynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
@@ -62,7 +73,7 @@ plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_t
 plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
 
 # Dynamic treatment with MPC.
-res_mpc = mpc_treat_recover(A_list, F, G, h_init, rx_dose, rx_weights, T_recov, health_map = health_map, solver = "MOSEK")
+res_mpc = mpc_treat_recover(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
 print("\nMPC Treatment")
 print("Status:", res_mpc["status"])
 print("Objective:", res_mpc["obj"])
