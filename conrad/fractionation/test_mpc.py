@@ -55,14 +55,15 @@ print("Single Treatment")
 print("Status:", res_single["status"])
 print("Objective:", res_single["obj"])
 
-# Dynamic treatment.
-dose_lower = np.full((T_treat,K), -np.inf)
-dose_upper = np.full((T_treat,K), np.inf)
-dose_lower[:,0] = np.concatenate([np.full(5, 25), np.full(15, -np.inf)])
-dose_upper[:,0] = 75
-dose_upper[:,1:] = 25
-patient_rx["constraints"] = {"lower": dose_lower, "upper": dose_upper}
+# Dose constraints.
+# dose_lower = np.full((T_treat,K), -np.inf)
+# dose_upper = np.full((T_treat,K), np.inf)
+# dose_lower[:,0] = np.concatenate([np.full(5, 25), np.full(15, -np.inf)])
+# dose_upper[:,0] = 75
+# dose_upper[:,1:] = 25
+# patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
 
+# Dynamic treatment.
 res_dynamic = dynamic_treat_recover(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
 print("\nDynamic Treatment")
 print("Status:", res_dynamic["status"])
