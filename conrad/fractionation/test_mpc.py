@@ -3,8 +3,7 @@ from mpc_funcs import *
 from data_utils import *
 from plot_utils import *
 
-# TODO: Allow user to add constraints on health status.
-# TODO: Allow user to add constraints during recovery period.
+# TODO: Implement MPC health constraints during recovery period.
 
 # Problem data.
 # m = 10000
@@ -64,7 +63,7 @@ print("Objective:", res_single["obj"])
 # patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
 
 # Dynamic treatment.
-res_dynamic = dynamic_treat_recover(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
+res_dynamic = dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
 print("\nDynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
@@ -74,7 +73,7 @@ plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_t
 plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
 
 # Dynamic treatment with MPC.
-res_mpc = mpc_treat_recover(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
+res_mpc = mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
 print("\nMPC Treatment")
 print("Status:", res_mpc["status"])
 print("Objective:", res_mpc["obj"])

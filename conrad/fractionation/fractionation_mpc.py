@@ -26,6 +26,7 @@ damage_mat = np.array([[0.15, 0.30, -0.05],   # x_0 = PTV
 					   [0.10, 0.25, -0.05]])  # x_3 = OAR_3
 
 # Problem data.
+np.random.seed(1)
 T_treat = 14   # Treatment period.
 T_recov = 20   # Recovery period.
 T = T_treat + T_recov  # Number of time periods.
@@ -74,7 +75,7 @@ for t_s in range(T_treat):
 	
 	# Solve problem.
 	prob = Problem(Minimize(obj), constr)
-	prob.solve()
+	prob.solve(solver = "MOSEK")
 	print("Start Time:", t_s)
 	print("Status:", prob.status)
 	print("Objective:", prob.value)
@@ -92,6 +93,7 @@ for t_s in range(T_treat,T):
 	x_final[t_s+1] = growth_mat.dot(x_final[t_s]) + w_true
 	u_final[t_s] = 0
 	w_final[t_s] = w_true
+print("\nFinal Objective:", pnorm(u_final,2).value)
 
 # Plot health and treatment curves.
 x_prog = health_prognosis(x_init, growth_mat, T, w_noise = w_final)

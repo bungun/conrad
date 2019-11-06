@@ -4,6 +4,7 @@ from plot_utils import *
 from mpc_funcs import *
 
 # Problem data.
+np.random.seed(1)
 T_treat = 14
 T_recov = 20
 T = T_treat + T_recov
@@ -27,8 +28,14 @@ w_over = K*[1]
 rx_weights = [w_under, w_over]
 patient_rx = {"dose": rx_dose, "weights": rx_weights}
 
+# Actual health status transition function.
+mu = 0
+sigma = 0.005
+h_noise = mu + sigma*np.random.randn(T,K)
+health_map = lambda h,t: h + h_noise[t]
+# health_map = lambda h,t: h
+
 # Health prognosis.
-health_map = lambda h,t: h
 # h_prog = health_prognosis(h_init, F, T, w_noise = h_noise)
 h_prog = health_prognosis_gen(F, h_init, T, health_map = health_map)
 curves = {"Untreated": h_prog}
@@ -49,13 +56,13 @@ recov_lower[:,1:] = -0.25
 recov_upper[:,0] = 0.001
 patient_rx["recov_constrs"] = {"lower": recov_lower, "upper": recov_upper}
 
-# Dynamic treatment.
-res_dynamic = dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
-print("Dynamic Treatment")
-print("Status:", res_dynamic["status"])
-print("Objective:", res_dynamic["obj"])
+# Dynamic treatment with MPC.
+res_mpc = mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "ECOS")
+print("MPC Treatment")
+print("Status:", res_mpc["status"])
+print("Objective:", res_mpc["obj"])
 
-# Plot dynamic health and treatment curves.
-plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat)
-# plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
-plot_treatment(res_dynamic["beams"], stepsize = 10, T_treat = T_treat)
+# Plot dynamic MPC health and treatment curves.
+plot_health(res_mpc["health"], curves = curves, stepsize = 10, T_treat = T_treat)
+# plot_treatment(res_mpc["doses"], stepsize = 10, T_treat = T_treat)
+plot_treatment(res_mpc["beams"], stepsize = 10, T_treat = T_treat)
