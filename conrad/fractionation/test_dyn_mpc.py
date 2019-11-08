@@ -32,8 +32,8 @@ patient_rx = {"dose": rx_dose, "weights": rx_weights}
 mu = 0
 sigma = 0.005
 h_noise = mu + sigma*np.random.randn(T,K)
-health_map = lambda h,t: h + h_noise[t]
-# health_map = lambda h,t: h
+# health_map = lambda h,t: h + h_noise[t]
+health_map = lambda h,t: h
 
 # Health prognosis.
 # h_prog = health_prognosis(h_init, F, T, w_noise = h_noise)
@@ -64,5 +64,4 @@ print("Objective:", res_mpc["obj"])
 
 # Plot dynamic MPC health and treatment curves.
 plot_health(res_mpc["health"], curves = curves, stepsize = 10, T_treat = T_treat)
-# plot_treatment(res_mpc["doses"], stepsize = 10, T_treat = T_treat)
-plot_treatment(res_mpc["beams"], stepsize = 10, T_treat = T_treat)
+plot_treatment(res_mpc["doses"], stepsize = 10, T_treat = T_treat)

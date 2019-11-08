@@ -16,6 +16,13 @@ def pad_matrix(A, padding, axis = 0):
 		raise ValueError("axis must be either 0 or 1.")
 	return A_pad
 
+def beam_to_dose_block(A_full, indices_or_sections):
+	A_blocks = np.split(A_full, indices_or_sections)
+	# A_rows = [np.sum(block, axis = 0) for block in A_blocks]
+	A_rows = [np.mean(block, axis = 0) for block in A_blocks]
+	A = np.row_stack(A_rows)
+	return A
+
 # Health prognosis with a given treatment.
 def health_prognosis(x_init, growth_mat, T, u_plan = None, damage_mat = None, w_noise = None):
 	m = x_init.shape[0]

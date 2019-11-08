@@ -3,8 +3,6 @@ from mpc_funcs import *
 from data_utils import *
 from plot_utils import *
 
-# TODO: Implement MPC health constraints during recovery period.
-
 # Problem data.
 # m = 10000
 # n = 1000

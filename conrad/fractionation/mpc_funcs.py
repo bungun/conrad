@@ -144,7 +144,7 @@ def dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map 
 	beams_all = pad_matrix(b.value, T_recov)
 	doses_all = pad_matrix(d.value, T_recov)
 	health_all = health_prognosis_gen(F, h_init, T_treat + T_recov, G, doses_all, health_map)
-	return {"obj": prob.value, "status": prob.status, "beams": beams_all, "doses": doses_all, "health": health_all}
+	return {"obj": prob.value, "status": prob.status, "solve_time": prob.solver_stats.solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
 
 def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
 	T_treat = len(A_list)
@@ -156,6 +156,7 @@ def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = la
 	beams = np.zeros((T_treat,n))
 	doses = np.zeros((T_treat,K))
 	penalties = np.zeros(T_treat)
+	solve_time = 0
 	
 	h_cur = h_init
 	for t_s in range(T_treat):
@@ -168,11 +169,13 @@ def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = la
 		# Solve optimal control problem from current period forward.
 		prob, b, h, d = build_dyn_prob(A_list[t_s:], F, G, h_cur, rx_cur, T_recov)
 		prob.solve(*args, **kwargs)
+		solve_time += prob.solver_stats.solve_time
 		
 		if mpc_verbose:
 			print("Start Time:", t_s)
 			print("Status:", prob.status)
 			print("Objective:", prob.value)
+			print("Solve Time:", prob.solve_time)
 		
 		# Save beam, doses, and penalties for current period.
 		status = prob.status
@@ -187,4 +190,4 @@ def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = la
 	beams_all = pad_matrix(beams, T_recov)
 	doses_all = pad_matrix(doses, T_recov)
 	health_all = health_prognosis_gen(F, h_init, T_treat + T_recov, G, doses_all, health_map)
-	return {"obj": np.sum(penalties), "status": status, "beams": beams_all, "doses": doses_all, "health": health_all}
+	return {"obj": np.sum(penalties), "status": status, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
