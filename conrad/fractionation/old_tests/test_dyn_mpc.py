@@ -1,7 +1,7 @@
 import numpy as np
-from data_utils import *
-from plot_utils import *
 from mpc_funcs import *
+from data_utils import beam_to_dose_block, health_prognosis
+from plot_utils import plot_health, plot_treatment
 
 # Problem data.
 np.random.seed(1)
@@ -22,11 +22,13 @@ A_list = T_treat*[A]
 h_init = np.array([0.25] + (K-1)*[0])
 
 # Prescription.
-rx_dose = K*[0]
+# rx_dose = K*[0]
+rx_dose = np.zeros((T_treat,K))
 w_under = K*[1]
 w_over = K*[1]
-rx_weights = [w_under, w_over]
-patient_rx = {"dose": rx_dose, "weights": rx_weights}
+rx_dose_weights = [w_under, w_over]
+rx_health_weights  = K*[1]
+patient_rx = {"dose": rx_dose, "dose_weights": rx_dose_weights, "health_weights": rx_health_weights}
 
 # Actual health status transition function.
 mu = 0
@@ -37,7 +39,7 @@ health_map = lambda h,t: h
 
 # Health prognosis.
 # h_prog = health_prognosis(h_init, F, T, w_noise = h_noise)
-h_prog = health_prognosis_gen(F, h_init, T, health_map = health_map)
+h_prog = health_prognosis(F, h_init, T, health_map = health_map)
 curves = {"Untreated": h_prog}
 
 # Health constraints during treatment.

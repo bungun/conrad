@@ -1,7 +1,7 @@
 import numpy as np
 from mpc_funcs import *
-from data_utils import *
-from plot_utils import *
+from data_utils import beam_to_dose_block, health_prognosis
+from plot_utils import plot_health, plot_treatment
 
 # Problem data.
 # m = 10000
@@ -15,11 +15,12 @@ T_recov = 14
 T = T_treat + T_recov
 
 # Prescription.
-rx_dose = [66] + (K-1)*[0]
+rx_dose = np.array([66] + (K-1)*[0])
 w_under = K*[1]
 w_over = [2] + (K-1)*[1]
-rx_weights = [w_under, w_over]
-patient_rx = {"dose": rx_dose, "weights": rx_weights}
+rx_dose_weights = [w_under, w_over]
+rx_health_weights = K*[1]
+patient_rx = {"dose": rx_dose, "dose_weights": rx_dose_weights, "health_weights": rx_health_weights}
 
 # Beam-to-dose matrix.
 A_full = np.abs(100 + 10*np.random.randn(m,n))
@@ -43,7 +44,7 @@ health_map = lambda h,t: h + h_noise[t]
 
 # Health prognosis.
 # h_prog = health_prognosis(h_init, F, T, w_noise = h_noise)
-h_prog = health_prognosis_gen(F, h_init, T, health_map = health_map)
+h_prog = health_prognosis(F, h_init, T, health_map = health_map)
 curves = {"Untreated": h_prog}
 
 # Single treatment.
@@ -59,6 +60,9 @@ print("Objective:", res_single["obj"])
 # dose_upper[:,0] = 75
 # dose_upper[:,1:] = 25
 # patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
+
+# Prescription per period.
+patient_rx["dose"] = np.tile(rx_dose/T_treat, (T_treat,1))
 
 # Dynamic treatment.
 res_dynamic = dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")

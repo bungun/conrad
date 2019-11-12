@@ -1,11 +1,10 @@
 import numpy as np
 from mpc_funcs import *
-from data_utils import beam_to_dose_block
+from data_utils import beam_to_dose_block, health_prognosis
 from plot_utils import plot_health, plot_treatment
 
-np.random.seed(1)
-
 # Problem data.
+np.random.seed(1)
 # m = 10000
 # n = 1000
 # K = 10
@@ -28,8 +27,10 @@ h_init = np.array([0.25] + (K-1)*[0])
 
 # Prescription.
 patient_rx = {}
-patient_rx["dose"] = [0.66] + (K-1)*[0]
-patient_rx["weights"] = [K*[1], [2] + (K-1)*[1]]
+dose_total = np.array([6] + (K-1)*[0])
+patient_rx["dose"] = np.tile(dose_total/T_treat, (T_treat,1))
+patient_rx["dose_weights"] = [K*[1], [2] + (K-1)*[1]]
+patient_rx["health_weights"] = K*[1]
 
 # Dose constraints.
 dose_lower = np.full((T_treat,K), 0)
@@ -39,7 +40,7 @@ dose_upper[:,1:] = 0.05
 patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
 
 # Health prognosis.
-h_prog = health_prognosis_gen(F, h_init, T)
+h_prog = health_prognosis(F, h_init, T)
 curves = {"Untreated": h_prog}
 
 # Health constraints during treatment.
@@ -67,5 +68,5 @@ print("Solve Time:", res_mpc["solve_time"])
 # Plot dynamic MPC health and dose curves.
 plot_health(res_mpc["health"], curves = curves, stepsize = 10, T_treat = T_treat)
 plot_treatment(res_mpc["doses"], stepsize = 10, T_treat = T_treat)
-# plot_health(x_final, {"Untreated": x_prog}, stepsize = 10, T_treat = T_treat, filename = "mpc_clinical_health.png")
-# plot_treatment(u_final, stepsize = 10, T_treat = T_treat, filename = "mpc_clinical_doses.png")
+# plot_health(res_mpc["health"], curves, stepsize = 10, T_treat = T_treat, filename = "mpc_clinical_health.png")
+# plot_treatment(res_mpc["doses"], stepsize = 10, T_treat = T_treat, filename = "mpc_clinical_doses.png")
