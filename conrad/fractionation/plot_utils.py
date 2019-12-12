@@ -8,8 +8,9 @@ def plot_health(x, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, file
 	T = x.shape[0] - 1
 	m = x.shape[1] 
 	
-	rows = 1 if m <= maxcols else int(m / maxcols)
+	rows = 1 if m <= maxcols else int(np.ceil(m / maxcols))
 	cols = min(m, maxcols)
+	left = rows*cols - m
 	
 	fig, axs = plt.subplots(rows, cols, sharey = True)
 	fig.set_size_inches(16,8)
@@ -32,6 +33,9 @@ def plot_health(x, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, file
 			xt = np.append(xt, T_treat)
 		ax.set_xticks(xt)
 	
+	for col in range(left):
+		axs[rows-1, maxcols-1-col].set_axis_off()
+	
 	fig.legend(handles = handles, loc = "center right", borderaxespad = 1)
 	# fig.legend(handles = [ltreat, lnone], labels = ["Treated", "Untreated"], loc = "center right", borderaxespad = 1)
 	plt.suptitle("Health Status vs. Time")
@@ -44,8 +48,9 @@ def plot_treatment(u, stepsize = 10, maxcols = 5, T_treat = None, filename = Non
 	T = u.shape[0] - 1
 	n = u.shape[1]
 	
-	rows = 1 if n <= maxcols else int(n / maxcols)
+	rows = 1 if n <= maxcols else int(np.ceil(n / maxcols))
 	cols = min(n, maxcols)
+	left = rows*cols - n
 	
 	fig, axs = plt.subplots(rows, cols, sharey = True)
 	fig.set_size_inches(16,8)
@@ -62,6 +67,10 @@ def plot_treatment(u, stepsize = 10, maxcols = 5, T_treat = None, filename = Non
 		if T_treat is not None:
 			xt = np.append(xt, T_treat)
 		ax.set_xticks(xt)
+	
+	for col in range(left):
+		axs[rows-1, maxcols-1-col].set_axis_off()
+	
 	plt.suptitle("Treatment Dose vs. Time")
 	plt.show()
 	if filename is not None:

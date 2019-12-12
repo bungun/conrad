@@ -5,8 +5,9 @@ from data_utils import pad_matrix, health_prognosis
 
 # Dose penalty per period.
 def dose_penalty(dose, prescription, weights):
+	d_total = sum(dose, axis = 0)
 	w_under, w_over = weights
-	return w_under*neg(dose - prescription) + w_over*pos(dose - prescription)
+	return w_under*neg(d_total - prescription) + w_over*pos(d_total - prescription)
 
 # Health status penalty per period.
 def health_penalty(health, weights):
