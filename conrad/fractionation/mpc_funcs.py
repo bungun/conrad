@@ -29,7 +29,6 @@ def dyn_objective(d_var, h_var, p_var, patient_rx):
 # Extract constraints from patient prescription.
 def rx_to_constrs(expr, rx_dict):
 	constrs = []
-	T, K = expr.shape
 	
 	# Lower bound.
 	if "lower" in rx_dict:
@@ -41,8 +40,8 @@ def rx_to_constrs(expr, rx_dict):
 			if np.isfinite(rx_lower):
 				constrs.append(expr >= rx_lower)
 		else:
-			if rx_lower.shape != (T,K):
-				raise ValueError("rx_lower must have dimensions ({0},{1})".format(T,K))
+			if rx_lower.shape != expr.shape:
+				raise ValueError("rx_lower must have dimensions {0}".format(expr.shape))
 			is_finite = np.isfinite(rx_lower)
 			if np.any(is_finite):
 				constrs.append(expr[is_finite] >= rx_lower[is_finite])
@@ -57,8 +56,8 @@ def rx_to_constrs(expr, rx_dict):
 			if np.isfinite(rx_upper):
 				constrs.append(expr <= rx_upper)
 		else:
-			if rx_upper.shape != (T,K):
-				raise ValueError("rx_upper must have dimensions ({0},{1})".format(T,K))
+			if rx_upper.shape != expr.shape:
+				raise ValueError("rx_upper must have dimensions {0}".format(expr.shape))
 			is_finite = np.isfinite(rx_upper)
 			if np.any(is_finite):
 				constrs.append(expr[is_finite] <= rx_upper[is_finite])
