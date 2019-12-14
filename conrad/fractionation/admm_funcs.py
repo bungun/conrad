@@ -144,10 +144,10 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
             
 		# Collect and stack d_t^k for t = 1,...,T.
 		d_rows = [pipe.recv() for pipe in pipes]
-		d_prev = d_new.value
 		d_new.value = np.row_stack(d_rows)
 		
 		# Compute and send \tilde d_t^k.
+		d_tld_prev = np.zeros((T_treat,K)) if k == 0 else d_tld.value
 		prox.solve(*args, **kwargs)
 		for t in range(T_treat):
 			pipes[t].send(d_tld[t].value)
@@ -158,16 +158,15 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 		
 		# Calculate residuals.
 		r_prim_mat = d_new.value - d_tld.value
-		r_dual_mat = rho*(d_new.value - d_prev)
+		r_dual_mat = rho*(d_tld.value - d_tld_prev)
 		r_prim[k] = LA.norm(r_prim_mat)
 		r_dual[k] = LA.norm(r_dual_mat)
 		
 		# Check stopping criteria.
 		eps_prim = eps_abs*np.sqrt(T_treat*K) + eps_rel*np.maximum(LA.norm(d_new.value), LA.norm(d_tld.value))
 		eps_dual = eps_abs*np.sqrt(T_treat*K) + eps_rel*LA.norm(u.value)
+		finished = (k + 1) >= max_iter or (r_prim[k] <= eps_prim and r_dual[k] <= eps_dual)
 		k = k + 1
-		finished = k >= max_iter
-		# finished = k >= max_iter or (r_prim[k] <= eps_prim and r_dual[k] <= eps_dual)
 		for pipe in pipes:
 			pipe.send(finished)
 	
