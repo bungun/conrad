@@ -88,6 +88,36 @@ def build_dyn_prob_health(F, G, h_init, patient_rx, T_treat, T_recov = 0):
 	prob = Problem(Minimize(obj), constrs)
 	return prob, h, d
 
+def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
+	# Construct proximal dose problem.
+	prob_dose, b, p, d = build_dyn_prob_dose_period(A, patient_rx, T_recov)
+	d_new = Parameter(d.shape, value = np.zeros(d.shape))
+	u = Parameter(d.shape, value = np.zeros(d.shape))
+	penalty = (rho/2)*sum_squares(d - d_new - u)
+	prox = prob_dose + Problem(Minimize(penalty))
+	
+	# ADMM loop.
+	finished = False
+	while not finished:
+		# Compute and send d_t^k.
+		prox.solve(*args, **kwargs)
+		if prox.status not in ["optimal", "optimal_inaccurate"]:
+			raise RuntimeError("Solver failed with status {0}".format(prox.status))
+		pipe.send(d.value)
+		
+		# Receive \tilde d_t^k.
+		d_new.value = pipe.recv()
+		
+		# Update and send u_t^^k.
+		u.value += d_new.value - d.value
+		pipe.send(u.value)
+		
+		# Check if stopped.
+		finished = pipe.recv()
+	
+	# Send final b_t^k and p_t^k.
+	pipe.send((b.value, p.value))
+
 def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, *args, **kwargs):
 	# Problem parameters.
 	max_iter = kwargs.pop("max_iter", 1000) # Maximum iterations.
@@ -149,6 +179,8 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 		# Compute and send \tilde d_t^k.
 		d_tld_prev = np.zeros((T_treat,K)) if k == 0 else d_tld.value
 		prox.solve(*args, **kwargs)
+		if prox.status not in ["optimal", "optimal_inaccurate"]:
+			raise RuntimeError("Solver failed with status {0}".format(prox.status))
 		for t in range(T_treat):
 			pipes[t].send(d_tld[t].value)
 		
@@ -188,31 +220,3 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 	
 	return {"obj": obj, "status": prox.status, "beams": b_all, "doses": d_all, "health": h_all, "prescribed": p_val, 
 			"primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k]), "num_iters": k, "solve_time": end - start}
-
-def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
-	# Construct proximal dose problem.
-	prob_dose, b, p, d = build_dyn_prob_dose_period(A, patient_rx, T_recov)
-	d_new = Parameter(d.shape, value = np.zeros(d.shape))
-	u = Parameter(d.shape, value = np.zeros(d.shape))
-	penalty = (rho/2)*sum_squares(d - d_new - u)
-	prox = prob_dose + Problem(Minimize(penalty))
-	
-	# ADMM loop.
-	finished = False
-	while not finished:
-		# Compute and send d_t^k.
-		prox.solve(*args, **kwargs)
-		pipe.send(d.value)
-		
-		# Receive \tilde d_t^k.
-		d_new.value = pipe.recv()
-		
-		# Update and send u_t^^k.
-		u.value += d_new.value - d.value
-		pipe.send(u.value)
-		
-		# Check if stopped.
-		finished = pipe.recv()
-	
-	# Send final b_t^k and p_t^k.
-	pipe.send((b.value, p.value))
