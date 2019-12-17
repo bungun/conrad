@@ -47,7 +47,7 @@ def build_dyn_prob_dose_period(A, patient_rx, T_recov = 0):
 	
 	# Additional dose constraints in period.
 	if "dose_constrs" in patient_rx:
-		constrs += rx_to_constrs(d_t, dose_constrs_cur)
+		constrs += rx_to_constrs(d_t, patient_rx["dose_constrs"])
 	
 	prob_t = Problem(Minimize(obj), constrs)
 	return prob_t, b_t, p_t, d_t
@@ -181,9 +181,10 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 	
 	# Construct full results.
 	b_all = pad_matrix(b_val, T_recov)
-	d_all = pad_matrix(d_tld.value, T_recov)
+	d_all = pad_matrix(d_new.value, T_recov)
+	# d_all = pad_matrix((d_tld.value + d_new.value)/2, T_recov)
 	h_all = health_prognosis(F, h_init, T_treat + T_recov, G, d_all, health_map)
-	obj = dyn_objective(d_tld.value, h.value, p_val, patient_rx).value
+	obj = dyn_objective(d_tld.value, h_all[:(T_treat+1)], p_val, patient_rx).value
 	
 	return {"obj": obj, "status": prox.status, "beams": b_all, "doses": d_all, "health": h_all, "prescribed": p_val, 
 			"primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k]), "num_iters": k, "solve_time": end - start}

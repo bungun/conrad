@@ -1,7 +1,8 @@
 import numpy as np
 from admm_funcs import *
+from mpc_funcs import dynamic_treatment
 from data_utils import beam_to_dose_block, health_prognosis
-from plot_utils import plot_health, plot_treatment
+from plot_utils import plot_health, plot_treatment, plot_residuals
 
 # Problem data.
 # m = 10000
@@ -59,15 +60,26 @@ curves = {"Untreated": h_prog}
 patient_rx["dose"] = np.tile(rx_dose/T_treat, (T_treat,1))
 
 # Dynamic treatment.
-res_dynamic = dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
+res_dynamic = dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
 print("Dynamic Treatment")
+print("Status:", res_dynamic["status"])
+print("Objective:", res_dynamic["obj"])
+
+# Plot dynamic health and treatment curves.
+plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat, filename = "simple_dyn_health.png")
+plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat, filename = "simple_dyn_treatment.png")
+
+# Dynamic treatment with ADMM.
+res_dynamic = dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, rho = 0.5, max_iter = 1000, solver = "MOSEK")
+print("\nDynamic Treatment with ADMM")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
 print("Iterations:", res_dynamic["num_iters"])
 
-# Plot dynamic health and treatment curves.
-plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat)
-plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
+# Plot dynamic ADMM health and treatment curves.
+plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "simple_admm_residuals.png")
+plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat, filename = "simple_admm_health.png")
+plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat, filename = "simple_admm_treatment.png")
 
 # Dynamic treatment with MPC.
 # res_mpc = mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")

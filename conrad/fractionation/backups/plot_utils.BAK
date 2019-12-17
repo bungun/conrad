@@ -76,28 +76,48 @@ def plot_treatment(u, stepsize = 10, maxcols = 5, T_treat = None, filename = Non
 	if filename is not None:
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
-# Plot primal and dual residuals.
-def plot_residuals(r_primal, r_dual, normalize = False, show = True, title = None, semilogy = False, filename = None, *args, **kwargs):
-	if normalize:
-		r_primal = r_primal/r_primal[0] if r_primal[0] != 0 else r_primal
-		r_dual = r_dual/r_dual[0] if r_dual[0] != 0 else r_dual
+# Plot impulse responses.
+def plot_impulse(H, t_range, stepsize = 10, T_treat = None, filename = None):
+	m = H.shape[1]
+	n = H.shape[2]
 	
-	fig = plt.figure()
-	fig.set_size_inches(12,8)
-	if semilogy:
-		plt.semilogy(range(len(r_primal)), r_primal, label = "Primal", *args, **kwargs)
-		plt.semilogy(range(len(r_dual)), r_dual, label = "Dual", *args, **kwargs)
-	else:
-		plt.plot(range(len(r_primal)), r_primal, label = "Primal", *args, **kwargs)
-		plt.plot(range(len(r_dual)), r_dual, label = "Dual", *args, **kwargs)
+	fig, axs = plt.subplots(m,n, sharex = True, sharey = True)
+	fig.set_size_inches(16,10)
+	for i in range(m):
+		for j in range(n):
+			axs[i,j].plot(t_range, H[:,i,j])
+			axs[i,j].set_title("$H_{{{0}{1}}}(t)$".format(i,j))
+			
+			# Label transition from treatment to recovery period.
+			axs[i,j].axvline(x = T_treat, lw = 1, ls = ':', color = "grey")
+			xt = np.arange(t_range[0], t_range[-1], stepsize)
+			xt = np.append(xt, t_range[-1])
+			if T_treat is not None:
+				xt = np.append(xt, T_treat)
+			axs[i,j].set_xticks(xt)
+	plt.suptitle("Impulse Responses $H_{{ij}}(t)$ of Treatment $j$ on Health Status $i$")
+	plt.show()
+	if filename is not None:
+		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
-	plt.legend()
-	plt.xlabel("Iteration")
-	plt.ylabel("Residual")
+def plot_impulse_default(H, stepsize = 10, T_treat = None, filename = None):
+	plot_impulse(H, range(H.shape[0]), stepsize = stepsize, T_treat = T_treat, filename = filename)
 	
-	if title:
-		plt.title(title)
-	if show:
-		plt.show()
+# Plot second-order dynamic system curve.
+def plot_second_order(t, y, ty_peak, y_init, y_final, t_decay = None, alpha = 0.5, tau = 0, filename = None):
+	plt.plot(t, y)
+	
+	t_peak, y_peak = ty_peak
+	plt.axvline(x = t_peak + tau, ls = '--', color = 'orange')
+	plt.axhline(y = y_peak, ls = '--', color = 'orange')
+	plt.axvline(x = tau, ls = '--', color = 'grey')
+	plt.axhline(y = y_init, ls = '--', color = 'grey')
+	plt.axhline(y = y_final, ls = '--', color = 'purple')
+	
+	if t_decay is not None:
+		plt.axvline(x = t_decay + tau, ls = '--', color = 'green')
+		plt.axhline(y = alpha*y_peak, ls = '--', color = 'green')
+		
+	plt.show()
 	if filename is not None:
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)

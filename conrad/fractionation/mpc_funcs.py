@@ -5,9 +5,10 @@ from data_utils import pad_matrix, health_prognosis
 
 # Dose penalty per period.
 def dose_penalty(dose, prescription, weights):
-	d_total = sum(dose, axis = 0)
 	w_under, w_over = weights
-	return w_under*neg(d_total - prescription) + w_over*pos(d_total - prescription)
+	# d_total = sum(dose, axis = 0)
+	# return w_under*neg(d_total - prescription) + w_over*pos(d_total - prescription)
+	return w_under*neg(dose - prescription) + w_over*pos(dose - prescription)
 
 # Health status penalty per period.
 def health_penalty(health, weights):
@@ -147,7 +148,8 @@ def dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map 
 	beams_all = pad_matrix(b.value, T_recov)
 	doses_all = pad_matrix(d.value, T_recov)
 	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, doses_all, health_map)
-	return {"obj": prob.value, "status": prob.status, "solve_time": prob.solver_stats.solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
+	obj = dyn_objective(d.value, health_all[:(T_treat+1)], p.value, patient_rx).value
+	return {"obj": obj, "status": prob.status, "solve_time": prob.solver_stats.solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
 
 def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
 	T_treat = len(A_list)
