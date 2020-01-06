@@ -64,6 +64,7 @@ res_dynamic = dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov, healt
 print("Dynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
+print("Solve Time:", res_dynamic["solve_time"])
 
 # Plot dynamic health and treatment curves.
 plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat)
@@ -73,27 +74,28 @@ plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
 # plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat, filename = "simple_dyn_treatment.png")
 
 # Dynamic treatment with ADMM.
-res_dynamic = dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, rho = 0.5, max_iter = 1000, solver = "MOSEK")
+res_dyn_admm = dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, rho = 0.5, max_iter = 1000, solver = "MOSEK")
 print("\nDynamic Treatment with ADMM")
-print("Status:", res_dynamic["status"])
-print("Objective:", res_dynamic["obj"])
-print("Iterations:", res_dynamic["num_iters"])
+print("Status:", res_dyn_admm["status"])
+print("Objective:", res_dyn_admm["obj"])
+print("Iterations:", res_dyn_admm["num_iters"])
+print("Solve Time:", res_dyn_admm["solve_time"])
 
 # Plot dynamic ADMM health and treatment curves.
-plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True)
-plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat)
-plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
+plot_residuals(res_dyn_admm["primal"], res_dyn_admm["dual"], semilogy = True)
+plot_health(res_dyn_admm["health"], curves = curves, stepsize = 10, T_treat = T_treat)
+plot_treatment(res_dyn_admm["doses"], stepsize = 10, T_treat = T_treat)
 
-# plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "simple_admm_residuals.png")
-# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat, filename = "simple_admm_health.png")
-# plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat, filename = "simple_admm_treatment.png")
+# plot_residuals(res_dyn_admm["primal"], res_dyn_admm["dual"], semilogy = True, filename = "simple_admm_residuals.png")
+# plot_health(res_dyn_admm["health"], curves = curves, stepsize = 10, T_treat = T_treat, filename = "simple_admm_health.png")
+# plot_treatment(res_dyn_admm["doses"], stepsize = 10, T_treat = T_treat, filename = "simple_admm_treatment.png")
 
 # Dynamic treatment with MPC.
-# res_mpc = mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
+# res_mpc_admm = mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
 # print("\nMPC Treatment with ADMM")
-# print("Status:", res_mpc["status"])
-# print("Objective:", res_mpc["obj"])
+# print("Status:", res_mpc_admm["status"])
+# print("Objective:", res_mpc_admm["obj"])
 
 # Plot dynamic MPC health and treatment curves.
-# plot_health(res_mpc["health"], curves = curves, stepsize = 10, T_treat = T_treat)
-# plot_treatment(res_mpc["doses"], stepsize = 10, T_treat = T_treat)
+# plot_health(res_mpc_admm["health"], curves = curves, stepsize = 10, T_treat = T_treat)
+# plot_treatment(res_mpc_admm["doses"], stepsize = 10, T_treat = T_treat)

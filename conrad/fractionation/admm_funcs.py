@@ -103,7 +103,8 @@ def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 		prox.solve(*args, **kwargs)
 		if prox.status not in ["optimal", "optimal_inaccurate"]:
 			raise RuntimeError("Solver failed with status {0}".format(prox.status))
-		pipe.send(d.value)
+		# pipe.send(d.value)
+		pipe.send((d.value, prox.solver_stats.solve_time))
 		
 		# Receive \tilde d_t^k.
 		d_new.value = pipe.recv()
@@ -167,20 +168,24 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 	r_dual = np.zeros(max_iter)
 	
 	start = time()
+	solve_time = 0
 	while not finished:
 		# TODO: Add verbose printout.
 		if k % 10 == 0:
 			print("Iteration:", k)
             
 		# Collect and stack d_t^k for t = 1,...,T.
-		d_rows = [pipe.recv() for pipe in pipes]
+		dt_update = [pipe.recv() for pipe in pipes]
+		d_rows, d_times = map(list, zip(*dt_update))
 		d_new.value = np.row_stack(d_rows)
+		solve_time += np.max(d_times)
 		
 		# Compute and send \tilde d_t^k.
 		d_tld_prev = np.zeros((T_treat,K)) if k == 0 else d_tld.value
 		prox.solve(*args, **kwargs)
 		if prox.status not in ["optimal", "optimal_inaccurate"]:
 			raise RuntimeError("Solver failed with status {0}".format(prox.status))
+		solve_time += prox.solver_stats.solve_time
 		for t in range(T_treat):
 			pipes[t].send(d_tld[t].value)
 		
@@ -219,4 +224,4 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 	obj = dyn_objective(d_tld.value, h_all[:(T_treat+1)], p_val, patient_rx).value
 	
 	return {"obj": obj, "status": prox.status, "beams": b_all, "doses": d_all, "health": h_all, "prescribed": p_val, 
-			"primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k]), "num_iters": k, "solve_time": end - start}
+			"primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k]), "num_iters": k, "total_time": end - start, "solve_time": solve_time}
