@@ -147,6 +147,7 @@ def dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map 
 	# Construct full results.
 	beams_all = pad_matrix(b.value, T_recov)
 	doses_all = pad_matrix(d.value, T_recov)
+	# fracs_all = pad_matrix(p.value, T_recov)
 	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, doses_all, health_map)
 	obj = dyn_objective(d.value, health_all[:(T_treat+1)], p.value, patient_rx).value
 	return {"obj": obj, "status": prob.status, "solve_time": prob.solver_stats.solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
@@ -193,6 +194,7 @@ def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = la
 	# Construct full results.
 	beams_all = pad_matrix(beams, T_recov)
 	doses_all = pad_matrix(doses, T_recov)
+	# fracs_all = pad_matrix(fracs, T_recov)
 	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, doses_all, health_map)
 	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], fracs, patient_rx).value
 	return {"obj": obj_treat, "status": status, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}

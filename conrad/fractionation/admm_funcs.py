@@ -103,7 +103,6 @@ def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 		prox.solve(*args, **kwargs)
 		if prox.status not in ["optimal", "optimal_inaccurate"]:
 			raise RuntimeError("Solver failed with status {0}".format(prox.status))
-		# pipe.send(d.value)
 		pipe.send((d.value, prox.solver_stats.solve_time))
 		
 		# Receive \tilde d_t^k.
@@ -119,12 +118,13 @@ def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 	# Send final b_t^k and p_t^k.
 	pipe.send((b.value, p.value))
 
-def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, *args, **kwargs):
+def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, *args, **kwargs):
 	# Problem parameters.
 	max_iter = kwargs.pop("max_iter", 1000) # Maximum iterations.
 	rho = kwargs.pop("rho", 1/10)           # Step size.
 	eps_abs = kwargs.pop("eps_abs", 1e-6)   # Absolute stopping tolerance.
 	eps_rel = kwargs.pop("eps_rel", 1e-8)   # Relative stopping tolerance.
+	verbose = kwargs.get("verbose", False)
 	
 	# Validate parameters.
 	T_treat = len(A_list)
@@ -170,8 +170,7 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 	start = time()
 	solve_time = 0
 	while not finished:
-		# TODO: Add verbose printout.
-		if k % 10 == 0:
+		if verbose and k % 10 == 0:
 			print("Iteration:", k)
             
 		# Collect and stack d_t^k for t = 1,...,T.
@@ -216,12 +215,64 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 	[proc.terminate() for proc in procs]
 	end = time()
 	
-	# Construct full results.
-	b_all = pad_matrix(b_val, T_recov)
-	d_all = pad_matrix(d_new.value, T_recov)
-	# d_all = pad_matrix((d_tld.value + d_new.value)/2, T_recov)
-	h_all = health_prognosis(F, h_init, T_treat + T_recov, G, d_all, health_map)
-	obj = dyn_objective(d_tld.value, h_all[:(T_treat+1)], p_val, patient_rx).value
+	# Only used internally for calls in MPC.
+	if partial_results:
+		# TODO: Return primal/dual residuals as well?
+		obj_pred = dyn_objective(d_tld.value, h.value, p_val, patient_rx).value
+		return {"obj": obj_pred, "status": prox.status, "beams": b_val, "doses": d_tld.value, "fracs": p_val, "solve_time": solve_time}
 	
-	return {"obj": obj, "status": prox.status, "beams": b_all, "doses": d_all, "health": h_all, "prescribed": p_val, 
+	# Construct full results.
+	beams_all = pad_matrix(b_val, T_recov)
+	doses_all = pad_matrix(d_tld.value, T_recov)
+	# doses_all = pad_matrix((d_tld.value + d_new.value)/2, T_recov)
+	fracs_all = pad_matrix(p_val, T_recov)
+	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, doses_all, health_map)
+	obj = dyn_objective(d_tld.value, health_all[:(T_treat+1)], p_val, patient_rx).value
+	return {"obj": obj, "status": prox.status, "beams": beams_all, "doses": doses_all, "health": health_all, "fracs": fracs_all, 
 			"primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k]), "num_iters": k, "total_time": end - start, "solve_time": solve_time}
+
+def mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
+	T_treat = len(A_list)
+	K, n = A_list[0].shape
+	
+	# Initialize values.
+	beams = np.zeros((T_treat,n))
+	doses = np.zeros((T_treat,K))
+	fracs = np.zeros((T_treat,K))
+	solve_time = 0
+	
+	h_cur = h_init
+	for t_s in range(T_treat):
+		rx_cur = patient_rx.copy()
+		rx_cur["dose"] = patient_rx["dose"][t_s:]
+		if "dose_constrs" in patient_rx:
+			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t_s:], "upper": patient_rx["dose_constrs"]["upper"][t_s:]}
+		if "health_constrs" in patient_rx:
+			rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t_s:], "upper": patient_rx["health_constrs"]["upper"][t_s:]}
+		
+		# Solve optimal control problem from current period forward.
+		result = dynamic_treatment_admm(A_list[t_s:], F, G, h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
+		solve_time += result["solve_time"]
+		
+		if mpc_verbose:
+			print("Start Time:", t_s)
+			print("Status:", result["status"])
+			print("Objective:", result["obj"])
+			print("Solve Time:", result["solve_time"])
+		
+		# Save beam, doses, and penalties for current period.
+		status = result["status"]
+		beams[t_s] = result["beams"][0]
+		doses[t_s] = result["doses"][0]
+		fracs[t_s] = result["fracs"][0]
+		
+		# Update health for next period.
+		h_cur = health_map(F.dot(h_cur) + G.dot(doses[t_s]), t_s)
+	
+	# Construct full results.
+	beams_all = pad_matrix(beams, T_recov)
+	doses_all = pad_matrix(doses, T_recov)
+	fracs_all = pad_matrix(fracs, T_recov)
+	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, doses_all, health_map)
+	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], fracs, patient_rx).value
+	return {"obj": obj_treat, "status": status, "beams": beams_all, "doses": doses_all, "health": health_all, "fracs": fracs_all, "solve_time": solve_time}

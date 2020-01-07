@@ -91,11 +91,11 @@ plot_treatment(res_dyn_admm["doses"], stepsize = 10, T_treat = T_treat)
 # plot_treatment(res_dyn_admm["doses"], stepsize = 10, T_treat = T_treat, filename = "simple_admm_treatment.png")
 
 # Dynamic treatment with MPC.
-# res_mpc_admm = mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
-# print("\nMPC Treatment with ADMM")
-# print("Status:", res_mpc_admm["status"])
-# print("Objective:", res_mpc_admm["obj"])
+res_mpc_admm = mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, rho = 0.5, max_iter = 1000, solver = "MOSEK")
+print("\nMPC Treatment with ADMM")
+print("Status:", res_mpc_admm["status"])
+print("Objective:", res_mpc_admm["obj"])
 
 # Plot dynamic MPC health and treatment curves.
-# plot_health(res_mpc_admm["health"], curves = curves, stepsize = 10, T_treat = T_treat)
-# plot_treatment(res_mpc_admm["doses"], stepsize = 10, T_treat = T_treat)
+plot_health(res_mpc_admm["health"], curves = curves, stepsize = 10, T_treat = T_treat)
+plot_treatment(res_mpc_admm["doses"], stepsize = 10, T_treat = T_treat)
