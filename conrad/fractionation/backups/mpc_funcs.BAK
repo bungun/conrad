@@ -4,24 +4,26 @@ from cvxpy import *
 from data_utils import pad_matrix, health_prognosis
 
 # Dose penalty per period.
-def dose_penalty(dose, weights):
-	return weights*square(dose)
+def dose_penalty(dose, prescription, weights):
+	w_under, w_over = weights
+	# d_total = sum(dose, axis = 0)
+	# return w_under*neg(d_total - prescription) + w_over*pos(d_total - prescription)
+	return w_under*neg(dose - prescription) + w_over*pos(dose - prescription)
 
 # Health status penalty per period.
-def health_penalty(health, goal, weights):
-	w_under, w_over = weights
-	return w_under*neg(health - goal) + w_over*pos(health - goal)
+def health_penalty(health, weights):
+	return weights*square(health)
 
 # Full objective function.
-def dyn_objective(d_var, h_var, patient_rx):
+def dyn_objective(d_var, h_var, p_var, patient_rx):
 	T, K = d_var.shape
 	if h_var.shape[0] != T+1:
 		raise ValueError("h_var must have exactly {0} rows".format(T+1))
 	
 	penalties = []
 	for t in range(T):
-		d_penalty = dose_penalty(d_var[t], patient_rx["dose_weights"])
-		h_penalty = health_penalty(h_var[t+1], patient_rx["health_goal"], patient_rx["health_weights"])
+		d_penalty = dose_penalty(d_var[t], p_var[t], patient_rx["dose_weights"])
+		h_penalty = health_penalty(h_var[t+1], patient_rx["health_weights"])
 		penalties.append(d_penalty + h_penalty)
 	return sum(penalties)
 
@@ -77,16 +79,21 @@ def build_dyn_prob(A_list, F, G, h_init, patient_rx, T_recov = 0):
 	# Define variables.
 	b = Variable((T_treat,n), pos = True, name = "beams")   # Beams.
 	h = Variable((T_treat+1,K), name = "health")            # Health statuses.
-	d = vstack([A_list[t]*b[t] for t in range(T_treat)])    # Doses.
+	p = Variable((T_treat,K), pos = True, name = "prescribed")   # Prescribed dose.
+	d = vstack([A_list[t]*b[t] for t in range(T_treat)])      # Doses.
 	
 	# Objective function.
-	obj = dyn_objective(d, h, patient_rx)
+	obj = dyn_objective(d, h, p, patient_rx)
 	
 	# Health dynamics for treatment stage.
 	# constrs = [h[0] == h_init, b >= 0]
 	constrs = [h[0] == h_init]
 	for t in range(T_treat):
 		constrs.append(h[t+1] == F*h[t] + G*d[t])
+	
+	# Prescribed dose in each period.
+	# TODO: Add more bounds on the prescription?
+	constrs.append(p == patient_rx["dose"])
 	
 	# Additional dose constraints.
 	if "dose_constrs" in patient_rx:
@@ -110,14 +117,15 @@ def build_dyn_prob(A_list, F, G, h_init, patient_rx, T_recov = 0):
 		constrs += constrs_r
 	
 	prob = Problem(Minimize(obj), constrs)
-	return prob, b, h, d
+	return prob, b, h, p, d
 
 def single_treatment(A, patient_rx, *args, **kwargs):
 	K, n = A.shape
 	b = Variable(n, pos = True)   # Beams.
+	# d = Variable(K, pos = True)
 	d = Variable(K, pos = True)   # Doses.
 	
-	obj = dose_penalty(d, patient_rx["dose_weights"])
+	obj = dose_penalty(d, patient_rx["dose"], patient_rx["dose_weights"])
 	# constrs = [d == A*b, b >= 0]
 	constrs = [d == A*b]
 	
@@ -133,14 +141,15 @@ def dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map 
 	T_treat = len(A_list)
 	
 	# Build problem for treatment stage.
-	prob, b, h, d = build_dyn_prob(A_list, F, G, h_init, patient_rx, T_recov)
+	prob, b, h, p, d = build_dyn_prob(A_list, F, G, h_init, patient_rx, T_recov)
 	prob.solve(*args, **kwargs)
 	
 	# Construct full results.
 	beams_all = pad_matrix(b.value, T_recov)
 	doses_all = pad_matrix(d.value, T_recov)
+	# fracs_all = pad_matrix(p.value, T_recov)
 	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, doses_all, health_map)
-	obj = dyn_objective(d.value, health_all[:(T_treat+1)], patient_rx).value
+	obj = dyn_objective(d.value, health_all[:(T_treat+1)], p.value, patient_rx).value
 	return {"obj": obj, "status": prob.status, "solve_time": prob.solver_stats.solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
 
 def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
@@ -150,22 +159,21 @@ def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = la
 	# Initialize values.
 	beams = np.zeros((T_treat,n))
 	doses = np.zeros((T_treat,K))
+	fracs = np.zeros((T_treat,K))
 	solve_time = 0
 	
 	h_cur = h_init
 	for t_s in range(T_treat):
 		rx_cur = patient_rx.copy()
-		# rx_cur["health_goal"] = patient_rx["health_goal"][t_s:]
+		rx_cur["dose"] = patient_rx["dose"][t_s:]
 		if "dose_constrs" in patient_rx:
 			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t_s:], "upper": patient_rx["dose_constrs"]["upper"][t_s:]}
 		if "health_constrs" in patient_rx:
 			rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t_s:], "upper": patient_rx["health_constrs"]["upper"][t_s:]}
 		
 		# Solve optimal control problem from current period forward.
-		prob, b, h, d = build_dyn_prob(A_list[t_s:], F, G, h_cur, rx_cur, T_recov)
+		prob, b, h, p, d = build_dyn_prob(A_list[t_s:], F, G, h_cur, rx_cur, T_recov)
 		prob.solve(*args, **kwargs)
-		if prob.status not in ["optimal", "optimal_inaccurate"]:
-			raise RuntimeError("Solver failed with status {0}".format(prob.status))
 		solve_time += prob.solver_stats.solve_time
 		
 		if mpc_verbose:
@@ -178,6 +186,7 @@ def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = la
 		status = prob.status
 		beams[t_s] = b.value[0]
 		doses[t_s] = d.value[0]
+		fracs[t_s] = p.value[0]
 		
 		# Update health for next period.
 		h_cur = health_map(F.dot(h_cur) + G.dot(doses[t_s]), t_s)
@@ -185,6 +194,7 @@ def mpc_treatment(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = la
 	# Construct full results.
 	beams_all = pad_matrix(beams, T_recov)
 	doses_all = pad_matrix(doses, T_recov)
+	# fracs_all = pad_matrix(fracs, T_recov)
 	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, doses_all, health_map)
-	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], patient_rx).value
+	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], fracs, patient_rx).value
 	return {"obj": obj_treat, "status": status, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}

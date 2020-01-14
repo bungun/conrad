@@ -13,44 +13,54 @@ def build_dyn_prob_dose(A_list, patient_rx, T_recov = 0):
 	
 	# Define variables.
 	b = Variable((T_treat,n), pos = True, name = "beams")   # Beams.
-	d = vstack([A_list[t]*b[t] for t in range(T_treat)])    # Doses.
+	p = Variable((T_treat,K), pos = True, name = "prescribed")   # Prescribed dose.
+	d = vstack([A_list[t]*b[t] for t in range(T_treat)])   # Doses.
 	
 	# Dose penalty function.
-	obj = sum([dose_penalty(d[t], patient_rx["dose_weights"]) for t in range(T_treat)])
+	obj = sum([dose_penalty(d[t], p[t], patient_rx["dose_weights"]) for t in range(T_treat)])
+	
+	# Prescribed dose in each period.
+	# TODO: Add more bounds on the prescription?
+	constrs = [p == patient_rx["dose"]]
 	
 	# Additional dose constraints.
 	if "dose_constrs" in patient_rx:
 		constrs += rx_to_constrs(vstack(d), patient_rx["dose_constrs"])
 	
 	prob = Problem(Minimize(obj), constrs)
-	return prob, b, d
+	return prob, b, p, d
 
 def build_dyn_prob_dose_period(A, patient_rx, T_recov = 0):
 	K, n = A.shape
 	
 	# Define variables for period.
 	b_t = Variable(n, pos = True, name = "beams")   # Beams.
+	p_t = Variable(K, pos = True, name = "prescribed")   # Prescribed dose.
 	d_t = A*b_t
 	
 	# Dose penalty current period.
-	obj = dose_penalty(d_t, patient_rx["dose_weights"])
+	obj = dose_penalty(d_t, p_t, patient_rx["dose_weights"])
+	
+	# Prescribed dose in current period.
+	# TODO: Add more bounds on the prescription?
+	constrs = [p_t == patient_rx["dose"]]
 	
 	# Additional dose constraints in period.
 	if "dose_constrs" in patient_rx:
 		constrs += rx_to_constrs(d_t, patient_rx["dose_constrs"])
 	
 	prob_t = Problem(Minimize(obj), constrs)
-	return prob_t, b_t, d_t
+	return prob_t, b_t, p_t, d_t
 
 def build_dyn_prob_health(F, G, h_init, patient_rx, T_treat, T_recov = 0):
 	K = h_init.shape[0]
 	
 	# Define variables.
 	h = Variable((T_treat+1,K), name = "health")   # Health statuses.
-	d = Variable((T_treat,K), pos = True, name = "doses")   # Doses.
+	d = Variable((T_treat,K), pos = True, name = "doses")
 	
 	# Health penalty function.
-	obj = sum([health_penalty(h[t+1], patient_rx["health_goal"], patient_rx["health_weights"]) for t in range(T_treat)])
+	obj = sum([health_penalty(h[t+1], patient_rx["health_weights"]) for t in range(T_treat)])
 	
 	# Health dynamics for treatment stage.
 	# constrs = [h[0] == h_init, b >= 0]
@@ -80,7 +90,7 @@ def build_dyn_prob_health(F, G, h_init, patient_rx, T_treat, T_recov = 0):
 
 def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 	# Construct proximal dose problem.
-	prob_dose, b, d = build_dyn_prob_dose_period(A, patient_rx, T_recov)
+	prob_dose, b, p, d = build_dyn_prob_dose_period(A, patient_rx, T_recov)
 	d_new = Parameter(d.shape, value = np.zeros(d.shape))
 	u = Parameter(d.shape, value = np.zeros(d.shape))
 	penalty = (rho/2)*sum_squares(d - d_new - u)
@@ -106,7 +116,7 @@ def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 		finished = pipe.recv()
 	
 	# Send final b_t^k and p_t^k.
-	pipe.send(b.value)
+	pipe.send((b.value, p.value))
 
 def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, *args, **kwargs):
 	# Problem parameters.
@@ -133,7 +143,7 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 	procs = []
 	for t in range(T_treat):
 		rx_cur = patient_rx.copy()
-		# rx_cur["health_goal"] = patient_rx["health_goal"][t]
+		rx_cur["dose"] = patient_rx["dose"][t]
 		if "dose_constrs" in patient_rx:
 			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t], "upper": patient_rx["dose_constrs"]["upper"][t]}
 		if "health_constrs" in patient_rx:
@@ -196,9 +206,11 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 		for pipe in pipes:
 			pipe.send(finished)
 	
-	# Receive final values of b_t^k for t = 1,...,T.
-	b_rows = [pipe.recv() for pipe in pipes]
+	# Receive final values of b_t^k and p_t^k.
+	bp_update = [pipe.recv() for pipe in pipes]
+	b_rows, p_rows = map(list, zip(*bp_update))
 	b_val = np.row_stack(b_rows)
+	p_val = np.row_stack(p_rows)
 	
 	[proc.terminate() for proc in procs]
 	end = time()
@@ -206,17 +218,18 @@ def dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health
 	# Only used internally for calls in MPC.
 	if partial_results:
 		# TODO: Return primal/dual residuals as well?
-		obj_pred = dyn_objective(d_tld.value, h.value, patient_rx).value
-		return {"obj": obj_pred, "status": prox.status, "solve_time": solve_time, "beams": b_val, "doses": d_tld.value}
+		obj_pred = dyn_objective(d_tld.value, h.value, p_val, patient_rx).value
+		return {"obj": obj_pred, "status": prox.status, "beams": b_val, "doses": d_tld.value, "fracs": p_val, "solve_time": solve_time}
 	
 	# Construct full results.
 	beams_all = pad_matrix(b_val, T_recov)
 	doses_all = pad_matrix(d_tld.value, T_recov)
 	# doses_all = pad_matrix((d_tld.value + d_new.value)/2, T_recov)
+	fracs_all = pad_matrix(p_val, T_recov)
 	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, doses_all, health_map)
-	obj = dyn_objective(d_tld.value, health_all[:(T_treat+1)], patient_rx).value
-	return {"obj": obj, "status": prox.status, "num_iters": k, "total_time": end - start, "solve_time": solve_time, 
-			"beams": beams_all, "doses": doses_all, "health": health_all, "primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k])}
+	obj = dyn_objective(d_tld.value, health_all[:(T_treat+1)], p_val, patient_rx).value
+	return {"obj": obj, "status": prox.status, "beams": beams_all, "doses": doses_all, "health": health_all, "fracs": fracs_all, 
+			"primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k]), "num_iters": k, "total_time": end - start, "solve_time": solve_time}
 
 def mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
 	T_treat = len(A_list)
@@ -225,12 +238,13 @@ def mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map
 	# Initialize values.
 	beams = np.zeros((T_treat,n))
 	doses = np.zeros((T_treat,K))
+	fracs = np.zeros((T_treat,K))
 	solve_time = 0
 	
 	h_cur = h_init
 	for t_s in range(T_treat):
 		rx_cur = patient_rx.copy()
-		# rx_cur["health_goal"] = patient_rx["health_goal"][t_s:]
+		rx_cur["dose"] = patient_rx["dose"][t_s:]
 		if "dose_constrs" in patient_rx:
 			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t_s:], "upper": patient_rx["dose_constrs"]["upper"][t_s:]}
 		if "health_constrs" in patient_rx:
@@ -250,6 +264,7 @@ def mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map
 		status = result["status"]
 		beams[t_s] = result["beams"][0]
 		doses[t_s] = result["doses"][0]
+		fracs[t_s] = result["fracs"][0]
 		
 		# Update health for next period.
 		h_cur = health_map(F.dot(h_cur) + G.dot(doses[t_s]), t_s)
@@ -257,6 +272,7 @@ def mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov = 0, health_map
 	# Construct full results.
 	beams_all = pad_matrix(beams, T_recov)
 	doses_all = pad_matrix(doses, T_recov)
+	fracs_all = pad_matrix(fracs, T_recov)
 	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, doses_all, health_map)
-	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], patient_rx).value
-	return {"obj": obj_treat, "status": status, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
+	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], fracs, patient_rx).value
+	return {"obj": obj_treat, "status": status, "beams": beams_all, "doses": doses_all, "health": health_all, "fracs": fracs_all, "solve_time": solve_time}
