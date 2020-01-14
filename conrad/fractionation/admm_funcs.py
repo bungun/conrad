@@ -19,6 +19,8 @@ def build_dyn_prob_dose(A_list, patient_rx, T_recov = 0):
 	obj = sum([dose_penalty(d[t], patient_rx["dose_weights"]) for t in range(T_treat)])
 	
 	# Additional dose constraints.
+	# constrs = [b >= 0]
+	constrs = []
 	if "dose_constrs" in patient_rx:
 		constrs += rx_to_constrs(vstack(d), patient_rx["dose_constrs"])
 	
@@ -36,6 +38,8 @@ def build_dyn_prob_dose_period(A, patient_rx, T_recov = 0):
 	obj = dose_penalty(d_t, patient_rx["dose_weights"])
 	
 	# Additional dose constraints in period.
+	# constrs = [b >= 0]
+	constrs = []
 	if "dose_constrs" in patient_rx:
 		constrs += rx_to_constrs(d_t, patient_rx["dose_constrs"])
 	
@@ -53,7 +57,6 @@ def build_dyn_prob_health(F, G, h_init, patient_rx, T_treat, T_recov = 0):
 	obj = sum([health_penalty(h[t+1], patient_rx["health_goal"], patient_rx["health_weights"]) for t in range(T_treat)])
 	
 	# Health dynamics for treatment stage.
-	# constrs = [h[0] == h_init, b >= 0]
 	constrs = [h[0] == h_init]
 	for t in range(T_treat):
 		constrs.append(h[t+1] == F*h[t] + G*d[t])
