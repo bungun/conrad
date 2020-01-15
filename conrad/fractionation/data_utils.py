@@ -22,7 +22,7 @@ def beam_to_dose_block(A_full, indices_or_sections):
 	return A
 
 # Health prognosis with a given treatment.
-def health_prognosis(F, h_init, T, G = None, doses = None, health_map = lambda h,t: h):
+def health_prognosis(F, h_init, T, G = None, r = None, doses = None, health_map = lambda h,t: h):
 	K = h_init.shape[0]
 	h_prog = np.zeros((T+1,K))
 	h_prog[0] = h_init
@@ -33,7 +33,9 @@ def health_prognosis(F, h_init, T, G = None, doses = None, health_map = lambda h
 		doses = np.zeros((T,1))
 	elif not (doses is not None and G is not None):
 		raise ValueError("Both G and doses must be provided.")
+	if r is None:
+		r = np.zeros(K)
 	
 	for t in range(T):
-		h_prog[t+1] = health_map(F.dot(h_prog[t]) + G.dot(doses[t]), t)
+		h_prog[t+1] = health_map(F.dot(h_prog[t]) + G.dot(doses[t]) + r, t)
 	return h_prog

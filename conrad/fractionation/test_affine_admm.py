@@ -26,6 +26,7 @@ A = np.row_stack(A_rows)
 # F = np.diag([1.02, 0.95, 0.90, 0.85, 0.70, 0.65, 0.50, 0.25, 0.20, 0.15])
 F = np.diag([1.02, 0.95, 0.90, 0.75])
 G = -np.eye(K)
+r = np.zeros(K)
 A_list = T_treat*[A]
 h_init = np.array([0.25] + (K-1)*[0])
 
@@ -36,7 +37,7 @@ h_noise = mu + sigma*np.random.randn(T,K)
 health_map = lambda h,t: h + h_noise[t]
 
 # Health prognosis.
-h_prog = health_prognosis(F, h_init, T, health_map = health_map)
+h_prog = health_prognosis(F, h_init, T, r = r, health_map = health_map)
 curves = {"Untreated": h_prog}
 
 # Patient prescription.
@@ -72,7 +73,7 @@ health_upper[T_treat-1,0] = H_target
 patient_rx["health_constrs"] = {"lower": health_lower, "upper": health_upper}
 
 # Dynamic treatment.
-res_dynamic = dynamic_treatment(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
+res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
 print("Dynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
@@ -83,7 +84,7 @@ plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_t
 plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
 
 # Dynamic treatment with ADMM.
-res_dyn_admm = dynamic_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, rho = 0.5, max_iter = 1000, solver = "MOSEK")
+res_dyn_admm = dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov, health_map = health_map, rho = 0.5, max_iter = 1000, solver = "MOSEK")
 print("\nDynamic Treatment with ADMM")
 print("Status:", res_dyn_admm["status"])
 print("Objective:", res_dyn_admm["obj"])
@@ -96,7 +97,7 @@ plot_health(res_dyn_admm["health"], curves = curves, stepsize = 10, T_treat = T_
 plot_treatment(res_dyn_admm["doses"], stepsize = 10, T_treat = T_treat)
 
 # Dynamic treatment using MPC with ADMM.
-res_mpc_admm = mpc_treatment_admm(A_list, F, G, h_init, patient_rx, T_recov, health_map = health_map, rho = 0.5, max_iter = 1000, solver = "MOSEK")
+res_mpc_admm = mpc_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov, health_map = health_map, rho = 0.5, max_iter = 1000, solver = "MOSEK")
 print("\nMPC Treatment with ADMM")
 print("Status:", res_mpc_admm["status"])
 print("Objective:", res_mpc_admm["obj"])

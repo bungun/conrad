@@ -1,6 +1,6 @@
 import numpy as np
-from mpc_funcs import *
-from data_utils import beam_to_dose_block, health_prognosis
+from ccp_funcs import *
+from data_utils import beam_to_dose_block
 from plot_utils import plot_health, plot_treatment
 
 # Problem data.
@@ -22,10 +22,8 @@ A_rows = [np.mean(block, axis = 0) for block in A_blocks]
 A = np.row_stack(A_rows)
 
 # Dynamics matrices.
-# F = np.diag([1.02, 0.95, 0.90, 0.85, 0.70, 0.65, 0.50, 0.25, 0.20, 0.15])
-F = np.diag([1.02, 0.95, 0.90, 0.75])
-G = -np.eye(K)
-r = np.zeros(K)
+alphas = np.array([1, 2, 3, 4])
+betas = np.array([4, 3, 2, 1])
 A_list = T_treat*[A]
 h_init = np.array([0.25] + (K-1)*[0])
 
@@ -36,7 +34,7 @@ h_noise = mu + sigma*np.random.randn(T,K)
 health_map = lambda h,t: h + h_noise[t]
 
 # Health prognosis.
-h_prog = health_prognosis(F, h_init, T, r = r, health_map = health_map)
+h_prog = bed_health_prog(alphas, betas, h_init, T, health_map = health_map)
 curves = {"Untreated": h_prog}
 
 # Patient prescription.
@@ -60,7 +58,7 @@ dose_lower = np.full((T_treat,K), -np.inf)
 dose_upper = np.full((T_treat,K), np.inf)
 dose_lower[:,0] = np.concatenate([np.full(5, D_target), np.full(15, -np.inf)])
 dose_upper[:,1:] = D_other
-patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
+# patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
 
 # Health constraints.
 health_lower = np.full((T_treat,K), -np.inf)
@@ -69,10 +67,10 @@ health_lower[:,1:] = H_other
 # health_lower[T_treat-1,0] = H_target - eps
 # health_upper[T_treat-1,0] = H_target + eps
 health_upper[T_treat-1,0] = H_target
-patient_rx["health_constrs"] = {"lower": health_lower, "upper": health_upper}
+# patient_rx["health_constrs"] = {"lower": health_lower, "upper": health_upper}
 
-# Dynamic treatment.
-res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
+# Dynamic treatment using CCP.
+res_dynamic = bed_ccp_dyn_treat(A_list, alphas, betas, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
 print("Dynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
@@ -80,13 +78,3 @@ print("Objective:", res_dynamic["obj"])
 # Plot dynamic health and treatment curves.
 plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat)
 plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
-
-# Dynamic treatment with MPC.
-res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
-print("\nMPC Treatment")
-print("Status:", res_mpc["status"])
-print("Objective:", res_mpc["obj"])
-
-# Plot dynamic MPC health and treatment curves.
-plot_health(res_mpc["health"], curves = curves, stepsize = 10, T_treat = T_treat)
-plot_treatment(res_mpc["doses"], stepsize = 10, T_treat = T_treat)
