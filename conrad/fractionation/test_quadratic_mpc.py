@@ -34,7 +34,7 @@ h_noise = mu + sigma*np.random.randn(T,K)
 health_map = lambda h,t: h + h_noise[t]
 
 # Health prognosis.
-h_prog = bed_health_prog(alphas, betas, h_init, T, health_map = health_map)
+h_prog = bed_health_prog(h_init, T, alphas, betas, health_map = health_map)
 curves = {"Untreated": h_prog}
 
 # Patient prescription.
@@ -58,7 +58,7 @@ dose_lower = np.full((T_treat,K), -np.inf)
 dose_upper = np.full((T_treat,K), np.inf)
 dose_lower[:,0] = np.concatenate([np.full(5, D_target), np.full(15, -np.inf)])
 dose_upper[:,1:] = D_other
-# patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
+patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
 
 # Health constraints.
 health_lower = np.full((T_treat,K), -np.inf)
@@ -71,9 +71,11 @@ health_upper[T_treat-1,0] = H_target
 
 # Dynamic treatment using CCP.
 res_dynamic = bed_ccp_dyn_treat(A_list, alphas, betas, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
-print("Dynamic Treatment")
+print("Dynamic Treatment using CCP")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
+print("Solve Time:", res_dynamic["solve_time"])
+print("Iterations:", res_dynamic["num_iters"])
 
 # Plot dynamic health and treatment curves.
 plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat)

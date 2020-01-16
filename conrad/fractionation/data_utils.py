@@ -56,27 +56,14 @@ def health_prognosis(h_init, T, F_list, G_list = None, r_list = None, doses = No
 	
 	# Defaults to no treatment.
 	if G_list is None and doses is None:
-		G_list = T*[np.zeros((K,1))]
-		doses = np.zeros((T,1))
+		G_list = T*[np.zeros((K,K))]
+		doses = np.zeros((T,K))
 	elif not (G_list is not None and doses is not None):
 		raise ValueError("Both G_list and doses must be provided.")
 	if r_list is None:
 		r_list = T*[np.zeros(K)]
 	
-	if not isinstance(F_list, list):
-		F_list = T*[F_list]
-	if not isinstance(G_list, list):
-		G_list = T*[G_list]
-	if not isinstance(r_list, list):
-		r_list = T*[r_list]
-	
-	if len(F_list) != T:
-		raise ValueError("F_list must be a list of length {0}".format(T))
-	if len(G_list) != T:
-		raise ValueError("G_list must be a list of length {0}".format(T))
-	if len(r_list) != T:
-		raise ValueError("r_list must be a list of length {0}".format(T))
-	
+	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T, T_recov = 0)
 	for t in range(T):
 		h_prog[t+1] = health_map(F_list[t].dot(h_prog[t]) + G_list[t].dot(doses[t]) + r_list[t], t)
 	return h_prog
