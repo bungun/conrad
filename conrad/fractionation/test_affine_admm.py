@@ -37,7 +37,7 @@ h_noise = mu + sigma*np.random.randn(T,K)
 health_map = lambda h,t: h + h_noise[t]
 
 # Health prognosis.
-h_prog = health_prognosis(F, h_init, T, r = r, health_map = health_map)
+h_prog = health_prognosis(h_init, T, F, r_list = r, health_map = health_map)
 curves = {"Untreated": h_prog}
 
 # Patient prescription.

@@ -4,7 +4,7 @@ import numpy.linalg as LA
 from cvxpy import *
 from time import time
 from multiprocessing import Process, Pipe
-from data_utils import pad_matrix, health_prognosis
+from data_utils import pad_matrix, check_dyn_matrices, health_prognosis
 from mpc_funcs import dose_penalty, health_penalty, dyn_objective, rx_to_constrs
 
 def build_dyn_prob_dose(A_list, patient_rx, T_recov = 0):
@@ -46,7 +46,7 @@ def build_dyn_prob_dose_period(A, patient_rx, T_recov = 0):
 	prob_t = Problem(Minimize(obj), constrs)
 	return prob_t, b_t, d_t
 
-def build_dyn_prob_health(F, G, r, h_init, patient_rx, T_treat, T_recov = 0):
+def build_dyn_prob_health(F_list, G_list, r_list, h_init, patient_rx, T_treat, T_recov = 0):
 	K = h_init.shape[0]
 	
 	# Define variables.
@@ -59,7 +59,7 @@ def build_dyn_prob_health(F, G, r, h_init, patient_rx, T_treat, T_recov = 0):
 	# Health dynamics for treatment stage.
 	constrs = [h[0] == h_init]
 	for t in range(T_treat):
-		constrs.append(h[t+1] == F*h[t] + G*d[t] + r)
+		constrs.append(h[t+1] == F_list[t]*h[t] + G_list[t]*d[t] + r_list[t])
 	
 	# Additional health constraints.
 	if "health_constrs" in patient_rx:
@@ -68,10 +68,13 @@ def build_dyn_prob_health(F, G, r, h_init, patient_rx, T_treat, T_recov = 0):
 	# Health dynamics for recovery stage.
 	# TODO: Should we return h_r or calculate it later?
 	if T_recov > 0:
+		F_recov = F_list[T_treat:]
+		r_recov = r_list[T_treat:]
+		
 		h_r = Variable((T_recov,K), name = "recovery")
-		constrs_r = [h_r[0] == F*h[-1]]
+		constrs_r = [h_r[0] == F_recov[0]*h[-1] + r_recov[0]]
 		for t in range(T_recov-1):
-			constrs_r.append(h_r[t+1] == F*h_r[t] + r)
+			constrs_r.append(h_r[t+1] == F_recov[t+1]*h_r[t] + r_recov[t+1])
 		
 		# Additional health constraints during recovery.
 		if "recov_constrs" in patient_rx:
@@ -111,7 +114,11 @@ def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 	# Send final b_t^k and p_t^k.
 	pipe.send(b.value)
 
-def dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, *args, **kwargs):
+def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, *args, **kwargs):
+	T_treat = len(A_list)
+	K, n = A_list[0].shape
+	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
+	
 	# Problem parameters.
 	max_iter = kwargs.pop("max_iter", 1000) # Maximum iterations.
 	rho = kwargs.pop("rho", 1/10)           # Step size.
@@ -120,8 +127,6 @@ def dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov = 0, hea
 	verbose = kwargs.get("verbose", False)
 	
 	# Validate parameters.
-	T_treat = len(A_list)
-	K = F.shape[1]
 	if max_iter <= 0:
 		raise ValueError("max_iter must be a positive integer.")
 	if rho <= 0:
@@ -148,7 +153,7 @@ def dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov = 0, hea
 		procs[-1].start()
 	
 	# Proximal health problem.
-	prob_health, h, d_tld = build_dyn_prob_health(F, G, r, h_init, patient_rx, T_treat, T_recov)
+	prob_health, h, d_tld = build_dyn_prob_health(F_list, G_list, r_list, h_init, patient_rx, T_treat, T_recov)
 	d_new = Parameter(d_tld.shape, value = np.zeros(d_tld.shape))
 	u = Parameter(d_tld.shape, value = np.zeros(d_tld.shape))
 	penalty = (rho/2)*sum_squares(d_tld - d_new + u)
@@ -216,14 +221,16 @@ def dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov = 0, hea
 	beams_all = pad_matrix(b_val, T_recov)
 	doses_all = pad_matrix(d_tld.value, T_recov)
 	# doses_all = pad_matrix((d_tld.value + d_new.value)/2, T_recov)
-	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, r, doses_all, health_map)
+	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
+	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
 	obj = dyn_objective(d_tld.value, health_all[:(T_treat+1)], patient_rx).value
 	return {"obj": obj, "status": prox.status, "num_iters": k, "total_time": end - start, "solve_time": solve_time, 
 			"beams": beams_all, "doses": doses_all, "health": health_all, "primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k])}
 
-def mpc_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
+def mpc_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
+	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
 	
 	# Initialize values.
 	beams = np.zeros((T_treat,n))
@@ -240,7 +247,7 @@ def mpc_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov = 0, health_
 			rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t_s:], "upper": patient_rx["health_constrs"]["upper"][t_s:]}
 		
 		# Solve optimal control problem from current period forward.
-		result = dynamic_treatment_admm(A_list[t_s:], F, G, r, h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
+		result = dynamic_treatment_admm(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
 		solve_time += result["solve_time"]
 		
 		if mpc_verbose:
@@ -255,11 +262,12 @@ def mpc_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov = 0, health_
 		doses[t_s] = result["doses"][0]
 		
 		# Update health for next period.
-		h_cur = health_map(F.dot(h_cur) + G.dot(doses[t_s]) + r, t_s)
+		h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], t_s)
 	
 	# Construct full results.
 	beams_all = pad_matrix(beams, T_recov)
 	doses_all = pad_matrix(doses, T_recov)
-	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, r, doses_all, health_map)
+	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
+	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
 	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], patient_rx).value
 	return {"obj": obj_treat, "status": status, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}

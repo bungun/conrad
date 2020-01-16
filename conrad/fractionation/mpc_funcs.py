@@ -1,7 +1,7 @@
 import cvxpy
 import numpy as np
 from cvxpy import *
-from data_utils import pad_matrix, health_prognosis
+from data_utils import pad_matrix, check_dyn_matrices, health_prognosis
 
 # Dose penalty per period.
 def dose_penalty(dose, weights):
@@ -63,18 +63,11 @@ def rx_to_constrs(expr, rx_dict):
 	return constrs
 
 # Construct optimal control problem.
-def build_dyn_prob(A_list, F, G, r, h_init, patient_rx, T_recov = 0):
+def build_dyn_prob(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
-	
 	if h_init.shape[0] != K:
 		raise ValueError("h_init must be a vector of {0} elements". format(K))
-	if F.shape != (K,K):
-		raise ValueError("F must have dimensions ({0},{0})".format(K))
-	if G.shape != (K,K):
-		raise ValueError("G must have dimensions ({0},{0})".format(K))
-	if r.shape != (K,) and r.shape != (K,1):
-		raise ValueError("r must have dimensions ({K},)".format(K))
 	
 	# Define variables.
 	b = Variable((T_treat,n), pos = True, name = "beams")   # Beams.
@@ -88,11 +81,11 @@ def build_dyn_prob(A_list, F, G, r, h_init, patient_rx, T_recov = 0):
 	# constrs = [h[0] == h_init, b >= 0]
 	constrs = [h[0] == h_init]
 	for t in range(T_treat):
-		constrs.append(h[t+1] == F*h[t] + G*d[t] + r)
+		constrs.append(h[t+1] == F_list[t]*h[t] + G_list[t]*d[t] + r_list[t])
 	
 	# Additional dose constraints.
 	if "dose_constrs" in patient_rx:
-		constrs += rx_to_constrs(vstack(d), patient_rx["dose_constrs"])
+		constrs += rx_to_constrs(d, patient_rx["dose_constrs"])
 	
 	# Additional health constraints.
 	if "health_constrs" in patient_rx:
@@ -101,10 +94,13 @@ def build_dyn_prob(A_list, F, G, r, h_init, patient_rx, T_recov = 0):
 	# Health dynamics for recovery stage.
 	# TODO: Should we return h_r or calculate it later?
 	if T_recov > 0:
+		F_recov = F_list[T_treat:]
+		r_recov = r_list[T_treat:]
+		
 		h_r = Variable((T_recov,K), name = "recovery")
-		constrs_r = [h_r[0] == F*h[-1]]
+		constrs_r = [h_r[0] == F_recov[0]*h[-1] + r_recov[0]]
 		for t in range(T_recov-1):
-			constrs_r.append(h_r[t+1] == F*h_r[t] + r)
+			constrs_r.append(h_r[t+1] == F_recov[t+1]*h_r[t] + r_recov[t+1])
 		
 		# Additional health constraints during recovery.
 		if "recov_constrs" in patient_rx:
@@ -131,23 +127,27 @@ def single_treatment(A, patient_rx, *args, **kwargs):
 	# h = F.dot(h_init) + G.dot(d.value)
 	return {"obj": prob.value, "status": prob.status, "beams": b.value, "doses": d.value}
 
-def dynamic_treatment(A_list, F, G, r, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, *args, **kwargs):
+def dynamic_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, *args, **kwargs):
 	T_treat = len(A_list)
+	K, n = A_list[0].shape
+	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
 	
 	# Build problem for treatment stage.
-	prob, b, h, d = build_dyn_prob(A_list, F, G, r, h_init, patient_rx, T_recov)
+	prob, b, h, d = build_dyn_prob(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov)
 	prob.solve(*args, **kwargs)
 	
 	# Construct full results.
 	beams_all = pad_matrix(b.value, T_recov)
 	doses_all = pad_matrix(d.value, T_recov)
-	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, r, doses_all, health_map)
+	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
+	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
 	obj = dyn_objective(d.value, health_all[:(T_treat+1)], patient_rx).value
 	return {"obj": obj, "status": prob.status, "solve_time": prob.solver_stats.solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
 
-def mpc_treatment(A_list, F, G, r, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
+def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
+	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
 	
 	# Initialize values.
 	beams = np.zeros((T_treat,n))
@@ -164,7 +164,7 @@ def mpc_treatment(A_list, F, G, r, h_init, patient_rx, T_recov = 0, health_map =
 			rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t_s:], "upper": patient_rx["health_constrs"]["upper"][t_s:]}
 		
 		# Solve optimal control problem from current period forward.
-		prob, b, h, d = build_dyn_prob(A_list[t_s:], F, G, r, h_cur, rx_cur, T_recov)
+		prob, b, h, d = build_dyn_prob(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov)
 		prob.solve(*args, **kwargs)
 		if prob.status not in ["optimal", "optimal_inaccurate"]:
 			raise RuntimeError("Solver failed with status {0}".format(prob.status))
@@ -182,11 +182,12 @@ def mpc_treatment(A_list, F, G, r, h_init, patient_rx, T_recov = 0, health_map =
 		doses[t_s] = d.value[0]
 		
 		# Update health for next period.
-		h_cur = health_map(F.dot(h_cur) + G.dot(doses[t_s]) + r, t_s)
+		h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], t_s)
 	
 	# Construct full results.
 	beams_all = pad_matrix(beams, T_recov)
 	doses_all = pad_matrix(doses, T_recov)
-	health_all = health_prognosis(F, h_init, T_treat + T_recov, G, r, doses_all, health_map)
+	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
+	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
 	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], patient_rx).value
 	return {"obj": obj_treat, "status": status, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
