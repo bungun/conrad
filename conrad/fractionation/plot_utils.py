@@ -1,7 +1,46 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 
 savepath = "/home/anqi/Dropbox/Research/Fractionation/Figures/"
+
+# Plot beams.
+def plot_beams(b, theta = None, standardize = False, filename = None, *args, **kwargs):
+	T = b.shape[0]
+	m = b.shape[1]
+	
+	if theta is None:
+		theta = np.linspace(0, np.pi, m+1)[:-1]
+		# theta = np.linspace(0, 2*np.pi, m+1)[:-1]
+	if theta.shape[0] != m:
+		raise ValueError("theta must be an array of length {0}".format(m))
+	if standardize:
+		b_mean = np.tile(np.mean(b, axis = 1), (m,1)).T
+		b_std = np.tile(np.std(b, axis = 1), (m,1)).T
+		b = (b - b_mean)/b_std
+	
+	fig = plt.figure()
+	fig.set_size_inches(16,8)
+	ax = fig.add_subplot(111, projection = "polar")
+	
+	# Create collection of beams.
+	arr = np.ones((2*m, 2))
+	arr[0::2,0] = theta
+	arr[1::2,0] = theta + np.pi
+	segments = np.split(arr, m)
+	lc = LineCollection(segments, *args, **kwargs)
+	
+	# Set colors based on beam intensity.
+	# TODO: Create polar plots for a set of axes.
+	t = 0
+	lc.set_array(np.asarray(b[t]))
+	ax.add_collection(lc)
+	
+	fig.colorbar(lc)
+	plt.title("Beam Intensities")
+	plt.show()
+	if filename is not None:
+		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot health curves.
 def plot_health(x, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, filename = None):
