@@ -20,8 +20,9 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		b_std = np.tile(np.std(b, axis = 1), (m,1)).T
 		b = (b - b_mean)/b_std
 	
-	# TODO: Always include last time period.
 	T_grid = np.arange(0, T, stepsize)
+	if T_grid[-1] != T-1:
+		T_grid = np.append(T_grid, T-1)   # Always include last time period.
 	T_steps = len(T_grid)
 	rows = 1 if T_steps <= maxcols else int(np.ceil(T_steps / maxcols))
 	cols = min(T_steps, maxcols)
@@ -52,7 +53,7 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		ax.set_yticklabels([])
 		ax.set_theta_zero_location('N')
 		ax.set_title("$b({0})$".format(t))
-		t = t + stepsize
+		t = min(t + stepsize, T-1)
 	
 	# Display colorbar for entire range of intensities.
 	fig.subplots_adjust(right = 0.8)
