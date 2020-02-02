@@ -5,7 +5,7 @@ from matplotlib.collections import LineCollection
 savepath = "/home/anqi/Dropbox/Research/Fractionation/Figures/"
 
 # Plot beams.
-def plot_beams(b, theta = None, standardize = False, filename = None, *args, **kwargs):
+def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False, filename = None, *args, **kwargs):
 	T = b.shape[0]
 	m = b.shape[1]
 	
@@ -19,25 +19,36 @@ def plot_beams(b, theta = None, standardize = False, filename = None, *args, **k
 		b_std = np.tile(np.std(b, axis = 1), (m,1)).T
 		b = (b - b_mean)/b_std
 	
-	fig = plt.figure()
+	T_steps = int(np.floor(T / stepsize)) + 1
+	rows = 1 if T_steps <= maxcols else int(np.ceil(T_steps / maxcols))
+	cols = min(T_steps, maxcols)
+	
+	fig, axs = plt.subplots(rows, cols, subplot_kw = dict(projection = "polar"))
 	fig.set_size_inches(16,8)
-	ax = fig.add_subplot(111, projection = "polar")
 	
 	# Create collection of beams.
 	arr = np.ones((2*m, 2))
 	arr[0::2,0] = theta
+	# arr[1::2] = 0
 	arr[1::2,0] = theta + np.pi
 	segments = np.split(arr, m)
 	lc = LineCollection(segments, *args, **kwargs)
 	
-	# Set colors based on beam intensity.
-	# TODO: Create polar plots for a set of axes.
-	t = 0
-	lc.set_array(np.asarray(b[t]))
-	ax.add_collection(lc)
+	for t in np.arange(0, T, stepsize):
+		if rows == 1:
+			ax = axs if cols == 1 else axs[t]
+		else:
+			ax = axs[int(t / maxcols), t % maxcols]
+		
+		# Set colors based on beam intensity.
+		lc.set_array(np.asarray(b[t]))
+		ax.add_collection(lc)
+		ax.set_yticklabels([])
+		ax.set_theta_zero_location('N')
+		ax.set_title("$b({0})$".format(t))
 	
 	fig.colorbar(lc)
-	plt.title("Beam Intensities")
+	plt.suptitle("Beam Intensities vs. Time")
 	plt.show()
 	if filename is not None:
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
@@ -54,7 +65,10 @@ def plot_health(x, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, file
 	fig, axs = plt.subplots(rows, cols, sharey = True)
 	fig.set_size_inches(16,8)
 	for i in range(m):
-		ax = axs[i] if rows == 1 else axs[int(i / maxcols), i % maxcols]
+		if rows == 1:
+			ax = axs if cols == 1 else axs[i]
+		else:
+			ax = axs[int(i / maxcols), i % maxcols]
 		ltreat, = ax.plot(range(T+1), x[:,i], label = "Treated")
 		handles = [ltreat]
 		for label, curve in curves.items():
@@ -94,7 +108,10 @@ def plot_treatment(u, stepsize = 10, maxcols = 5, T_treat = None, filename = Non
 	fig, axs = plt.subplots(rows, cols, sharey = True)
 	fig.set_size_inches(16,8)
 	for j in range(n):
-		ax = axs[j] if rows == 1 else axs[int(j / maxcols), j % maxcols]
+		if rows == 1:
+			ax = axs if cols == 1 else axs[j]
+		else:
+			ax = axs[int(j / maxcols), j % maxcols]
 		ax.plot(range(T+1), u[:,j])
 		# ax.set_title("$u_{{{0}}}(t)$".format(j))
 		ax.set_title("$d_{{{0}}}(t)$".format(j))
