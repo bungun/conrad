@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from copy import copy
 from matplotlib.collections import LineCollection
 
 savepath = "/home/anqi/Dropbox/Research/Fractionation/Figures/"
@@ -19,7 +20,9 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		b_std = np.tile(np.std(b, axis = 1), (m,1)).T
 		b = (b - b_mean)/b_std
 	
-	T_steps = int(np.floor(T / stepsize)) + 1
+	# TODO: Always include last time period.
+	T_grid = np.arange(0, T, stepsize)
+	T_steps = len(T_grid)
 	rows = 1 if T_steps <= maxcols else int(np.ceil(T_steps / maxcols))
 	cols = min(T_steps, maxcols)
 	
@@ -32,22 +35,32 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 	# arr[1::2] = 0
 	arr[1::2,0] = theta + np.pi
 	segments = np.split(arr, m)
-	lc = LineCollection(segments, *args, **kwargs)
 	
-	for t in np.arange(0, T, stepsize):
+	t = 0
+	for t_step in range(T_steps):
 		if rows == 1:
-			ax = axs if cols == 1 else axs[t]
+			ax = axs if cols == 1 else axs[t_step]
 		else:
-			ax = axs[int(t / maxcols), t % maxcols]
+			ax = axs[int(t_step / maxcols), t_step % maxcols]
 		
 		# Set colors based on beam intensity.
+		lc = LineCollection(segments, *args, **kwargs)
 		lc.set_array(np.asarray(b[t]))
 		ax.add_collection(lc)
+		
+		ax.set_xticklabels([])
 		ax.set_yticklabels([])
 		ax.set_theta_zero_location('N')
 		ax.set_title("$b({0})$".format(t))
+		t = t + stepsize
 	
-	fig.colorbar(lc)
+	# Display colorbar for entire range of intensities.
+	fig.subplots_adjust(right = 0.8)
+	cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
+	lc = LineCollection(2*[np.zeros((2,2))], *args, **kwargs)
+	lc.set_array(np.array([np.min(b), np.max(b)]))
+	fig.colorbar(lc, cax = cbar_ax)
+	
 	plt.suptitle("Beam Intensities vs. Time")
 	plt.show()
 	if filename is not None:
