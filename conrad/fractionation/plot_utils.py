@@ -8,16 +8,16 @@ savepath = "/home/anqi/Dropbox/Research/Fractionation/Figures/"
 # Plot beams.
 def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False, filename = None, *args, **kwargs):
 	T = b.shape[0]
-	m = b.shape[1]
+	n = b.shape[1]
 	
 	if theta is None:
-		theta = np.linspace(0, np.pi, m+1)[:-1]
-		# theta = np.linspace(0, 2*np.pi, m+1)[:-1]
-	if theta.shape[0] != m:
-		raise ValueError("theta must be an array of length {0}".format(m))
+		theta = np.linspace(0, np.pi, n+1)[:-1]
+		# theta = np.linspace(0, 2*np.pi, n+1)[:-1]
+	if theta.shape[0] != n:
+		raise ValueError("theta must be an array of length {0}".format(n))
 	if standardize:
-		b_mean = np.tile(np.mean(b, axis = 1), (m,1)).T
-		b_std = np.tile(np.std(b, axis = 1), (m,1)).T
+		b_mean = np.tile(np.mean(b, axis = 1), (n,1)).T
+		b_std = np.tile(np.std(b, axis = 1), (n,1)).T
 		b = (b - b_mean)/b_std
 	
 	T_grid = np.arange(0, T, stepsize)
@@ -31,11 +31,11 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 	fig.set_size_inches(16,8)
 	
 	# Create collection of beams.
-	arr = np.ones((2*m, 2))
+	arr = np.ones((2*n, 2))
 	arr[0::2,0] = theta
 	# arr[1::2] = 0
 	arr[1::2,0] = theta + np.pi
-	segments = np.split(arr, m)
+	segments = np.split(arr, n)
 	
 	t = 0
 	for t_step in range(T_steps):

@@ -13,6 +13,29 @@ def pad_matrix(A, padding, axis = 0):
 		raise ValueError("axis must be either 0 or 1.")
 	return A_pad
 
+# Construct line integral matrix.
+def line_integral_mat(theta_grid, regions, beam_angles = 100, *args, **kwargs):
+	m_grid, n_grid = theta_grid.shape
+	K = np.unique(regions).size
+	
+	if regions.shape != (m_grid, n_grid):
+		raise ValueError("regions must have dimensions ({0},{1})".format(m_grid, n_grid))
+	if np.isscalar(beam_angles):
+		beam_angles = np.linspace(0, np.pi, beam_angles+1)[:-1]
+	
+	# A_{kj} = fraction of beam j that falls in region k.
+	n = len(beam_angles)
+	A = np.zeros((K, n))
+	for j in range(n):
+		beam_grid = np.isclose(theta_grid, beam_angles[j], *args, **kwargs) | \
+					np.isclose(theta_grid, beam_angles[j] + np.pi, *args, **kwargs)
+		beam_tot = np.sum(beam_grid)
+		if beam_tot > 0:
+			for k in range(K):
+				beam_region = np.sum((regions == k) & beam_grid)
+				A[k,j] = beam_region/beam_tot
+	return A
+
 # Block average rows of dose influence matrix.
 def beam_to_dose_block(A_full, indices_or_sections):
 	A_blocks = np.split(A_full, indices_or_sections)
@@ -21,6 +44,7 @@ def beam_to_dose_block(A_full, indices_or_sections):
 	A = np.row_stack(A_rows)
 	return A
 
+# Check dynamics matrices are correct dimension.
 def check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov = 0):
 	T_total = T_treat + T_recov
 	if not isinstance(F_list, list):
