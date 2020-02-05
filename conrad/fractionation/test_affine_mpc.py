@@ -1,7 +1,7 @@
 import numpy as np
 from mpc_funcs import *
 from data_utils import beam_to_dose_block, health_prognosis
-from plot_utils import plot_health, plot_treatment
+from plot_utils import plot_health, plot_treatment, plot_beams, transp_cmap
 
 # Problem data.
 # m = 10000
@@ -80,6 +80,7 @@ print("Objective:", res_dynamic["obj"])
 # Plot dynamic health and treatment curves.
 plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_treat)
 plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
+plot_beams(res_dynamic["beams"], stepsize = 10)
 
 # Dynamic treatment with MPC.
 res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx, T_recov, health_map = health_map, solver = "MOSEK")
@@ -90,3 +91,4 @@ print("Objective:", res_mpc["obj"])
 # Plot dynamic MPC health and treatment curves.
 plot_health(res_mpc["health"], curves = curves, stepsize = 10, T_treat = T_treat)
 plot_treatment(res_mpc["doses"], stepsize = 10, T_treat = T_treat)
+plot_beams(res_mpc["beams"], stepsize = 10)

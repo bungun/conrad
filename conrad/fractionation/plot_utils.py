@@ -2,8 +2,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import copy
 from matplotlib.collections import LineCollection
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 savepath = "/home/anqi/Dropbox/Research/Fractionation/Figures/"
+
+# Extract subset of a colormap.
+# http://stackoverflow.com/questions/18926031/how-to-extract-a-subset-of-a-colormap-as-a-new-colormap-in-matplotlib
+def truncate_cmap(cmap, minval = 0.0, maxval = 1.0, n = 100):
+    cmap_trunc = LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n = cmap.name, a = minval, b = maxval),
+        cmap(np.linspace(minval, maxval, n)))
+    return cmap_trunc
+
+# Modify colormap to enable transparency in smaller values.
+def transp_cmap(cmap):
+	cmap_transp = cmap(np.arange(cmap.N))
+	cmap_transp[:,-1] = np.linspace(0, 1, cmap.N)
+	cmap_transp = ListedColormap(cmap_transp)
+	return cmap_transp
 
 # Plot beams.
 def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False, filename = None, *args, **kwargs):
@@ -52,7 +68,7 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		ax.set_xticklabels([])
 		ax.set_yticklabels([])
 		ax.set_theta_zero_location('N')
-		ax.set_title("$b({0})$".format(t))
+		ax.set_title("$b({0})$".format(t+1))
 		t = min(t + stepsize, T-1)
 	
 	# Display colorbar for entire range of intensities.
@@ -68,9 +84,14 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot health curves.
-def plot_health(x, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, filename = None):
-	T = x.shape[0] - 1
-	m = x.shape[1] 
+def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, filename = None):
+	T = h.shape[0] - 1
+	m = h.shape[1]
+	
+	if bounds is not None:
+		lower, upper = bounds
+	else:
+		lower = upper = None
 	
 	rows = 1 if m <= maxcols else int(np.ceil(m / maxcols))
 	cols = min(m, maxcols)
@@ -83,7 +104,7 @@ def plot_health(x, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, file
 			ax = axs if cols == 1 else axs[i]
 		else:
 			ax = axs[int(i / maxcols), i % maxcols]
-		ltreat, = ax.plot(range(T+1), x[:,i], label = "Treated")
+		ltreat, = ax.plot(range(T+1), h[:,i], label = "Treated")
 		handles = [ltreat]
 		for label, curve in curves.items():
 			lcurve, = ax.plot(range(T+1), curve[:,i], ls = '--', label = label)
@@ -93,12 +114,18 @@ def plot_health(x, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, file
 		ax.set_title("$h_{{{0}}}(t)$".format(i))
 		
 		# Label transition from treatment to recovery period.
-		ax.axvline(x = T_treat, lw = 1, ls = ':', color = "grey")
 		xt = np.arange(0, T, stepsize)
 		xt = np.append(xt, T)
 		if T_treat is not None:
+			ax.axvline(x = T_treat, lw = 1, ls = ':', color = "grey")
 			xt = np.append(xt, T_treat)
 		ax.set_xticks(xt)
+		
+		# Plot lower and upper bounds on h(t) for t = 1,...,T.
+		if lower is not None:
+			ax.plot(range(1,T+1), lower[:,i], lw = 1, ls = "-.", color = "indianred")
+		if upper is not None:
+			ax.plot(range(1,T+1), upper[:,i], lw = 1, ls = "-.", color = "indianred")
 	
 	for col in range(left):
 		axs[rows-1, maxcols-1-col].set_axis_off()
@@ -111,9 +138,14 @@ def plot_health(x, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, file
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot treatment curves.
-def plot_treatment(u, stepsize = 10, maxcols = 5, T_treat = None, filename = None):
-	T = u.shape[0] - 1
-	n = u.shape[1]
+def plot_treatment(d, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, filename = None):
+	T = d.shape[0]
+	n = d.shape[1]
+	
+	if bounds is not None:
+		lower, upper = bounds
+	else:
+		lower = upper = None
 	
 	rows = 1 if n <= maxcols else int(np.ceil(n / maxcols))
 	cols = min(n, maxcols)
@@ -126,17 +158,23 @@ def plot_treatment(u, stepsize = 10, maxcols = 5, T_treat = None, filename = Non
 			ax = axs if cols == 1 else axs[j]
 		else:
 			ax = axs[int(j / maxcols), j % maxcols]
-		ax.plot(range(T+1), u[:,j])
+		ax.plot(range(1,T+1), d[:,j])
 		# ax.set_title("$u_{{{0}}}(t)$".format(j))
 		ax.set_title("$d_{{{0}}}(t)$".format(j))
 		
 		# Label transition from treatment to recovery period.
-		ax.axvline(x = T_treat, lw = 1, ls = ':', color = "grey")
-		xt = np.arange(0, T, stepsize)
+		xt = np.arange(1, T, stepsize)
 		xt = np.append(xt, T)
 		if T_treat is not None:
+			ax.axvline(x = T_treat, lw = 1, ls = ':', color = "grey")
 			xt = np.append(xt, T_treat)
 		ax.set_xticks(xt)
+		
+		# Plot lower and upper bounds on d(t) for t = 1,...,T.
+		if lower is not None:
+			ax.plot(range(1,T+1), lower[:,j], lw = 1, ls = "-.", color = "indianred")
+		if upper is not None:
+			ax.plot(range(1,T+1), upper[:,j], lw = 1, ls = "-.", color = "indianred")
 	
 	for col in range(left):
 		axs[rows-1, maxcols-1-col].set_axis_off()
