@@ -44,22 +44,15 @@ x_grid = r_grid*np.cos(theta_grid)
 y_grid = r_grid*np.sin(theta_grid)
 regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), np.pi/6) <= 0] = 2
 
-# Create colormap for regions.
+# Create colormap for structures.
 K = np.unique(regions).size   # Number of structures.
-cmap = ListedColormap(['red', 'blue', 'green', 'white'])
-bounds = np.arange(K+1) - 0.5
-# cmap = truncate_cmap(plt.cm.rainbow, 0, 0.1*K, n = K)
-# bounds = np.linspace(0, K, K+1)
-norm = BoundaryNorm(bounds, cmap.N)
-
-# Plot regions.
-fig, ax = plt.subplots(1, 1, subplot_kw = dict(projection = "polar"))
-ctf = ax.contourf(theta_grid, r_grid, regions, cmap = cmap, norm = norm)
-ax.set_xticklabels([])
-ax.set_yticklabels([])
-ax.set_theta_zero_location("N")
-plt.colorbar(ctf)
-plt.show()
+struct_cmap = ListedColormap(['red', 'blue', 'green', 'white'])
+struct_bounds = np.arange(K+1) - 0.5
+# struct_cmap = truncate_cmap(plt.cm.rainbow, 0, 0.1*K, n = K)
+# struct_bounds = np.linspace(0, K, K+1)
+struct_norm = BoundaryNorm(struct_bounds, struct_cmap.N)
+struct_kw = {"cmap": struct_cmap, "norm": struct_norm, "alpha": 0.5}
+# plot_structures(theta_grid, r_grid, regions, **struct_kw)
 
 # Define problem.
 A = line_integral_mat(theta_grid, regions, beam_angles = n, atol = 1e-4)
@@ -99,7 +92,8 @@ print("Objective:", res_dynamic["obj"])
 # Plot dynamic health and treatment curves.
 plot_health(res_dynamic["health"], stepsize = 10, bounds = (health_lower, health_upper))
 plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
-plot_beams(res_dynamic["beams"], stepsize = 2, cmap = transp_cmap(plt.cm.Reds))
+plot_beams(res_dynamic["beams"], stepsize = 4, cmap = transp_cmap(plt.cm.Reds), \
+			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw)
 
 # Dynamic treatment with MPC.
 # res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx, solver = "MOSEK")

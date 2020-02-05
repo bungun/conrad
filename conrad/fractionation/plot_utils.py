@@ -21,8 +21,30 @@ def transp_cmap(cmap):
 	cmap_transp = ListedColormap(cmap_transp)
 	return cmap_transp
 
+# Plot structures.
+def plot_structures(theta, r, structures, filename = None, *args, **kwargs):
+	m, n = theta.shape
+	if r.shape != (m,n):
+		raise ValueError("r must have dimensions ({0},{1})".format(m,n))
+	if structures.shape != (m,n):
+		raise ValueError("structures must have dimensions ({0},{1})".format(m,n))
+	
+	plt.figure(figsize = (10,8))
+	ax = plt.subplot(111, projection = "polar")
+	
+	ctf = ax.contourf(theta, r, structures, *args, **kwargs)
+	ax.set_xticklabels([])
+	ax.set_yticklabels([])
+	ax.set_theta_zero_location("N")
+	
+	plt.title("Anatomical Structures")
+	plt.colorbar(ctf)
+	plt.show()
+	if filename is not None:
+		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
+
 # Plot beams.
-def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False, filename = None, *args, **kwargs):
+def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False, filename = None, structures = None, struct_kw = dict(), *args, **kwargs):
 	T = b.shape[0]
 	n = b.shape[1]
 	
@@ -35,6 +57,10 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		b_mean = np.tile(np.mean(b, axis = 1), (n,1)).T
 		b_std = np.tile(np.std(b, axis = 1), (n,1)).T
 		b = (b - b_mean)/b_std
+	if structures is not None:
+		if len(structures) != 3:
+			raise ValueError("structures should be a tuple of (theta, r, labels)")
+		struct_theta, struct_r, struct_labels = structures
 	
 	T_grid = np.arange(0, T, stepsize)
 	if T_grid[-1] != T-1:
@@ -60,6 +86,10 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		else:
 			ax = axs[int(t_step / maxcols), t_step % maxcols]
 		
+		# Plot anatomical structures.
+		if structures is not None:
+			ctf = ax.contourf(struct_theta, struct_r, struct_labels, **struct_kw)
+		
 		# Set colors based on beam intensity.
 		lc = LineCollection(segments, *args, **kwargs)
 		lc.set_array(np.asarray(b[t]))
@@ -71,12 +101,25 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		ax.set_title("$b({0})$".format(t+1))
 		t = min(t + stepsize, T-1)
 	
+	# Display colorbar for structures by label.
+	if structures is not None:
+		fig.subplots_adjust(left = 0.2)
+		cax_left = fig.add_axes([0.125, 0.15, 0.02, 0.7])
+		cbar = fig.colorbar(ctf, cax = cax_left, label = "Structure Label")
+		cax_left.yaxis.set_label_position("left")
+	
+		labels = np.unique(struct_labels)
+		lmin = np.min(labels)
+		lmax = np.max(labels)
+		cbar.set_ticks(np.arange(lmin, lmax + 1))
+	
 	# Display colorbar for entire range of intensities.
 	fig.subplots_adjust(right = 0.8)
-	cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
+	cax_right = fig.add_axes([0.85, 0.15, 0.02, 0.7])
 	lc = LineCollection(2*[np.zeros((2,2))], *args, **kwargs)
 	lc.set_array(np.array([np.min(b), np.max(b)]))
-	fig.colorbar(lc, cax = cbar_ax)
+	fig.colorbar(lc, cax = cax_right, label = "Beam Intensity")
+	cax_right.yaxis.set_label_position("left")
 	
 	plt.suptitle("Beam Intensities vs. Time")
 	plt.show()
