@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from plot_utils import *
-from data_utils import line_integral_mat
+from data_utils import line_integral_mat, circle, ellipse
 from mpc_funcs import dynamic_treatment, mpc_treatment
 
 n = 10   # Number of beams.
@@ -11,37 +11,39 @@ T = 20    # Length of treatment.
 m_grid = 10000
 n_grid = 500
 
-r0 = 0.6
-theta0 = 7*np.pi/6
-x0 = r0*np.cos(theta0)
-y0 = r0*np.sin(theta0)
-x_width = 0.075
-y_width = 0.15
-
-def ellipse(x, y, center = (0,0), width = (1,1), angle = 0):
-	x0, y0 = center
-	x_width, y_width = width
-	return (((x - x0)*np.cos(angle) + (y - y0)*np.sin(angle))/x_width)**2 + \
-		   (((x - x0)*np.sin(angle) - (y - y0)*np.cos(angle))/y_width)**2 - 1
-
 # Create polar grid.
 theta = np.linspace(0, 2*np.pi, m_grid)
 r = np.linspace(0, 1, n_grid)
 theta_grid, r_grid = np.meshgrid(theta, r)
+x_grid = r_grid*np.cos(theta_grid)
+y_grid = r_grid*np.sin(theta_grid)
 
 # Define structure regions.
 # Body voxels (k = 3).
 regions = np.full((n_grid, m_grid), 3)
 
 # PTV (k = 0).
-regions[(r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= np.pi/2)] = 0
+r0 = (0.5 + 0.65)/2
+theta0_l = 7*np.pi/16
+theta0_r = np.pi/16
+r_width = (0.65 - 0.5)/2
+circle_l = circle(x_grid, y_grid, (r0*np.cos(theta0_l), r0*np.sin(theta0_l)), r_width) <= 0
+circle_r = circle(x_grid, y_grid, (r0*np.cos(theta0_r), r0*np.sin(theta0_r)), r_width) <= 0
+slice_c = (r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= theta0_l) & (theta_grid >= theta0_r)
+regions[circle_l | circle_r | slice_c] = 0
+# regions[(r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= np.pi/2)] = 0
 
 # OAR (k = 1).
+# regions[circle(x_grid, y_grid, (0, 0), 0.35) <= 0] = 1
 regions[r_grid <= 0.35] = 1
 
 # OAR (k = 2).
-x_grid = r_grid*np.cos(theta_grid)
-y_grid = r_grid*np.sin(theta_grid)
+r0 = 0.6
+theta0 = 7*np.pi/6
+x0 = r0*np.cos(theta0)
+y0 = r0*np.sin(theta0)
+x_width = 0.075
+y_width = 0.15
 regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), np.pi/6) <= 0] = 2
 
 # Create colormap for structures.
@@ -68,7 +70,14 @@ h_init = np.array([1] + (K-1)*[0])
 rx_health_weights = [K*[1], K*[1]]
 rx_health_goal = np.zeros(K)
 rx_dose_weights = K*[1]
-patient_rx = {"dose_weights": rx_dose_weights, "health_goal": rx_health_goal, "health_weights": rx_health_weights}
+# rx_dose_goal = np.zeros(K)
+rx_dose_goal = np.full((K,), 0.25)
+patient_rx = {"dose_goal": rx_dose_goal, "dose_weights": rx_dose_weights, \
+			  "health_goal": rx_health_goal, "health_weights": rx_health_weights}
+
+# Beam constraints.
+beam_upper = np.full((T,n), 0.5)
+patient_rx["beam_constrs"] = {"upper": beam_upper}
 
 # Dose constraints.
 dose_lower = np.zeros((T,K))
@@ -88,12 +97,14 @@ res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, solver = "M
 print("Dynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
+print(res_dynamic["beams"])
 
-# Plot dynamic health and treatment curves.
-plot_health(res_dynamic["health"], stepsize = 10, bounds = (health_lower, health_upper))
-plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
+# Plot dynamic beam, health, and treatment curves.
+# TODO: Modify beam colorbar to show changes in intensity.
 plot_beams(res_dynamic["beams"], stepsize = 4, cmap = transp_cmap(plt.cm.Reds), \
 			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw)
+plot_health(res_dynamic["health"], stepsize = 10, bounds = (health_lower, health_upper))
+plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
 
 # Dynamic treatment with MPC.
 # res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx, solver = "MOSEK")
@@ -101,7 +112,8 @@ plot_beams(res_dynamic["beams"], stepsize = 4, cmap = transp_cmap(plt.cm.Reds), 
 # print("Status:", res_mpc["status"])
 # print("Objective:", res_mpc["obj"])
 
-# Plot dynamic MPC health and treatment curves.
+# Plot dynamic MPC beam, health, and treatment curves.
+# plot_beams(res_mpc["beams"], stepsize = 4, cmap = transp_cmap(plt.cm.Reds), \
+# 			  structures = (theta_grid, r_grid, regions), struct_kw = struct_kw)
 # plot_health(res_mpc["health"], stepsize = 10, bounds = (health_lower, health_upper))
 # plot_treatment(res_mpc["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
-# plot_beams(res_mpc["beams"], stepsize = 2, cmap = transp_cmap(plt.cm.Reds))

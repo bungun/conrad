@@ -1,5 +1,15 @@
 import numpy as np
 
+def circle(x, y, center = (0,0), radius = 1):
+	return ellipse(x, y, center, (radius, radius))
+
+# Equation for an ellipse tilted at an angle from the x-axis.
+def ellipse(x, y, center = (0,0), width = (1,1), angle = 0):
+	x0, y0 = center
+	x_width, y_width = width
+	return (((x - x0)*np.cos(angle) + (y - y0)*np.sin(angle))/x_width)**2 + \
+		   (((x - x0)*np.sin(angle) - (y - y0)*np.cos(angle))/y_width)**2 - 1
+
 # Pad matrix with zeros.
 def pad_matrix(A, padding, axis = 0):
 	m, n = A.shape

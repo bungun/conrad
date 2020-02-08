@@ -4,8 +4,12 @@ from cvxpy import *
 from data_utils import pad_matrix, check_dyn_matrices, health_prognosis
 
 # Dose penalty per period.
-def dose_penalty(dose, weights):
-	return weights*square(dose)
+def dose_penalty(dose, goal = None, weights = None):
+	if goal is None:
+		goal = np.zeros(dose.shape)
+	if weights is None:
+		weights = np.ones(dose.shape)
+	return weights*square(dose - goal)
 
 # Health status penalty per period.
 def health_penalty(health, goal, weights):
@@ -20,7 +24,7 @@ def dyn_objective(d_var, h_var, patient_rx):
 	
 	penalties = []
 	for t in range(T):
-		d_penalty = dose_penalty(d_var[t], patient_rx["dose_weights"])
+		d_penalty = dose_penalty(d_var[t], patient_rx["dose_goal"], patient_rx["dose_weights"])
 		h_penalty = health_penalty(h_var[t+1], patient_rx["health_goal"], patient_rx["health_weights"])
 		penalties.append(d_penalty + h_penalty)
 	return sum(penalties)
@@ -83,6 +87,10 @@ def build_dyn_prob(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov =
 	for t in range(T_treat):
 		constrs.append(h[t+1] == F_list[t]*h[t] + G_list[t]*d[t] + r_list[t])
 	
+	# Additional beam constraints.
+	if "beam_constrs" in patient_rx:
+		constrs += rx_to_constrs(b, patient_rx["beam_constrs"])
+	
 	# Additional dose constraints.
 	if "dose_constrs" in patient_rx:
 		constrs += rx_to_constrs(d, patient_rx["dose_constrs"])
@@ -115,9 +123,12 @@ def single_treatment(A, patient_rx, *args, **kwargs):
 	b = Variable(n, pos = True)   # Beams.
 	d = Variable(K, pos = True)   # Doses.
 	
-	obj = dose_penalty(d, patient_rx["dose_weights"])
+	obj = dose_penalty(d, patient_rx["dose_goal"], patient_rx["dose_weights"])
 	# constrs = [d == A*b, b >= 0]
 	constrs = [d == A*b]
+	
+	if "beam_constrs" in patient_rx:
+		constrs += rx_to_constrs(b, patient_rx["beam_constrs"])
 	
 	if "dose_constrs" in patient_rx:
 		constrs += rx_to_constrs(d, patient_rx["dose_constrs"])
@@ -158,6 +169,9 @@ def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 
 	for t_s in range(T_treat):
 		rx_cur = patient_rx.copy()
 		# rx_cur["health_goal"] = patient_rx["health_goal"][t_s:]
+		
+		if "beam_constrs" in patient_rx:
+			rx_cur["beam_constrs"] = {"lower": patient_rx["beam_constrs"]["lower"][t_s:], "upper": patient_rx["beam_constrs"]["upper"][t_s:]}
 		if "dose_constrs" in patient_rx:
 			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t_s:], "upper": patient_rx["dose_constrs"]["upper"][t_s:]}
 		if "health_constrs" in patient_rx:
