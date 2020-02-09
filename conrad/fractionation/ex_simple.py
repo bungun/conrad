@@ -3,11 +3,15 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from plot_utils import *
+<<<<<<< Updated upstream
 from data_utils import line_integral_mat, circle, ellipse
+=======
+from data_utils import line_integral_mat, health_prognosis
+>>>>>>> Stashed changes
 from mpc_funcs import dynamic_treatment, mpc_treatment
 
-n = 10   # Number of beams.
-T = 20    # Length of treatment.
+n = 1000   # Number of beams.
+T = 20     # Length of treatment.
 m_grid = 10000
 n_grid = 500
 
@@ -56,7 +60,7 @@ struct_norm = BoundaryNorm(struct_bounds, struct_cmap.N)
 struct_kw = {"cmap": struct_cmap, "norm": struct_norm, "alpha": 0.5}
 # plot_structures(theta_grid, r_grid, regions, **struct_kw)
 
-# Define problem.
+# Problem data.
 A = line_integral_mat(theta_grid, regions, beam_angles = n, atol = 1e-4)
 A_list = T*[A]
 
@@ -65,6 +69,10 @@ F = np.diag([1.02, 0.90, 0.75, 0.95])
 G = -np.eye(K)
 r = np.zeros(K)
 h_init = np.array([1] + (K-1)*[0])
+
+# Health prognosis.
+h_prog = health_prognosis(h_init, T, F, r_list = r)
+curves = {"Untreated": h_prog}
 
 # Penalty function.
 rx_health_weights = [K*[1], K*[1]]
@@ -97,13 +105,13 @@ res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, solver = "M
 print("Dynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
-print(res_dynamic["beams"])
+print("Solve Time:", res_dynamic["solve_time"])
 
 # Plot dynamic beam, health, and treatment curves.
 # TODO: Modify beam colorbar to show changes in intensity.
 plot_beams(res_dynamic["beams"], stepsize = 4, cmap = transp_cmap(plt.cm.Reds), \
 			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw)
-plot_health(res_dynamic["health"], stepsize = 10, bounds = (health_lower, health_upper))
+plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper))
 plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
 
 # Dynamic treatment with MPC.
@@ -111,6 +119,7 @@ plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_u
 # print("\nMPC Treatment")
 # print("Status:", res_mpc["status"])
 # print("Objective:", res_mpc["obj"])
+# print("Solve Time:", res_mpc["solve_time"])
 
 # Plot dynamic MPC beam, health, and treatment curves.
 # plot_beams(res_mpc["beams"], stepsize = 4, cmap = transp_cmap(plt.cm.Reds), \
