@@ -3,14 +3,10 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from plot_utils import *
-<<<<<<< Updated upstream
-from data_utils import line_integral_mat, circle, ellipse
-=======
-from data_utils import line_integral_mat, health_prognosis
->>>>>>> Stashed changes
+from data_utils import line_integral_mat, health_prognosis, circle, ellipse
 from mpc_funcs import dynamic_treatment, mpc_treatment
 
-n = 1000   # Number of beams.
+n = 10   # Number of beams.
 T = 20     # Length of treatment.
 m_grid = 10000
 n_grid = 500
