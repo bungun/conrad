@@ -155,7 +155,7 @@ def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, boun
 		ltreat, = ax.plot(range(T+1), h[:,i], label = "Treated")
 		handles = [ltreat]
 		for label, curve in curves.items():
-			lcurve, = ax.plot(range(T+1), curve[:,i], ls = '--', label = label)
+			lcurve, = ax.plot(range(T+1), curve[:,i], label = label)
 			handles += [lcurve]
 		# lnone, = ax.plot(range(T+1), x_prog[:,i], ls = '--', color = "red")
 		# ax.set_title("$x_{{{0}}}(t)$".format(i))
@@ -171,9 +171,9 @@ def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, boun
 		
 		# Plot lower and upper bounds on h(t) for t = 1,...,T.
 		if lower is not None:
-			ax.plot(range(1,T+1), lower[:,i], lw = 1, ls = "-.", color = "indianred")
+			ax.plot(range(1,T+1), lower[:,i], lw = 1, ls = "--", color = "cornflowerblue")
 		if upper is not None:
-			ax.plot(range(1,T+1), upper[:,i], lw = 1, ls = "-.", color = "indianred")
+			ax.plot(range(1,T+1), upper[:,i], lw = 1, ls = "--", color = "cornflowerblue")
 	
 	for col in range(left):
 		axs[rows-1, maxcols-1-col].set_axis_off()
@@ -220,9 +220,9 @@ def plot_treatment(d, stepsize = 10, maxcols = 5, T_treat = None, bounds = None,
 		
 		# Plot lower and upper bounds on d(t) for t = 1,...,T.
 		if lower is not None:
-			ax.plot(range(1,T+1), lower[:,j], lw = 1, ls = "-.", color = "indianred")
+			ax.plot(range(1,T+1), lower[:,j], lw = 1, ls = "--", color = "cornflowerblue")
 		if upper is not None:
-			ax.plot(range(1,T+1), upper[:,j], lw = 1, ls = "-.", color = "indianred")
+			ax.plot(range(1,T+1), upper[:,j], lw = 1, ls = "--", color = "cornflowerblue")
 	
 	for col in range(left):
 		axs[rows-1, maxcols-1-col].set_axis_off()
