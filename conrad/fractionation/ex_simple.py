@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
-from matplotlib.colors import ListedColormap, BoundaryNorm
+from matplotlib.colors import ListedColormap, BoundaryNorm, LogNorm
 from plot_utils import *
 from data_utils import line_integral_mat, health_prognosis, circle, ellipse
 from mpc_funcs import dynamic_treatment, mpc_treatment
 
-n = 10   # Number of beams.
+n = 1000   # Number of beams.
 T = 20     # Length of treatment.
 m_grid = 10000
 n_grid = 500
@@ -46,6 +46,7 @@ x_width = 0.075
 y_width = 0.15
 regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), np.pi/6) <= 0] = 2
 
+# Display structures.
 # Create colormap for structures.
 K = np.unique(regions).size   # Number of structures.
 struct_cmap = ListedColormap(['red', 'blue', 'green', 'white'])
@@ -104,11 +105,15 @@ print("Objective:", res_dynamic["obj"])
 print("Solve Time:", res_dynamic["solve_time"])
 
 # Plot dynamic beam, health, and treatment curves.
-# TODO: Modify beam colorbar to show changes in intensity.
-plot_beams(res_dynamic["beams"], stepsize = 4, cmap = transp_cmap(plt.cm.Reds), \
-			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw)
-plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper))
-plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
+# Set beam colors on logarithmic scale.
+b_min = np.min(res_dynamic["beams"][res_dynamic["beams"] > 0])
+b_max = np.max(res_dynamic["beams"])
+lc_norm = LogNorm(vmin = b_min, vmax = b_max)
+
+plot_beams(res_dynamic["beams"], stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
+			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw, filename = "ex_simple_dyn_beams.png")
+plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_simple_dyn_health.png")
+plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_simple_dyn_doses.png")
 
 # Dynamic treatment with MPC.
 # res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx, solver = "MOSEK")
