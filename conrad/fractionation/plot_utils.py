@@ -32,13 +32,18 @@ def plot_structures(theta, r, structures, filename = None, *args, **kwargs):
 	plt.figure(figsize = (10,8))
 	ax = plt.subplot(111, projection = "polar")
 	
-	ctf = ax.contourf(theta, r, structures, *args, **kwargs)
+	labels = np.unique(structures)
+	lmin = np.min(labels)
+	lmax = np.max(labels)
+	levels = np.arange(lmin, lmax + 2) - 0.5
+	
+	ctf = ax.contourf(theta, r, structures, levels = levels, *args, **kwargs)
 	ax.set_xticklabels([])
 	ax.set_yticklabels([])
 	ax.set_theta_zero_location("N")
 	
 	plt.title("Anatomical Structures")
-	plt.colorbar(ctf)
+	plt.colorbar(ctf, ticks = np.arange(lmin, lmax + 1))
 	plt.show()
 	if filename is not None:
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
@@ -61,6 +66,11 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		if len(structures) != 3:
 			raise ValueError("structures should be a tuple of (theta, r, labels)")
 		struct_theta, struct_r, struct_labels = structures
+		
+		labels = np.unique(struct_labels)
+		lmin = np.min(labels)
+		lmax = np.max(labels)
+		struct_levels = np.arange(lmin, lmax + 2) - 0.5
 	
 	T_grid = np.arange(0, T, stepsize)
 	if T_grid[-1] != T-1:
@@ -88,7 +98,7 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		
 		# Plot anatomical structures.
 		if structures is not None:
-			ctf = ax.contourf(struct_theta, struct_r, struct_labels, **struct_kw)
+			ctf = ax.contourf(struct_theta, struct_r, struct_labels, levels = struct_levels, **struct_kw)
 		
 		# Set colors based on beam intensity.
 		lc = LineCollection(segments, *args, **kwargs)
@@ -105,13 +115,8 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 	if structures is not None:
 		fig.subplots_adjust(left = 0.2)
 		cax_left = fig.add_axes([0.125, 0.15, 0.02, 0.7])
-		cbar = fig.colorbar(ctf, cax = cax_left, label = "Structure Label")
+		fig.colorbar(ctf, cax = cax_left, ticks = np.arange(lmin, lmax + 1), label = "Structure Label")
 		cax_left.yaxis.set_label_position("left")
-	
-		labels = np.unique(struct_labels)
-		lmin = np.min(labels)
-		lmax = np.max(labels)
-		cbar.set_ticks(np.arange(lmin, lmax + 1))
 	
 	# Display colorbar for entire range of intensities.
 	fig.subplots_adjust(right = 0.8)
