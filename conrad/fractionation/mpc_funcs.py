@@ -3,6 +3,25 @@ import numpy as np
 from cvxpy import *
 from data_utils import pad_matrix, check_dyn_matrices, health_prognosis
 
+def rx_trunc(patient_rx, t_s):
+	rx_cur = patient_rx.copy()
+	# rx_cur["health_goal"] = patient_rx["health_goal"][t_s:]
+	
+	# if "beam_constrs" in patient_rx:
+	#	rx_cur["beam_constrs"] = {"lower": patient_rx["beam_constrs"]["lower"][t_s:], "upper": patient_rx["beam_constrs"]["upper"][t_s:]}
+	# if "dose_constrs" in patient_rx:
+	#	rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t_s:], "upper": patient_rx["dose_constrs"]["upper"][t_s:]}
+	# if "health_constrs" in patient_rx:
+	#	rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t_s:], "upper": patient_rx["health_constrs"]["upper"][t_s:]}
+	
+	for constr_key in {"beam_constrs", "dose_constrs", "health_constrs"}:
+		if constr_key in patient_rx:
+			rx_cur[constr_key] = {}
+			for lu_key in {"lower", "upper"}:
+				if lu_key in patient_rx[constr_key]:
+					rx_cur[constr_key][lu_key] = patient_rx[constr_key][lu_key][t_s:]
+	return rx_cur
+
 # Dose penalty per period.
 def dose_penalty(dose, goal = None, weights = None):
 	if goal is None:
@@ -146,6 +165,8 @@ def dynamic_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_reco
 	# Build problem for treatment stage.
 	prob, b, h, d = build_dyn_prob(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov)
 	prob.solve(*args, **kwargs)
+	if prob.status not in ["optimal", "optimal_inaccurate"]:
+		raise RuntimeError("Solver failed with status {0}".format(prob.status))
 	
 	# Construct full results.
 	beams_all = pad_matrix(b.value, T_recov)
@@ -167,18 +188,13 @@ def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 
 	
 	h_cur = h_init
 	for t_s in range(T_treat):
-		rx_cur = patient_rx.copy()
-		# rx_cur["health_goal"] = patient_rx["health_goal"][t_s:]
-		
-		if "beam_constrs" in patient_rx:
-			rx_cur["beam_constrs"] = {"lower": patient_rx["beam_constrs"]["lower"][t_s:], "upper": patient_rx["beam_constrs"]["upper"][t_s:]}
-		if "dose_constrs" in patient_rx:
-			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t_s:], "upper": patient_rx["dose_constrs"]["upper"][t_s:]}
-		if "health_constrs" in patient_rx:
-			rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t_s:], "upper": patient_rx["health_constrs"]["upper"][t_s:]}
+		# Drop prescription for previous periods.
+		rx_cur = rx_trunc(patient_rx, t_s)
 		
 		# Solve optimal control problem from current period forward.
-		prob, b, h, d = build_dyn_prob(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov)
+		T_left = T_treat - t_s
+		prob, b, h, d = build_dyn_prob(T_left*[A_list[t_s]], T_left*[F_list[t_s]], T_left*[G_list[t_s]], T_left*[r_list[t_s]], h_cur, rx_cur, T_recov)
+		# prob, b, h, d = build_dyn_prob(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov)
 		prob.solve(*args, **kwargs)
 		if prob.status not in ["optimal", "optimal_inaccurate"]:
 			raise RuntimeError("Solver failed with status {0}".format(prob.status))
@@ -188,15 +204,16 @@ def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 
 			print("Start Time:", t_s)
 			print("Status:", prob.status)
 			print("Objective:", prob.value)
-			print("Solve Time:", prob.solve_time)
+			print("Solve Time:", prob.solver_stats.solve_time)
 		
-		# Save beam, doses, and penalties for current period.
+		# Save beams, doses, and penalties for current period.
 		status = prob.status
 		beams[t_s] = b.value[0]
 		doses[t_s] = d.value[0]
 		
 		# Update health for next period.
-		h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], t_s)
+		h_cur = health_map(h.value[1], t_s)
+		# h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], t_s)
 	
 	# Construct full results.
 	beams_all = pad_matrix(beams, T_recov)

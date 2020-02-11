@@ -1,64 +1,26 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-from matplotlib.colors import ListedColormap, BoundaryNorm, LogNorm
+from matplotlib.colors import LogNorm
+
 from plot_utils import *
-from data_utils import line_integral_mat, health_prognosis, circle, ellipse
-from mpc_funcs import dynamic_treatment, mpc_treatment
+from data_utils import line_integral_mat, health_prognosis
+from example_utils import simple_structures, simple_colormap
+from mpc_funcs import dynamic_treatment
 
 n = 1000   # Number of beams.
 T = 20     # Length of treatment.
 m_grid = 10000
 n_grid = 500
 
-# Create polar grid.
-theta = np.linspace(0, 2*np.pi, m_grid)
-r = np.linspace(0, 1, n_grid)
-theta_grid, r_grid = np.meshgrid(theta, r)
-x_grid = r_grid*np.cos(theta_grid)
-y_grid = r_grid*np.sin(theta_grid)
-
-# Define structure regions.
-# Body voxels (k = 3).
-regions = np.full((n_grid, m_grid), 3)
-
-# PTV (k = 0).
-r0 = (0.5 + 0.65)/2
-theta0_l = 7*np.pi/16
-theta0_r = np.pi/16
-r_width = (0.65 - 0.5)/2
-circle_l = circle(x_grid, y_grid, (r0*np.cos(theta0_l), r0*np.sin(theta0_l)), r_width) <= 0
-circle_r = circle(x_grid, y_grid, (r0*np.cos(theta0_r), r0*np.sin(theta0_r)), r_width) <= 0
-slice_c = (r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= theta0_l) & (theta_grid >= theta0_r)
-regions[circle_l | circle_r | slice_c] = 0
-# regions[(r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= np.pi/2)] = 0
-
-# OAR (k = 1).
-# regions[circle(x_grid, y_grid, (0, 0), 0.35) <= 0] = 1
-regions[r_grid <= 0.35] = 1
-
-# OAR (k = 2).
-r0 = 0.6
-theta0 = 7*np.pi/6
-x0 = r0*np.cos(theta0)
-y0 = r0*np.sin(theta0)
-x_width = 0.075
-y_width = 0.15
-regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), np.pi/6) <= 0] = 2
-
-# Display structures.
-# Create colormap for structures.
-K = np.unique(regions).size   # Number of structures.
-struct_cmap = ListedColormap(['red', 'blue', 'green', 'white'])
-struct_bounds = np.arange(K+1) - 0.5
-# struct_cmap = truncate_cmap(plt.cm.rainbow, 0, 0.1*K, n = K)
-# struct_bounds = np.linspace(0, K, K+1)
-struct_norm = BoundaryNorm(struct_bounds, struct_cmap.N)
-struct_kw = {"cmap": struct_cmap, "norm": struct_norm, "alpha": 0.5}
+# Display structures on a polar grid.
+theta_grid, r_grid, regions = simple_structures(m_grid, n_grid)
+struct_kw = simple_colormap()
 # plot_structures(theta_grid, r_grid, regions, **struct_kw)
 
 # Problem data.
-A = line_integral_mat(theta_grid, regions, beam_angles = n, atol = 1e-4)
+K = np.unique(regions).size   # Number of structures.
+# A = line_integral_mat(theta_grid, regions, beam_angles = n, atol = 1e-4)
+A = np.load("data/A_simple_10000x500-grid_1000-beams.npy")
 A_list = T*[A]
 
 # F = np.diag([1.02, 0.95, 0.90, 0.75])
@@ -111,19 +73,11 @@ b_max = np.max(res_dynamic["beams"])
 lc_norm = LogNorm(vmin = b_min, vmax = b_max)
 
 plot_beams(res_dynamic["beams"], stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
-			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw, filename = "ex_simple_dyn_beams.png")
-plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_simple_dyn_health.png")
-plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_simple_dyn_doses.png")
+			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw)
+plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper))
+plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
 
-# Dynamic treatment with MPC.
-# res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx, solver = "MOSEK")
-# print("\nMPC Treatment")
-# print("Status:", res_mpc["status"])
-# print("Objective:", res_mpc["obj"])
-# print("Solve Time:", res_mpc["solve_time"])
-
-# Plot dynamic MPC beam, health, and treatment curves.
-# plot_beams(res_mpc["beams"], stepsize = 4, cmap = transp_cmap(plt.cm.Reds), \
-# 			  structures = (theta_grid, r_grid, regions), struct_kw = struct_kw)
-# plot_health(res_mpc["health"], stepsize = 10, bounds = (health_lower, health_upper))
-# plot_treatment(res_mpc["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
+# plot_beams(res_dynamic["beams"], stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
+#			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw, filename = "ex_simple_dyn_beams.png")
+# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_simple_dyn_health.png")
+# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_simple_dyn_doses.png")
