@@ -1,11 +1,14 @@
 import cvxpy
 import numpy as np
 import numpy.linalg as LA
+
 from cvxpy import *
 from time import time
 from multiprocessing import Process, Pipe
+
 from data_utils import pad_matrix, check_dyn_matrices, health_prognosis
-from mpc_funcs import dose_penalty, health_penalty, dyn_objective, rx_to_constrs
+from mpc_funcs import *
+from admm_spectral import step_spec
 
 def build_dyn_prob_dose(A_list, patient_rx, T_recov = 0):
 	T_treat = len(A_list)
@@ -51,7 +54,8 @@ def build_dyn_prob_health(F_list, G_list, r_list, h_init, patient_rx, T_treat, T
 	
 	# Define variables.
 	h = Variable((T_treat+1,K), name = "health")   # Health statuses.
-	d = Variable((T_treat,K), pos = True, name = "doses")   # Doses.
+	# d = Variable((T_treat,K), pos = True, name = "doses")   # Doses.
+	d = Variable((T_treat,K), pos = True, name = "doses", value = np.zeros((T_treat,K)))   # Doses.
 	
 	# Health penalty function.
 	obj = sum([health_penalty(h[t+1], patient_rx["health_goal"], patient_rx["health_weights"]) for t in range(T_treat)])
@@ -84,15 +88,21 @@ def build_dyn_prob_health(F_list, G_list, r_list, h_init, patient_rx, T_treat, T
 	prob = Problem(Minimize(obj), constrs)
 	return prob, h, d
 
-def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
+def run_dose_worker(pipe, A, patient_rx, T_recov, rho_init, *args, **kwargs):
+	# Spectral step size parameters.
+	spectral = kwargs.pop("spectral", False)
+	Tf_spc = kwargs.pop("Tf_spc", 2)
+	
 	# Construct proximal dose problem.
 	prob_dose, b, d = build_dyn_prob_dose_period(A, patient_rx, T_recov)
 	d_new = Parameter(d.shape, value = np.zeros(d.shape))
-	u = Parameter(d.shape, value = np.zeros(d.shape))
-	penalty = (rho/2)*sum_squares(d - d_new - u)
+	l = Parameter(d.shape, value = np.zeros(d.shape))
+	rho = Parameter(pos = True, value = rho_init)
+	penalty = (rho/2)*sum_squares(d - d_new - l/rho)
 	prox = prob_dose + Problem(Minimize(penalty))
 	
 	# ADMM loop.
+	k = 0
 	finished = False
 	while not finished:
 		# Compute and send d_t^k.
@@ -104,58 +114,72 @@ def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 		# Receive \tilde d_t^k.
 		d_new.value = pipe.recv()
 		
-		# Update and send u_t^^k.
-		u.value += d_new.value - d.value
-		pipe.send(u.value)
+		# Update and send l_t^^k.
+		l.value += rho.value*(d_new.value - d.value)
+		pipe.send(l.value)
+		
+		# Spectral step size update.
+		if spectral and k % Tf_spc == 1:
+			rho.value = pipe.recv()
 		
 		# Check if stopped.
 		finished = pipe.recv()
+		k = k + 1
 	
 	# Send final b_t^k and p_t^k.
 	pipe.send(b.value)
 
-def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, admm_verbose = False, *args, **kwargs):
+def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, *args, **kwargs):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
 	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
 	
 	# Problem parameters.
 	max_iter = kwargs.pop("max_iter", 1000) # Maximum iterations.
-	rho = kwargs.pop("rho", 1/10)           # Step size.
+	rho_init = kwargs.pop("rho_init", 1/10) # Step size.
 	eps_abs = kwargs.pop("eps_abs", 1e-6)   # Absolute stopping tolerance.
 	eps_rel = kwargs.pop("eps_rel", 1e-8)   # Relative stopping tolerance.
+	admm_verbose = kwargs.pop("admm_verbose", False)
+	
+	# Spectral step size paramaters.
+	spectral = kwargs.pop("spectral", False)
+	Tf_spc = kwargs.pop("Tf_spc", 2)
+	eps_spc = kwargs.pop("eps_spc", 0.2)
+	C_spc = kwargs.pop("C_spc", 1e10)
 	
 	# Validate parameters.
 	if max_iter <= 0:
 		raise ValueError("max_iter must be a positive integer.")
-	if rho <= 0:
-		raise ValueError("rho must be a positive scalar.")
+	if rho_init <= 0:
+		raise ValueError("rho_init must be a positive scalar.")
 	if eps_abs < 0:
 		raise ValueError("eps_abs must be a non-negative scalar.")
 	if eps_rel < 0:
 		raise ValueError("eps_rel must be a non-negative scalar.")
+	if Tf_spc <= 1:
+		raise ValueError("Tf_spec must be an integer greater than 1.")
+	if eps_spc < 0:
+		raise ValueError("eps_spc must be a non-negative scalar.")
+	if C_spc < 0:
+		raise ValueError("C_spc must be a non-negative scalar.")
 		
 	# Set up dose workers.
 	pipes = []
 	procs = []
 	for t in range(T_treat):
-		rx_cur = patient_rx.copy()
-		# rx_cur["health_goal"] = patient_rx["health_goal"][t]
-		if "dose_constrs" in patient_rx:
-			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t], "upper": patient_rx["dose_constrs"]["upper"][t]}
-		if "health_constrs" in patient_rx:
-			rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t], "upper": patient_rx["health_constrs"]["upper"][t]}
-			
+		rx_cur = rx_slice(patient_rx, t, t+1)
+		
 		local, remote = Pipe()
 		pipes += [local]
-		procs += [Process(target=run_dose_worker, args=(remote, A_list[t], rx_cur, T_recov, rho) + args, kwargs=kwargs)]
+		procs += [Process(target=run_dose_worker, args=(remote, A_list[t], rx_cur, T_recov, rho_init) + args, kwargs={**kwargs, "spectral": spectral, "Tf_spc": Tf_spc})]
 		procs[-1].start()
 	
 	# Proximal health problem.
 	prob_health, h, d_tld = build_dyn_prob_health(F_list, G_list, r_list, h_init, patient_rx, T_treat, T_recov)
 	d_new = Parameter(d_tld.shape, value = np.zeros(d_tld.shape))
-	u = Parameter(d_tld.shape, value = np.zeros(d_tld.shape))
-	penalty = (rho/2)*sum_squares(d_tld - d_new + u)
+	l = Parameter(d_tld.shape, value = np.zeros(d_tld.shape))
+	rho = Parameter(pos = True, value = rho_init)
+	penalty = (rho/2)*sum_squares(d_tld - d_new + l/rho)
 	prox = prob_health + Problem(Minimize(penalty))
 	
 	# ADMM loop.
@@ -163,13 +187,20 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	finished = False
 	r_prim = np.zeros(max_iter)
 	r_dual = np.zeros(max_iter)
+	l_spc = l_hat_spc = d_new_spc = d_tld_spc = 0
 	
 	start = time()
 	solve_time = 0
 	while not finished:
 		if admm_verbose and k % 10 == 0:
 			print("Iteration:", k)
-            
+		
+		# Save values from previous iteration.
+		d_new_prev = d_new.value
+		d_tld_prev = d_tld.value
+		# d_tld_prev = np.zeros((T_treat,K)) if k == 0 else d_tld.value
+		l_prev = l.value
+		
 		# Collect and stack d_t^k for t = 1,...,T.
 		dt_update = [pipe.recv() for pipe in pipes]
 		d_rows, d_times = map(list, zip(*dt_update))
@@ -177,7 +208,6 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 		solve_time += np.max(d_times)
 		
 		# Compute and send \tilde d_t^k.
-		d_tld_prev = np.zeros((T_treat,K)) if k == 0 else d_tld.value
 		prox.solve(*args, **kwargs)
 		if prox.status not in ["optimal", "optimal_inaccurate"]:
 			raise RuntimeError("Solver failed with status {0}".format(prox.status))
@@ -185,19 +215,42 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 		for t in range(T_treat):
 			pipes[t].send(d_tld[t].value)
 		
-		# Receive and update u_t^k for t = 1,...,T.
-		u_rows = [pipe.recv() for pipe in pipes]
-		u.value = np.row_stack(u_rows)
+		# Receive and update l_t^k for t = 1,...,T.
+		l_rows = [pipe.recv() for pipe in pipes]
+		l.value = np.row_stack(l_rows)
+		
+		# Spectral step size update.
+		if spectral and k % Tf_spc == 1:
+			# Compute \hat l_t^k for t = 1,...,T.
+			l_hat_prev = np.zeros((T_treat,K)) if k == 1 else l_hat
+			l_hat = l_prev + rho.value*(d_tld_prev - d_new.value)
+			
+			# Change in values from previous spectral update.
+			dl = l.value - l_spc
+			dl_hat = l_hat - l_hat_spc
+			dH_hat = d_new.value - d_new_spc
+			dG_hat = -d_tld.value + d_tld_spc
+			
+			# Update step size.
+			rho.value = step_spec(rho.value, k, dl, dl_hat, dH_hat, dG_hat, eps_spc, C_spc)
+			for t in range(T_treat):
+				pipes[t].send(rho.value)
+			
+			# Save values from iteration k.
+			l_spc = l_prev
+			l_hat_spc = l_hat_prev
+			d_new_spc = d_new_prev
+			d_tld_spc = d_tld_prev
 		
 		# Calculate residuals.
 		r_prim_mat = d_new.value - d_tld.value
-		r_dual_mat = rho*(d_tld.value - d_tld_prev)
+		r_dual_mat = rho.value*(d_tld.value - d_tld_prev)
 		r_prim[k] = LA.norm(r_prim_mat)
 		r_dual[k] = LA.norm(r_dual_mat)
 		
 		# Check stopping criteria.
 		eps_prim = eps_abs*np.sqrt(T_treat*K) + eps_rel*np.maximum(LA.norm(d_new.value), LA.norm(d_tld.value))
-		eps_dual = eps_abs*np.sqrt(T_treat*K) + eps_rel*LA.norm(u.value)
+		eps_dual = eps_abs*np.sqrt(T_treat*K) + eps_rel*LA.norm(l.value)
 		finished = (k + 1) >= max_iter or (r_prim[k] <= eps_prim and r_dual[k] <= eps_dual)
 		k = k + 1
 		for pipe in pipes:
@@ -238,15 +291,13 @@ def mpc_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_rec
 	
 	h_cur = h_init
 	for t_s in range(T_treat):
-		rx_cur = patient_rx.copy()
-		# rx_cur["health_goal"] = patient_rx["health_goal"][t_s:]
-		if "dose_constrs" in patient_rx:
-			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t_s:], "upper": patient_rx["dose_constrs"]["upper"][t_s:]}
-		if "health_constrs" in patient_rx:
-			rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t_s:], "upper": patient_rx["health_constrs"]["upper"][t_s:]}
+		# Drop prescription for previous periods.
+		rx_cur = rx_slice(patient_rx, t_s, T_treat)
 		
 		# Solve optimal control problem from current period forward.
-		result = dynamic_treatment_admm(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
+		T_left = T_treat - t_s
+		result = dynamic_treatment_admm(T_left*[A_list[t_s]], T_left*[F_list[t_s]], T_left*[G_list[t_s]], T_left*[r_list[t_s]], h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
+		# result = dynamic_treatment_admm(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
 		solve_time += result["solve_time"]
 		
 		if mpc_verbose:
@@ -261,7 +312,8 @@ def mpc_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_rec
 		doses[t_s] = result["doses"][0]
 		
 		# Update health for next period.
-		h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], t_s)
+		h_cur = health_map(h.value[1], t_s)
+		# h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], t_s)
 	
 	# Construct full results.
 	beams_all = pad_matrix(beams, T_recov)

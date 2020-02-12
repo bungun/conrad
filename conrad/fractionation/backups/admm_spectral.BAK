@@ -1,0 +1,48 @@
+import numpy as np
+
+# Least squares estimator for spectral step size.
+def step_ls(p, d):
+	sd = np.sum(d**2)/np.sum(p*d)   # Steepest descent
+	mg = np.sum(p*d)/np.sum(p**2)   # Minimum gradient
+	
+	if 2*mg > sd:
+		return mg
+	else:
+		return (sd - mg/2)
+
+# Correlation coefficient.
+def step_cor(p, d):
+	return np.sum(p*d)/(np.linalg.norm(p)*np.linalg.norm(d))
+
+# Safeguarding rule for spectral step size update.
+def step_safe(rho, a, b, a_cor, b_cor, eps = 0.2):
+	if a_cor > eps and b_cor > eps:
+		return np.sqrt(a*b)
+	elif a_cor > eps and b_cor <= eps:
+		return a
+	elif a_cor <= eps and b_cor > eps:
+		return b
+	else:
+		return rho
+
+# Calculates the generalized spectral step size with safeguarding.
+# Reference: Xu, Figueiredo, Goldstein. "Adaptive ADMM with Spectral Penalty Parameter Selection."
+def step_spec(rho, k, dl, dl_hat, dH_hat, dG_hat, eps = 0.2, C = 1e10):
+	# Use old step size if unable to solve LS problem/correlations.
+	eps_fl = np.finfo(float).eps   # Machine precision.
+	if np.sum(dl**2) <= eps_fl or np.sum(dl_hat**2) <= eps_fl or \
+	   np.sum(dH_hat**2) <= eps_fl or np.sum(dG_hat**2) <= eps_fl:
+		   return rho
+
+	# Compute spectral step size.
+	a_hat = step_ls(dH_hat, dl_hat)
+	b_hat = step_ls(dG_hat, dl)
+	
+	# Estimate correlations.
+	a_cor = step_cor(dH_hat, dl_hat)
+	b_cor = step_cor(dG_hat, dl)
+	
+	# Apply safeguarding rule.
+	scale = 1 + C/(1.0*k**2)
+	rho_hat = step_safe(rho, a_hat, b_hat, a_cor, b_cor, eps)
+	return max(min(rho_hat, scale*rho), rho/scale)

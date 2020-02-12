@@ -84,7 +84,7 @@ plot_health(res_dynamic["health"], curves = curves, stepsize = 10, T_treat = T_t
 plot_treatment(res_dynamic["doses"], stepsize = 10, T_treat = T_treat)
 
 # Dynamic treatment with ADMM.
-res_dyn_admm = dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov, health_map = health_map, rho = 0.5, max_iter = 100, solver = "MOSEK")
+res_dyn_admm = dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, T_recov, health_map = health_map, rho_init = 0.5, max_iter = 100, solver = "MOSEK")
 print("\nDynamic Treatment with ADMM")
 print("Status:", res_dyn_admm["status"])
 print("Objective:", res_dyn_admm["obj"])

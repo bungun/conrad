@@ -3,23 +3,19 @@ import numpy as np
 from cvxpy import *
 from data_utils import pad_matrix, check_dyn_matrices, health_prognosis
 
-def rx_trunc(patient_rx, t_s):
+def rx_slice(patient_rx, t_start, t_end, t_step = 1, squeeze = True):
+	t_slice = slice(t_start, t_end, t_step)
+	
 	rx_cur = patient_rx.copy()
-	# rx_cur["health_goal"] = patient_rx["health_goal"][t_s:]
-	
-	# if "beam_constrs" in patient_rx:
-	#	rx_cur["beam_constrs"] = {"lower": patient_rx["beam_constrs"]["lower"][t_s:], "upper": patient_rx["beam_constrs"]["upper"][t_s:]}
-	# if "dose_constrs" in patient_rx:
-	#	rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t_s:], "upper": patient_rx["dose_constrs"]["upper"][t_s:]}
-	# if "health_constrs" in patient_rx:
-	#	rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t_s:], "upper": patient_rx["health_constrs"]["upper"][t_s:]}
-	
 	for constr_key in {"beam_constrs", "dose_constrs", "health_constrs"}:
 		if constr_key in patient_rx:
 			rx_cur[constr_key] = {}
 			for lu_key in {"lower", "upper"}:
 				if lu_key in patient_rx[constr_key]:
-					rx_cur[constr_key][lu_key] = patient_rx[constr_key][lu_key][t_s:]
+					rx_old_slice = patient_rx[constr_key][lu_key][t_slice]
+					if squeeze:
+						rx_old_slice = np.squeeze(rx_old_slice)
+					rx_cur[constr_key][lu_key] = rx_old_slice
 	return rx_cur
 
 # Dose penalty per period.
@@ -189,7 +185,7 @@ def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 
 	h_cur = h_init
 	for t_s in range(T_treat):
 		# Drop prescription for previous periods.
-		rx_cur = rx_trunc(patient_rx, t_s)
+		rx_cur = rx_slice(patient_rx, t_s, T_treat)
 		
 		# Solve optimal control problem from current period forward.
 		T_left = T_treat - t_s

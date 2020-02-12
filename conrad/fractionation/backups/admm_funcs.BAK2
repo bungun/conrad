@@ -114,7 +114,7 @@ def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 	# Send final b_t^k and p_t^k.
 	pipe.send(b.value)
 
-def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, admm_verbose = False, *args, **kwargs):
+def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, *args, **kwargs):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
 	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
@@ -124,6 +124,7 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	rho = kwargs.pop("rho", 1/10)           # Step size.
 	eps_abs = kwargs.pop("eps_abs", 1e-6)   # Absolute stopping tolerance.
 	eps_rel = kwargs.pop("eps_rel", 1e-8)   # Relative stopping tolerance.
+	verbose = kwargs.get("verbose", False)
 	
 	# Validate parameters.
 	if max_iter <= 0:
@@ -167,7 +168,7 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	start = time()
 	solve_time = 0
 	while not finished:
-		if admm_verbose and k % 10 == 0:
+		if verbose and k % 10 == 0:
 			print("Iteration:", k)
             
 		# Collect and stack d_t^k for t = 1,...,T.

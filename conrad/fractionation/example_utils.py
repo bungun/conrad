@@ -32,10 +32,10 @@ def simple_structures(m_grid, n_grid):
 	# OAR (k = 2).
 	r0 = 0.6
 	theta0 = 7*np.pi/6
-	x0 = r0*np.cos(theta0)
-	y0 = r0*np.sin(theta0)
 	x_width = 0.075
 	y_width = 0.15
+	x0 = r0*np.cos(theta0)
+	y0 = r0*np.sin(theta0)
 	regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), np.pi/6) <= 0] = 2
 	return theta_grid, r_grid, regions
 
