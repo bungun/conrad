@@ -44,7 +44,7 @@ def line_integral_mat(theta_grid, regions, beam_angles = 100, *args, **kwargs):
 			for k in range(K):
 				beam_region = np.sum((regions == k) & beam_grid)
 				A[k,j] = beam_region/beam_tot
-	return A
+	return A, beam_angles
 
 # Block average rows of dose influence matrix.
 def beam_to_dose_block(A_full, indices_or_sections):

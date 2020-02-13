@@ -29,7 +29,7 @@ def plot_structures(theta, r, structures, filename = None, *args, **kwargs):
 	if structures.shape != (m,n):
 		raise ValueError("structures must have dimensions ({0},{1})".format(m,n))
 	
-	plt.figure(figsize = (10,8))
+	fig = plt.figure(figsize = (10,8))
 	ax = plt.subplot(111, projection = "polar")
 	
 	labels = np.unique(structures)
@@ -43,7 +43,8 @@ def plot_structures(theta, r, structures, filename = None, *args, **kwargs):
 	ax.set_theta_zero_location("N")
 	
 	plt.title("Anatomical Structures")
-	plt.colorbar(ctf, ticks = np.arange(lmin, lmax + 1))
+	cbar = plt.colorbar(ctf, ticks = np.arange(lmin, lmax + 1))
+	cbar.solids.set(alpha = 1)
 	plt.show()
 	if filename is not None:
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
@@ -115,7 +116,8 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 	if structures is not None:
 		fig.subplots_adjust(left = 0.2)
 		cax_left = fig.add_axes([0.125, 0.15, 0.02, 0.7])
-		fig.colorbar(ctf, cax = cax_left, ticks = np.arange(lmin, lmax + 1), label = "Structure Label")
+		cbar = fig.colorbar(ctf, cax = cax_left, ticks = np.arange(lmin, lmax + 1), label = "Structure Label")
+		cbar.solids.set(alpha = 1)
 		cax_left.yaxis.set_label_position("left")
 	
 	# Display colorbar for entire range of intensities.
@@ -123,7 +125,8 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 	cax_right = fig.add_axes([0.85, 0.15, 0.02, 0.7])
 	lc = LineCollection(2*[np.zeros((2,2))], *args, **kwargs)
 	lc.set_array(np.array([np.min(b), np.max(b)]))
-	fig.colorbar(lc, cax = cax_right, label = "Beam Intensity")
+	cbar = fig.colorbar(lc, cax = cax_right, label = "Beam Intensity")
+	cbar.solids.set(alpha = 1)
 	cax_right.yaxis.set_label_position("left")
 	
 	plt.suptitle("Beam Intensities vs. Time")

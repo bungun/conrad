@@ -15,6 +15,10 @@ def simple_structures(m_grid, n_grid):
 	regions = np.full((n_grid, m_grid), 3)
 
 	# PTV (k = 0).
+	# regions[circle(x_grid, y_grid, (0, 0), 0.35) <= 0] = 0
+	regions[r_grid <= 0.35] = 0
+
+	# OAR (k = 1).
 	r0 = (0.5 + 0.65)/2
 	theta0_l = 7*np.pi/16
 	theta0_r = np.pi/16
@@ -22,16 +26,13 @@ def simple_structures(m_grid, n_grid):
 	circle_l = circle(x_grid, y_grid, (r0*np.cos(theta0_l), r0*np.sin(theta0_l)), r_width) <= 0
 	circle_r = circle(x_grid, y_grid, (r0*np.cos(theta0_r), r0*np.sin(theta0_r)), r_width) <= 0
 	slice_c = (r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= theta0_l) & (theta_grid >= theta0_r)
-	regions[circle_l | circle_r | slice_c] = 0
-	# regions[(r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= np.pi/2)] = 0
-
-	# OAR (k = 1).
-	# regions[circle(x_grid, y_grid, (0, 0), 0.35) <= 0] = 1
-	regions[r_grid <= 0.35] = 1
+	regions[circle_l | circle_r | slice_c] = 1
+	# regions[(r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= np.pi/2)] = 1
 
 	# OAR (k = 2).
 	r0 = 0.6
-	theta0 = 7*np.pi/6
+	# theta0 = 7*np.pi/6
+	theta0 = 2*np.pi/3
 	x_width = 0.075
 	y_width = 0.15
 	x0 = r0*np.cos(theta0)
@@ -46,5 +47,5 @@ def simple_colormap():
 	# struct_cmap = truncate_cmap(plt.cm.rainbow, 0, 0.1*K, n = K)
 	# struct_bounds = np.linspace(0, K, K+1)
 	struct_norm = BoundaryNorm(struct_bounds, struct_cmap.N)
-	struct_kw = {"cmap": struct_cmap, "norm": struct_norm, "alpha": 0.5}
+	struct_kw = {"cmap": struct_cmap, "norm": struct_norm, "alpha": 0.75}
 	return struct_kw
