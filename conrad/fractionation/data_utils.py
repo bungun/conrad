@@ -11,12 +11,12 @@ def ellipse(x, y, center = (0,0), width = (1,1), angle = 0):
 	return (((x - x0)*np.cos(angle) + (y - y0)*np.sin(angle))/x_width)**2 + \
 		   (((x - x0)*np.sin(angle) - (y - y0)*np.cos(angle))/y_width)**2 - 1
 
-# def cardiod(x, y, a = 1, center = (0,0)):
+# def cardioid(x, y, a = 1, center = (0,0)):
 #	x0, y0 = center
 #	return ((x - x0)**2 + (y - y0)**2)**2 + 2*a*(x - x0)*((x - x0)**2 + (y - y0)**2) - \
 #          a**2*(y - y0)**2
 
-def cardiod(theta, a = 1, angle = 0):
+def cardioid(theta, a = 1, angle = 0):
 	return limacon(theta, -a, a, angle)
 
 def limacon(theta, a = 1, b = 1, angle = 0):

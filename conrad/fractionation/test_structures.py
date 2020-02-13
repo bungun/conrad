@@ -6,6 +6,7 @@ SHOW_STRUCTS = True
 CALC_AMAT = False
 
 n = 1000
+# n = 10
 m_grid = 10000
 n_grid = 500
 
@@ -16,5 +17,6 @@ if SHOW_STRUCTS:
 	plot_structures(theta_grid, r_grid, regions, **struct_kw)
 
 if CALC_AMAT:
-	A = line_integral_mat(theta_grid, regions, beam_angles = n, atol = 1e-3)
-	np.save("data/A_cardiod_rot_10000x500-grid_1000-beams.npy", A)
+	A, beam_angles = line_integral_mat(theta_grid, regions, beam_angles = n, atol = 1e-3)
+	# np.save("data/A_cardioid_rot_10000x500-grid_10-beams.npy", A)
+	np.save("data/A_cardioid_rot_10000x500-grid_1000-beams.npy", A)

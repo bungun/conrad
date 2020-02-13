@@ -17,8 +17,8 @@ n_grid = 500
 # Display structures on a polar grid.
 theta_grid, r_grid, regions = simple_structures(m_grid, n_grid)
 struct_kw = simple_colormap()
-plot_structures(theta_grid, r_grid, regions, **struct_kw)
-# plot_structures(theta_grid, r_grid, regions, filename = "ex_simple2_structures.png", **struct_kw)
+# plot_structures(theta_grid, r_grid, regions, **struct_kw)
+# plot_structures(theta_grid, r_grid, regions, filename = "ex_cardioid_structures.png", **struct_kw)
 
 # Beam angles.
 # idx = np.linspace(0, n_grid//2, n)
@@ -28,8 +28,10 @@ plot_structures(theta_grid, r_grid, regions, **struct_kw)
 # Problem data.
 K = np.unique(regions).size   # Number of structures.
 # A, beam_angles = line_integral_mat(theta_grid, regions, n, atol = 1e-3)
-A = np.load("data/A_simple_10000x500-grid_1000-beams.npy")
-# A = np.load("data/A_simple_10000x500-grid_10-beams.npy")
+# A = np.load("data/A_simple_rot_10000x500-grid_1000-beams.npy")
+A = np.load("data/A_cardioid_rot_10000x500-grid_1000-beams.npy")
+# A = np.load("data/A_simple_rot_10000x500-grid_10-beams.npy")
+# A = np.load("data/A_cardioid_rot_10000x500-grid_10-beams.npy")
 beam_angles = np.linspace(0, np.pi, n+1)[:-1]
 A_list = T*[A]
 
@@ -66,7 +68,8 @@ patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
 health_lower = np.zeros((T,K))
 health_upper = np.zeros((T,K))
 # health_lower[:,1:] = -2.5    # Lower bound on OARs.
-health_lower[:,1:] = -0.65
+health_lower[:,1:] = -1.0
+# health_lower[:,1:] = -0.65
 health_upper[:15,0] = 1.5    # Upper bound on PTV for t = 1,...,15.
 health_upper[15:,0] = 0.05   # Upper bound on PTV for t = 16,...,20.
 patient_rx["health_constrs"] = {"lower": health_lower, "upper": health_upper}
@@ -87,13 +90,13 @@ b_max = np.max(res_dynamic["beams"])
 lc_norm = LogNorm(vmin = b_min, vmax = b_max)
 
 # plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True)
-# plot_beams(res_dynamic["beams"], theta = beam_angles, stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
-#			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw, alpha = 0.05)
-# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper))
-# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
+plot_beams(res_dynamic["beams"], theta = beam_angles, stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
+			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw, alpha = 0.05)
+plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper))
+plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
 
 # plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "ex_simple_admm_dyn_beams.png")
-plot_beams(res_dynamic["beams"], theta = beam_angles, stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
- 			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw, alpha = 0.05, filename = "ex_simple2_dyn_beams.png")
-plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_simple2_dyn_health.png")
-plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_simple2_dyn_doses.png")
+# plot_beams(res_dynamic["beams"], theta = beam_angles, stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
+#			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw, alpha = 0.05, filename = "ex_cardioid_dyn_beams.png")
+# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_cardioid_dyn_health.png")
+# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_cardioid_dyn_doses.png")
