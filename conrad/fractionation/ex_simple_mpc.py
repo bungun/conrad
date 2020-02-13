@@ -75,27 +75,27 @@ health_upper[15:,0] = 0.05   # Upper bound on PTV for t = 16,...,20.
 patient_rx["health_constrs"] = {"lower": health_lower, "upper": health_upper}
 
 # Dynamic treatment.
-# res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, health_map = health_map, solver = "MOSEK")
-# print("Dynamic Treatment")
-# print("Status:", res_dynamic["status"])
-# print("Objective:", res_dynamic["obj"])
-# print("Solve Time:", res_dynamic["solve_time"])
+res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, health_map = health_map, solver = "MOSEK")
+print("Dynamic Treatment")
+print("Status:", res_dynamic["status"])
+print("Objective:", res_dynamic["obj"])
+print("Solve Time:", res_dynamic["solve_time"])
 
 # Plot dynamic beam, health, and treatment curves.
 # Set beam colors on logarithmic scale.
-# b_min = np.min(res_dynamic["beams"][res_dynamic["beams"] > 0])
-# b_max = np.max(res_dynamic["beams"])
-# lc_norm = LogNorm(vmin = b_min, vmax = b_max)
+b_min = np.min(res_dynamic["beams"][res_dynamic["beams"] > 0])
+b_max = np.max(res_dynamic["beams"])
+lc_norm = LogNorm(vmin = b_min, vmax = b_max)
 
 # plot_beams(res_dynamic["beams"], stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
 #			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw)
 # plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper))
 # plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
 
-# plot_beams(res_dynamic["beams"], stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
-#			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw, filename = "ex_noisy_dyn_beams.png")
-# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_noisy_dyn_health.png")
-# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_noisy_dyn_doses.png")
+plot_beams(res_dynamic["beams"], stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
+			structures = (theta_grid, r_grid, regions), struct_kw = struct_kw, filename = "ex_noisy_dyn_beams.png")
+plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_noisy_dyn_health.png")
+plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_noisy_dyn_doses.png")
 
 # Modify health constraints for MPC.
 health_upper_mpc = health_upper.copy()
@@ -104,7 +104,7 @@ patient_rx_mpc = patient_rx.copy()
 patient_rx_mpc["health_constrs"]["upper"] = health_upper_mpc
 
 # Dynamic treatment with MPC.
-res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx_mpc, health_map = health_map, solver = "MOSEK", mpc_verbose = True)
+res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx_mpc, health_map = health_map, solver = "MOSEK")
 print("\nMPC Treatment")
 print("Status:", res_mpc["status"])
 print("Objective:", res_mpc["obj"])

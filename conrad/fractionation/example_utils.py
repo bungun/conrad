@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib.colors import ListedColormap, BoundaryNorm
-from data_utils import circle, ellipse
+from data_utils import circle, ellipse, cardiod
 
 def simple_structures(m_grid, n_grid):
 	# Create polar grid.
@@ -16,7 +16,8 @@ def simple_structures(m_grid, n_grid):
 
 	# PTV (k = 0).
 	# regions[circle(x_grid, y_grid, (0, 0), 0.35) <= 0] = 0
-	regions[r_grid <= 0.35] = 0
+	# regions[r_grid <= 0.35] = 0
+	regions[r_grid <= cardiod(theta_grid, 0.25, angle = np.pi/2)] = 0
 
 	# OAR (k = 1).
 	r0 = (0.5 + 0.65)/2
