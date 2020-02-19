@@ -2,13 +2,18 @@ from example_utils import *
 from data_utils import line_integral_mat
 from plot_utils import plot_structures
 
-SHOW_STRUCTS = True
-CALC_AMAT = False
+SHOW_STRUCTS = False
+CALC_AMAT = True
+SAVE_AMAT = False
 
-n = 1000
-# n = 10
-m_grid = 10000
+# m_grid = 10000
+m_grid = 500
 n_grid = 500
+
+# n = 1000
+n_angle = 10
+n_bundle = 10
+offset = 0.01
 
 x_grid, y_grid, regions = simple_structures(m_grid, n_grid)
 
@@ -17,6 +22,6 @@ if SHOW_STRUCTS:
 	plot_structures(x_grid, y_grid, regions, **struct_kw)
 
 if CALC_AMAT:
-	A, beam_angles = line_integral_mat(theta_grid, regions, beam_angles = n, atol = 1e-3)
-	# np.save("data/A_cardioid_rot_10000x500-grid_10-beams.npy", A)
-	np.save("data/A_cardioid_rot_10000x500-grid_1000-beams.npy", A)
+	A, angles, d_vec = line_integral_mat(regions, angles = n_angle, n_bundle = n_bundle, offset = offset)
+	if SAVE_AMAT:
+		np.save("data/A_cardiod_rot_{0}x{1}-grid_{2}-angles_{3}-bundles.npy".format(m_grid, n_grid, n_angle, n_bundle), A)

@@ -42,27 +42,40 @@ def pad_matrix(A, padding, axis = 0):
 	return A_pad
 
 # Construct line integral matrix.
-def line_integral_mat(theta_grid, regions, beam_angles = 100, *args, **kwargs):
-	m_grid, n_grid = theta_grid.shape
+def line_integral_mat(regions, angles = 10, n_bundle = 1, offset = 0.01, *args, **kwargs):
+	m_grid, n_grid = regions.shape
 	K = np.unique(regions).size
 	
-	if regions.shape != (m_grid, n_grid):
-		raise ValueError("regions must have dimensions ({0},{1})".format(m_grid, n_grid))
-	if np.isscalar(beam_angles):
-		beam_angles = np.linspace(0, np.pi, beam_angles+1)[:-1]
+	if m_grid != n_grid:
+		raise NotImplementedError("Only square grids are supported")
+	if np.isscalar(angles):
+		angles = np.linspace(0, np.pi, angles+1)[:-1]
+	if n_bundle <= 0:
+		raise ValueError("n_bundle must be a positive integer")
+	if offset < 0:
+		raise ValueError("offset must be a nonnegative number")
 	
 	# A_{kj} = fraction of beam j that falls in region k.
-	n = len(beam_angles)
+	n_angle = len(angles)
+	n_bundle = int(n_bundle)
+	n = n_angle*n_bundle
 	A = np.zeros((K, n))
-	for j in range(n):
-		beam_grid = np.isclose(theta_grid, beam_angles[j], *args, **kwargs) | \
-					np.isclose(theta_grid, beam_angles[j] + np.pi, *args, **kwargs)
-		beam_tot = np.sum(beam_grid)
-		if beam_tot > 0:
+	
+	# Counterclockwise offsets of line from image center.
+	n_half = n_bundle//2
+	d_vec = np.arange(-n_half, n_half+1)
+	if n_bundle % 2 == 0:
+		d_vec = d_vec[:-1]
+	d_vec = offset*d_vec
+	
+	j = 0
+	for i in range(n_angle):
+		for d in d_vec:
+			L = line_pixel_length(d, angles[i], n_grid)
 			for k in range(K):
-				beam_region = np.sum((regions == k) & beam_grid)
-				A[k,j] = beam_region/beam_tot
-	return A, beam_angles
+				A[k,j] = np.sum(L[regions == k])
+			j = j + 1
+	return A, angles, d_vec
 
 def line_pixel_length(d, theta, n):
 	"""
@@ -108,7 +121,7 @@ def line_pixel_length(d, theta, n):
 	y0 = n/2 + d*ct
 	
 	y = y0 - x0*st/ct
-	jy = np.ceil(y)
+	jy = int(np.ceil(y))
 	dy = (y + n) % 1
 	
 	for jx in range(n):
