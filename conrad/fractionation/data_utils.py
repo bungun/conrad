@@ -64,6 +64,68 @@ def line_integral_mat(theta_grid, regions, beam_angles = 100, *args, **kwargs):
 				A[k,j] = beam_region/beam_tot
 	return A, beam_angles
 
+def line_pixel_length(d, theta, n):
+	"""
+	Image reconstruction from line measurements.
+	
+	Given a grid of n by n square pixels and a line over that grid,
+	compute the length of line that goes over each pixel.
+	
+	Parameters
+	----------
+	d : displacement of line, i.e., distance of line from center of image, 
+		measured in pixel lengths (and orthogonally to line).
+	theta : angle of line, measured in radians from x-axis. Must be between
+		0 and pi, inclusive.
+	n : image size is n by n.
+	
+	Returns
+	-------
+	Matrix of size n by n (same as image) with length of the line over 
+	each pixel. Most entries will be zero.
+	"""
+	# For angle in [pi/4,3*pi/4], flip along diagonal (transpose) and call recursively.
+	if theta > np.pi/4 and theta < 3*np.pi/4:
+		return line_pixel_length(d, np.pi/2-theta, n).T
+	
+	# For angle in [3*pi/4,pi], redefine line to go in opposite direction.
+	if theta > np.pi/2:
+		d = -d
+		theta = theta - np.pi
+	
+	# For angle in [-pi/4,0], flip along x-axis (up/down) and call recursively.
+	if theta < 0:
+		return np.flipud(line_pixel_length(-d, -theta, n))
+	
+	if theta > np.pi/2 or theta < 0:
+		raise ValueError("theta must be in [0,pi]")
+	
+	L = np.zeros((n,n))
+	ct = np.cos(theta)
+	st = np.sin(theta)
+	
+	x0 = n/2 - d*st
+	y0 = n/2 + d*ct
+	
+	y = y0 - x0*st/ct
+	jy = np.ceil(y)
+	dy = (y + n) % 1
+	
+	for jx in range(n):
+		dynext = dy + st/ct
+		if dynext < 1:
+			if jy >= 1 and jy <= n:
+				L[n-jy, jx] = 1/ct
+			dy = dynext
+		else:
+			if jy >= 1 and jy <= n:
+				L[n-jy, jx] = (1-dy)/st
+			if jy+1 >= 1 and jy + 1 <= n:
+				L[n-(jy+1), jx] = (dynext-1)/st
+			dy = dynext - 1
+			jy = jy + 1
+	return L
+
 # Block average rows of dose influence matrix.
 def beam_to_dose_block(A_full, indices_or_sections):
 	A_blocks = np.split(A_full, indices_or_sections)
