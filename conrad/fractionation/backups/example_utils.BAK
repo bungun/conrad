@@ -1,44 +1,44 @@
 import numpy as np
 from matplotlib.colors import ListedColormap, BoundaryNorm
-from data_utils import circle, ellipse, cardioid, limacon
+from data_utils import circle, ellipse, cardioid
 
-def simple_structures(m_grid, n_grid, x_len = 2, y_len = 2):
+def simple_structures(m_grid, n_grid):
 	# Create polar grid.
-	x = np.linspace(-x_len/2, x_len/2, m_grid)
-	y = np.linspace(-y_len/2, y_len/2, n_grid)
-	x_grid, y_grid = np.meshgrid(x, y)
-	r_grid = np.sqrt(x_grid**2 + y_grid**2)
-	theta_grid = np.arctan2(y_grid, x_grid)
+	theta = np.linspace(0, 2*np.pi, m_grid)
+	r = np.linspace(0, 1, n_grid)
+	theta_grid, r_grid = np.meshgrid(theta, r)
+	x_grid = r_grid*np.cos(theta_grid)
+	y_grid = r_grid*np.sin(theta_grid)
 
 	# Define structure regions.
 	# Body voxels (k = 3).
 	regions = np.full((n_grid, m_grid), 3)
 
 	# PTV (k = 0).
-	# regions[circle(x_grid, y_grid, (0,0), 0.35) <= 0] = 0
-	regions[cardioid(x_grid, y_grid, 0.125, (-0.1,0), np.pi) <= 0] = 0
+	# regions[circle(x_grid, y_grid, (0, 0), 0.35) <= 0] = 0
+	# regions[r_grid <= 0.35] = 0
+	regions[r_grid <= cardioid(theta_grid, 0.25, angle = np.pi/2)] = 0
 
 	# OAR (k = 1).
-	r_inner = 0.7
-	r_outer = 0.85
-	r0 = (r_inner + r_outer)/2
-	theta0_l = -np.pi/16
-	theta0_r = -7*np.pi/16
-	r_width = (r_outer - r_inner)/2
+	r0 = (0.5 + 0.65)/2
+	theta0_l = 7*np.pi/16
+	theta0_r = np.pi/16
+	r_width = (0.65 - 0.5)/2
 	circle_l = circle(x_grid, y_grid, (r0*np.cos(theta0_l), r0*np.sin(theta0_l)), r_width) <= 0
 	circle_r = circle(x_grid, y_grid, (r0*np.cos(theta0_r), r0*np.sin(theta0_r)), r_width) <= 0
-	slice_c = (r_grid >= r_inner) & (r_grid <= r_outer) & (theta_grid <= theta0_l) & (theta_grid >= theta0_r)
+	slice_c = (r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= theta0_l) & (theta_grid >= theta0_r)
 	regions[circle_l | circle_r | slice_c] = 1
 	# regions[(r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= np.pi/2)] = 1
 
 	# OAR (k = 2).
-	r0 = 0.75
-	theta0 = np.pi/3
+	r0 = 0.6
+	# theta0 = 7*np.pi/6
+	theta0 = 2*np.pi/3
+	x_width = 0.075
+	y_width = 0.15
 	x0 = r0*np.cos(theta0)
 	y0 = r0*np.sin(theta0)
-	x_width = 0.1
-	y_width = 0.18
-	regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), -np.pi/3) <= 0] = 2
+	regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), np.pi/6) <= 0] = 2
 	return theta_grid, r_grid, regions
 
 def simple_colormap():

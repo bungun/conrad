@@ -1,32 +1,26 @@
 import numpy as np
 
-# Center and rotate counterclockwise by an angle from the x-axis.
-def coord_transf(x, y, center = (0,0), angle = 0):
-	x0, y0 = center
-	xr = (x - x0)*np.cos(angle) - (y - y0)*np.sin(angle)
-	yr = (x - x0)*np.sin(angle) + (y - y0)*np.cos(angle)
-	return xr, yr
-	
 # Equation of a circle.
 def circle(x, y, center = (0,0), radius = 1):
 	return ellipse(x, y, center, (radius, radius))
 
-# Equation of an ellipse.
+# Equation for an ellipse tilted at an angle from the x-axis.
 def ellipse(x, y, center = (0,0), width = (1,1), angle = 0):
+	x0, y0 = center
 	x_width, y_width = width
-	xr, yr = coord_transf(x, y, center, angle)
-	return (xr/x_width)**2 + (yr/y_width)**2 - 1
+	return (((x - x0)*np.cos(angle) + (y - y0)*np.sin(angle))/x_width)**2 + \
+		   (((x - x0)*np.sin(angle) - (y - y0)*np.cos(angle))/y_width)**2 - 1
 
-# Equation of a cardiod.
-def cardioid(x, y, a = 0.5, center = (0,0), angle = 0):
-	# xr, yr = coord_transf(x, y, center, angle)
-	# return (xr**2 + yr**2)**2 + 4*a*xr*(xr**2 + yr**2) - 4*a**2*yr**2
-	return limacon(x, y, -2*a, 2*a, center, angle)
+# def cardioid(x, y, a = 1, center = (0,0)):
+#	x0, y0 = center
+#	return ((x - x0)**2 + (y - y0)**2)**2 + 2*a*(x - x0)*((x - x0)**2 + (y - y0)**2) - \
+#          a**2*(y - y0)**2
 
-# Equation of a limacon.
-def limacon(x, y, a = 1, b = 0, center = (0,0), angle = 0):
-	xr, yr = coord_transf(x, y, center, angle)
-	return (xr**2 + yr**2 - a*xr)**2 - b**2*(xr**2 + yr**2)
+def cardioid(theta, a = 1, angle = 0):
+	return limacon(theta, -a, a, angle)
+
+def limacon(theta, a = 1, b = 1, angle = 0):
+	return b + a*np.cos(theta - angle)
 
 # Pad matrix with zeros.
 def pad_matrix(A, padding, axis = 0):
