@@ -10,11 +10,11 @@ n = 1000
 m_grid = 10000
 n_grid = 500
 
-theta_grid, r_grid, regions = simple_structures(m_grid, n_grid)
+x_grid, y_grid, regions = simple_structures(m_grid, n_grid)
 
 if SHOW_STRUCTS:
 	struct_kw = simple_colormap()
-	plot_structures(theta_grid, r_grid, regions, **struct_kw)
+	plot_structures(x_grid, y_grid, regions, **struct_kw)
 
 if CALC_AMAT:
 	A, beam_angles = line_integral_mat(theta_grid, regions, beam_angles = n, atol = 1e-3)

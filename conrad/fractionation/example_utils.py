@@ -22,8 +22,8 @@ def simple_structures(m_grid, n_grid, x_len = 2, y_len = 2):
 	r_inner = 0.7
 	r_outer = 0.85
 	r0 = (r_inner + r_outer)/2
-	theta0_l = -np.pi/16
-	theta0_r = -7*np.pi/16
+	theta0_l = 3*np.pi/8
+	theta0_r = np.pi/8
 	r_width = (r_outer - r_inner)/2
 	circle_l = circle(x_grid, y_grid, (r0*np.cos(theta0_l), r0*np.sin(theta0_l)), r_width) <= 0
 	circle_r = circle(x_grid, y_grid, (r0*np.cos(theta0_r), r0*np.sin(theta0_r)), r_width) <= 0
@@ -32,14 +32,12 @@ def simple_structures(m_grid, n_grid, x_len = 2, y_len = 2):
 	# regions[(r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= np.pi/2)] = 1
 
 	# OAR (k = 2).
-	r0 = 0.75
-	theta0 = np.pi/3
-	x0 = r0*np.cos(theta0)
-	y0 = r0*np.sin(theta0)
+	x0 = -0.375
+	y0 = 0.65
 	x_width = 0.1
 	y_width = 0.18
-	regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), -np.pi/3) <= 0] = 2
-	return theta_grid, r_grid, regions
+	regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), np.pi/3) <= 0] = 2
+	return x_grid, y_grid, regions
 
 def simple_colormap():
 	K = 4

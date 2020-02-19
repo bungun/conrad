@@ -22,27 +22,25 @@ def transp_cmap(cmap):
 	return cmap_transp
 
 # Plot structures.
-def plot_structures(x, y, structures, filename = None, *args, **kwargs):
-	m, n = x.shape
-	if y.shape != (m,n):
-		raise ValueError("y must have dimensions ({0},{1})".format(m,n))
+def plot_structures(theta, r, structures, filename = None, *args, **kwargs):
+	m, n = theta.shape
+	if r.shape != (m,n):
+		raise ValueError("r must have dimensions ({0},{1})".format(m,n))
 	if structures.shape != (m,n):
 		raise ValueError("structures must have dimensions ({0},{1})".format(m,n))
 	
-	fig = plt.figure()
-	fig.set_size_inches(10,8)
+	fig = plt.figure(figsize = (10,8))
+	ax = plt.subplot(111, projection = "polar")
 	
 	labels = np.unique(structures)
 	lmin = np.min(labels)
 	lmax = np.max(labels)
 	levels = np.arange(lmin, lmax + 2) - 0.5
 	
-	ctf = plt.contourf(x, y, structures, levels = levels, *args, **kwargs)
-	
-	plt.axhline(0, lw = 1, ls = ':', color = "grey")
-	plt.axvline(0, lw = 1, ls = ':', color = "grey")
-	plt.xticks([0])
-	plt.yticks([0])
+	ctf = ax.contourf(theta, r, structures, levels = levels, *args, **kwargs)
+	ax.set_xticklabels([])
+	ax.set_yticklabels([])
+	ax.set_theta_zero_location("N")
 	
 	plt.title("Anatomical Structures")
 	cbar = plt.colorbar(ctf, ticks = np.arange(lmin, lmax + 1))
