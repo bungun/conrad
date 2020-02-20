@@ -28,23 +28,61 @@ def limacon(x, y, a = 1, b = 0, center = (0,0), angle = 0):
 	xr, yr = coord_transf(x, y, center, angle)
 	return (xr**2 + yr**2 - a*xr)**2 - b**2*(xr**2 + yr**2)
 
-# Pad matrix with zeros.
-def pad_matrix(A, padding, axis = 0):
-	m, n = A.shape
-	if axis == 0:
-		A_pad = np.zeros((m + padding,n))
-		A_pad[:m,:] = A
-	elif axis == 1:
-		A_pad = np.zeros((m, n + padding))
-		A_pad[:,:n] = A
-	else:
-		raise ValueError("axis must be either 0 or 1.")
-	return A_pad
+# Generate xy-coordinate pairs from line angles and displacements.
+def line_segments(angles, d_vec, xlim = (-1,1), ylim = (-1,1)):
+	n_angles = len(angles)
+	n_offsets = len(d_vec)
+	n_lines = n_angles*n_offsets
+	
+	xc = (xlim[1] + xlim[0])/2
+	yc = (ylim[1] + ylim[0])/2
+	x_edges = np.zeros((n_lines, 2))
+	y_edges = np.zeros((n_lines, 2))
+	
+	k = 0
+	for i in range(n_angles):
+		ct = np.cos(angles[i])
+		st = np.sin(angles[i])
+		slope = st/ct
+		
+		# Center of line.
+		x0 = xc - d_vec*st
+		y0 = yc + d_vec*ct
+		
+		# Endpoints of line.
+		for j in range(n_offsets):
+			if slope == 0:
+				x_edges[k,:] = [xlim[0], y0[j]]
+				y_edges[k,:] = [xlim[1], y0[j]]
+			elif np.isinf(slope):
+				x_edges[k,:] = [x0[j], ylim[0]]
+				y_edges[k,:] = [x0[j], ylim[1]]
+			else:
+				# y - y0 = slope*(x - x0).
+				ys = y0[j] + slope*(xlim - x0[j])
+				xs = x0[j] + (1/slope)*(ylim - y0[j])
+				
+				# Save points at edge of grid.
+				idx_y = (ys >= ylim[0]) & (ys <= ylim[1])
+				idx_x = (xs >= xlim[0]) & (xs <= xlim[1])
+				e1 = np.column_stack([xlim, ys])[idx_y]
+				e2 = np.column_stack([xs, ylim])[idx_x]
+				edges = np.row_stack([e1, e2])
+				
+				x_edges[k,:] = edges[0]
+				y_edges[k,:] = edges[1]
+			k = k + 1
+	
+	coords = np.zeros((2*n_lines,2))
+	coords[0::2,:] = x_edges
+	coords[1::2,:] = y_edges
+	segments = np.split(coords, n_lines)
+	return segments
 
 # Construct line integral matrix.
-def line_integral_mat(regions, angles = 10, n_bundle = 1, offset = 0.01, *args, **kwargs):
-	m_grid, n_grid = regions.shape
-	K = np.unique(regions).size
+def line_integral_mat(structures, angles = 10, n_bundle = 1, offset = 0.01, *args, **kwargs):
+	m_grid, n_grid = structures.shape
+	K = np.unique(structures).size
 	
 	if m_grid != n_grid:
 		raise NotImplementedError("Only square grids are supported")
@@ -61,7 +99,7 @@ def line_integral_mat(regions, angles = 10, n_bundle = 1, offset = 0.01, *args, 
 	n = n_angle*n_bundle
 	A = np.zeros((K, n))
 	
-	# Counterclockwise offsets of line from image center.
+	# Orthogonal offsets of line from image center (counterclockwise).
 	n_half = n_bundle//2
 	d_vec = np.arange(-n_half, n_half+1)
 	if n_bundle % 2 == 0:
@@ -73,7 +111,7 @@ def line_integral_mat(regions, angles = 10, n_bundle = 1, offset = 0.01, *args, 
 		for d in d_vec:
 			L = line_pixel_length(d, angles[i], n_grid)
 			for k in range(K):
-				A[k,j] = np.sum(L[regions == k])
+				A[k,j] = np.sum(L[structures == k])
 			j = j + 1
 	return A, angles, d_vec
 
@@ -138,6 +176,19 @@ def line_pixel_length(d, theta, n):
 			dy = dynext - 1
 			jy = jy + 1
 	return L
+
+# Pad matrix with zeros.
+def pad_matrix(A, padding, axis = 0):
+	m, n = A.shape
+	if axis == 0:
+		A_pad = np.zeros((m + padding,n))
+		A_pad[:m,:] = A
+	elif axis == 1:
+		A_pad = np.zeros((m, n + padding))
+		A_pad[:,:n] = A
+	else:
+		raise ValueError("axis must be either 0 or 1.")
+	return A_pad
 
 # Block average rows of dose influence matrix.
 def beam_to_dose_block(A_full, indices_or_sections):
