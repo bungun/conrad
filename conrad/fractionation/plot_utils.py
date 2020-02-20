@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from copy import copy
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from data_utils import line_segments
 
 savepath = "/home/anqi/Dropbox/Research/Fractionation/Figures/"
 
@@ -52,24 +53,24 @@ def plot_structures(x, y, structures, filename = None, *args, **kwargs):
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot beams.
-def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False, filename = None, structures = None, struct_kw = dict(), *args, **kwargs):
+def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = False, filename = None, structures = None, struct_kw = dict(), *args, **kwargs):
 	T = b.shape[0]
 	n = b.shape[1]
+	xlim = kwargs.pop("xlim", (-1,1))
+	ylim = kwargs.pop("ylim", (-1,1))
 	
-	if theta is None:
-		theta = np.linspace(0, np.pi, n+1)[:-1]
-		# theta = np.linspace(0, 2*np.pi, n+1)[:-1]
-	if theta.shape[0] != n:
-		raise ValueError("theta must be an array of length {0}".format(n))
+	if len(angles)*len(offsets) != n:
+		raise ValueError("len(angles)*len(offsets) must equal {0}".format(n))
 	if standardize:
 		b_mean = np.tile(np.mean(b, axis = 1), (n,1)).T
 		b_std = np.tile(np.std(b, axis = 1), (n,1)).T
 		b = (b - b_mean)/b_std
 	if structures is not None:
 		if len(structures) != 3:
-			raise ValueError("structures should be a tuple of (theta, r, labels)")
-		struct_theta, struct_r, struct_labels = structures
+			raise ValueError("structures must be a tuple of (x, y, labels)")
+		struct_x, struct_y, struct_labels = structures
 		
+		# Set levels for structure colorbar.
 		labels = np.unique(struct_labels)
 		lmin = np.min(labels)
 		lmax = np.max(labels)
@@ -82,17 +83,11 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 	rows = 1 if T_steps <= maxcols else int(np.ceil(T_steps / maxcols))
 	cols = min(T_steps, maxcols)
 	
-	fig, axs = plt.subplots(rows, cols, subplot_kw = dict(projection = "polar"))
+	fig, axs = plt.subplots(rows, cols)
 	fig.set_size_inches(16,8)
 	
-	# Create collection of beams.
-	arr = np.ones((2*n, 2))
-	arr[0::2,0] = theta
-	# arr[1::2] = 0
-	arr[1::2,0] = theta + np.pi
-	segments = np.split(arr, n)
-	
 	t = 0
+	segments = line_segments(angles, offsets, xlim, ylim)   # Create collection of beams.
 	for t_step in range(T_steps):
 		if rows == 1:
 			ax = axs if cols == 1 else axs[t_step]
@@ -101,16 +96,17 @@ def plot_beams(b, theta = None, stepsize = 10, maxcols = 5, standardize = False,
 		
 		# Plot anatomical structures.
 		if structures is not None:
-			ctf = ax.contourf(struct_theta, struct_r, struct_labels, levels = struct_levels, **struct_kw)
+			ctf = ax.contourf(struct_x, struct_y, struct_labels, levels = struct_levels, **struct_kw)
 		
 		# Set colors based on beam intensity.
 		lc = LineCollection(segments, *args, **kwargs)
 		lc.set_array(np.asarray(b[t]))
 		ax.add_collection(lc)
 		
-		ax.set_xticklabels([])
-		ax.set_yticklabels([])
-		ax.set_theta_zero_location('N')
+		ax.set_xticks([])
+		ax.set_yticks([])
+		ax.set_xlim(xlim)
+		ax.set_ylim(ylim)
 		ax.set_title("$b({0})$".format(t+1))
 		t = min(t + stepsize, T-1)
 	

@@ -2,10 +2,10 @@ import numpy as np
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from data_utils import circle, ellipse, cardioid, limacon
 
-def simple_structures(m_grid, n_grid, x_len = 2, y_len = 2):
+def simple_structures(m_grid, n_grid, xlim = (-1,1), ylim = (-1,1)):
 	# Create polar grid.
-	x = np.linspace(-x_len/2, x_len/2, m_grid)
-	y = np.linspace(-y_len/2, y_len/2, n_grid)
+	x = np.linspace(xlim[0], xlim[1], m_grid)
+	y = np.linspace(ylim[0], ylim[1], n_grid)
 	x_grid, y_grid = np.meshgrid(x, y)
 	r_grid = np.sqrt(x_grid**2 + y_grid**2)
 	theta_grid = np.arctan2(y_grid, x_grid)
