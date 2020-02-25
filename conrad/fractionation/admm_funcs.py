@@ -216,8 +216,9 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	# Only used internally for calls in MPC.
 	if partial_results:
 		# TODO: Return primal/dual residuals as well?
-		# TODO: Call health_prognosis to compute truncated health (up to T_treat).
-		obj_pred = dyn_objective(d_val, h.value, patient_rx).value
+		# obj_pred = dyn_objective(d_val, h.value, patient_rx).value
+		h_val = health_prognosis(h_init, T_treat, F_list[:T_treat], G_list, r_list[:T_treat], d_val, health_map)
+		obj_pred = dyn_objective(d_val, h_val, patient_rx).value
 		return {"obj": obj_pred, "status": prox.status, "solve_time": solve_time, "beams": b_val, "doses": d_val}
 	
 	# Construct full results.
