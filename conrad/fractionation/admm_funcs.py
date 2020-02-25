@@ -132,7 +132,7 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	max_iter = kwargs.pop("max_iter", 1000) # Maximum iterations.
 	rho = kwargs.pop("rho", 1/10)           # Step size.
 	eps_abs = kwargs.pop("eps_abs", 1e-6)   # Absolute stopping tolerance.
-	eps_rel = kwargs.pop("eps_rel", 1e-4)   # Relative stopping tolerance.
+	eps_rel = kwargs.pop("eps_rel", 1e-3)   # Relative stopping tolerance.
 	
 	# Validate parameters.
 	if max_iter <= 0:
