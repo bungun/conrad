@@ -111,8 +111,9 @@ def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 		# Check if stopped.
 		finished = pipe.recv()
 	
-	# Send final b_t^k and p_t^k.
-	pipe.send(b.value)
+	# Send final b_t^k and d_t^k.
+	d_val = A.dot(b.value)
+	pipe.send((b.value, d_val))
 
 def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, admm_verbose = False, *args, **kwargs):
 	T_treat = len(A_list)
@@ -123,7 +124,7 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	max_iter = kwargs.pop("max_iter", 1000) # Maximum iterations.
 	rho = kwargs.pop("rho", 1/10)           # Step size.
 	eps_abs = kwargs.pop("eps_abs", 1e-6)   # Absolute stopping tolerance.
-	eps_rel = kwargs.pop("eps_rel", 1e-8)   # Relative stopping tolerance.
+	eps_rel = kwargs.pop("eps_rel", 1e-4)   # Relative stopping tolerance.
 	
 	# Validate parameters.
 	if max_iter <= 0:
@@ -203,9 +204,11 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 		for pipe in pipes:
 			pipe.send(finished)
 	
-	# Receive final values of b_t^k for t = 1,...,T.
-	b_rows = [pipe.recv() for pipe in pipes]
+	# Receive final values of b_t^k and d_t^k = A*b_t^k for t = 1,...,T.
+	bd_final = [pipe.recv() for pipe in pipes]
+	b_rows, d_rows = map(list, zip(*bd_final))
 	b_val = np.row_stack(b_rows)
+	d_val = np.row_stack(d_rows)
 	
 	[proc.terminate() for proc in procs]
 	end = time()
@@ -213,16 +216,16 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	# Only used internally for calls in MPC.
 	if partial_results:
 		# TODO: Return primal/dual residuals as well?
-		obj_pred = dyn_objective(d_tld.value, h.value, patient_rx).value
-		return {"obj": obj_pred, "status": prox.status, "solve_time": solve_time, "beams": b_val, "doses": d_tld.value}
+		# TODO: Call health_prognosis to compute truncated health (up to T_treat).
+		obj_pred = dyn_objective(d_val, h.value, patient_rx).value
+		return {"obj": obj_pred, "status": prox.status, "solve_time": solve_time, "beams": b_val, "doses": d_val}
 	
 	# Construct full results.
 	beams_all = pad_matrix(b_val, T_recov)
-	doses_all = pad_matrix(d_tld.value, T_recov)
-	# doses_all = pad_matrix((d_tld.value + d_new.value)/2, T_recov)
+	doses_all = pad_matrix(d_val, T_recov)
 	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
 	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
-	obj = dyn_objective(d_tld.value, health_all[:(T_treat+1)], patient_rx).value
+	obj = dyn_objective(d_val, health_all[:(T_treat+1)], patient_rx).value
 	return {"obj": obj, "status": prox.status, "num_iters": k, "total_time": end - start, "solve_time": solve_time, 
 			"beams": beams_all, "doses": doses_all, "health": health_all, "primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k])}
 

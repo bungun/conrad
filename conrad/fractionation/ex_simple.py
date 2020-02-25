@@ -18,7 +18,7 @@ n = n_angle*n_bundle   # Total number of beams.
 # Display structures on a polar grid.
 x_grid, y_grid, regions = simple_structures(n_grid, n_grid)
 struct_kw = simple_colormap()
-plot_structures(x_grid, y_grid, regions, **struct_kw)
+# plot_structures(x_grid, y_grid, regions, **struct_kw)
 # plot_structures(x_grid, y_grid, regions, filename = "ex_cardioid2_structures.png", **struct_kw)
 
 # Problem data.
@@ -28,6 +28,7 @@ A, angles, offs_vec = line_integral_mat(regions, angles = n_angle, n_bundle = n_
 # A = np.load("data/A_cardiod_rot_1000x1000-grid_10-angles_10-bundles.npy")
 # angles = np.linspace(0, np.pi, n_angle+1)[:-1]
 # offs_vec = offset*np.arange(-n_bundle//2, n_bundle//2)
+A = A/n_grid
 A_list = T*[A]
 
 # F = np.diag([1.02, 0.95, 0.90, 0.75])
@@ -53,7 +54,8 @@ patient_rx = {"dose_goal": rx_dose_goal, "dose_weights": rx_dose_weights, \
 			  "health_goal": rx_health_goal, "health_weights": rx_health_weights}
 
 # Beam constraints.
-beam_upper = np.full((T,n), 0.0015)
+# beam_upper = np.full((T,n), 0.0015)
+beam_upper = np.full((T,n), 1.5)
 patient_rx["beam_constrs"] = {"upper": beam_upper}
 
 # Dose constraints.
@@ -73,14 +75,13 @@ health_upper[15:,0] = 0.05   # Upper bound on PTV for t = 16,...,20.
 patient_rx["health_constrs"] = {"lower": health_lower, "upper": health_upper}
 
 # Dynamic treatment.
-res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, solver = "MOSEK")
-# res_dynamic = dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, rho = 5, max_iter = 1000, solver = "OSQP", admm_verbose = True)
+res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, solver = "ECOS")
+# res_dynamic = dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, rho = 5, max_iter = 1000, solver = "ECOS", admm_verbose = True)
 print("Dynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
 print("Solve Time:", res_dynamic["solve_time"])
 # print("Iterations:", res_dynamic["num_iters"])
-# res_dynamic["beams"][res_dynamic["beams"] < 1e-6] = 0
 
 # Plot dynamic beam, health, and treatment curves.
 # Set beam colors on logarithmic scale.
@@ -89,13 +90,13 @@ b_max = np.max(res_dynamic["beams"])
 lc_norm = LogNorm(vmin = b_min, vmax = b_max)
 
 # plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True)
-plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
-			structures = (x_grid, y_grid, regions), struct_kw = struct_kw, alpha = 0.5)
+plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
+			structures = (x_grid, y_grid, regions), struct_kw = struct_kw)
 plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper))
 plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper))
 
 # plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "ex_cardioid2_admm_residuals.png")
-# plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds), norm = lc_norm, \
-#			structures = (x_grid, y_grid, regions), struct_kw = struct_kw, alpha = 0.5, filename = "ex_cardioid2_dyn_beams.png")
+# plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
+#			structures = (x_grid, y_grid, regions), struct_kw = struct_kw, filename = "ex_cardioid2_dyn_beams.png")
 # plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_cardioid2_dyn_health.png")
 # plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_cardioid2_dyn_doses.png")

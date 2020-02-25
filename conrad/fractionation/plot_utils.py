@@ -16,9 +16,9 @@ def truncate_cmap(cmap, minval = 0.0, maxval = 1.0, n = 100):
     return cmap_trunc
 
 # Modify colormap to enable transparency in smaller values.
-def transp_cmap(cmap):
+def transp_cmap(cmap, lower = 0, upper = 1):
 	cmap_transp = cmap(np.arange(cmap.N))
-	cmap_transp[:,-1] = np.linspace(0, 1, cmap.N)
+	cmap_transp[:,-1] = np.linspace(lower, upper, cmap.N)
 	cmap_transp = ListedColormap(cmap_transp)
 	return cmap_transp
 
