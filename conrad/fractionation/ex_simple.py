@@ -76,7 +76,7 @@ patient_rx["health_constrs"] = {"lower": health_lower, "upper": health_upper}
 
 # Dynamic treatment.
 res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, solver = "ECOS")
-# res_dynamic = dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, rho = 5, max_iter = 1000, solver = "ECOS", admm_verbose = True)
+# res_dynamic = dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, rho = 10, max_iter = 1000, solver = "ECOS", admm_verbose = True)
 print("Dynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
@@ -89,7 +89,7 @@ b_min = np.min(res_dynamic["beams"][res_dynamic["beams"] > 0])
 b_max = np.max(res_dynamic["beams"])
 lc_norm = LogNorm(vmin = b_min, vmax = b_max)
 
-# plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True)
+plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True)
 plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
 			structures = (x_grid, y_grid, regions), struct_kw = struct_kw)
 plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper))
@@ -97,6 +97,6 @@ plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_u
 
 # plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "ex_cardioid2_admm_residuals.png")
 # plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
-#			structures = (x_grid, y_grid, regions), struct_kw = struct_kw, filename = "ex_cardioid2_dyn_beams.png")
-# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_cardioid2_dyn_health.png")
-# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_cardioid2_dyn_doses.png")
+#			structures = (x_grid, y_grid, regions), struct_kw = struct_kw, filename = "ex_cardioid2_admm_beams.png")
+# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_cardioid2_admm_health.png")
+# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_cardioid2_admm_doses.png")

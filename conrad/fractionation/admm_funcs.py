@@ -5,7 +5,7 @@ from cvxpy import *
 from time import time
 from multiprocessing import Process, Pipe
 from data_utils import pad_matrix, check_dyn_matrices, health_prognosis
-from mpc_funcs import dose_penalty, health_penalty, dyn_objective, rx_to_constrs
+from mpc_funcs import dose_penalty, health_penalty, dyn_objective, rx_to_constrs, rx_slice
 
 def build_dyn_prob_dose(A_list, patient_rx, T_recov = 0):
 	T_treat = len(A_list)
@@ -18,9 +18,13 @@ def build_dyn_prob_dose(A_list, patient_rx, T_recov = 0):
 	# Dose penalty function.
 	obj = sum([dose_penalty(d[t], patient_rx["dose_weights"]) for t in range(T_treat)])
 	
-	# Additional dose constraints.
+	# Additional beam constraints.
 	# constrs = [b >= 0]
 	constrs = []
+	if "beam_constrs" in patient_rx:
+		constrs += rx_to_constrs(b, patient_rx["beam_constrs"])
+	
+	# Additional dose constraints.
 	if "dose_constrs" in patient_rx:
 		constrs += rx_to_constrs(vstack(d), patient_rx["dose_constrs"])
 	
@@ -35,11 +39,15 @@ def build_dyn_prob_dose_period(A, patient_rx, T_recov = 0):
 	d_t = A*b_t
 	
 	# Dose penalty current period.
-	obj = dose_penalty(d_t, patient_rx["dose_weights"])
+	obj = dose_penalty(d_t, patient_rx["dose_goal"], patient_rx["dose_weights"])
 	
-	# Additional dose constraints in period.
+	# Additional beam constraints in period.
 	# constrs = [b >= 0]
 	constrs = []
+	if "beam_constrs" in patient_rx:
+		constrs += rx_to_constrs(b_t, patient_rx["beam_constrs"])
+	
+	# Additional dose constraints in period.
 	if "dose_constrs" in patient_rx:
 		constrs += rx_to_constrs(d_t, patient_rx["dose_constrs"])
 	
@@ -140,13 +148,7 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	pipes = []
 	procs = []
 	for t in range(T_treat):
-		rx_cur = patient_rx.copy()
-		# rx_cur["health_goal"] = patient_rx["health_goal"][t]
-		if "dose_constrs" in patient_rx:
-			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t], "upper": patient_rx["dose_constrs"]["upper"][t]}
-		if "health_constrs" in patient_rx:
-			rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t], "upper": patient_rx["health_constrs"]["upper"][t]}
-			
+		rx_cur = rx_slice(patient_rx, t, t+1)   # Get prescription at time t.
 		local, remote = Pipe()
 		pipes += [local]
 		procs += [Process(target=run_dose_worker, args=(remote, A_list[t], rx_cur, T_recov, rho) + args, kwargs=kwargs)]
@@ -242,15 +244,13 @@ def mpc_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_rec
 	
 	h_cur = h_init
 	for t_s in range(T_treat):
-		rx_cur = patient_rx.copy()
-		# rx_cur["health_goal"] = patient_rx["health_goal"][t_s:]
-		if "dose_constrs" in patient_rx:
-			rx_cur["dose_constrs"] = {"lower": patient_rx["dose_constrs"]["lower"][t_s:], "upper": patient_rx["dose_constrs"]["upper"][t_s:]}
-		if "health_constrs" in patient_rx:
-			rx_cur["health_constrs"] = {"lower": patient_rx["health_constrs"]["lower"][t_s:], "upper": patient_rx["health_constrs"]["upper"][t_s:]}
+		# Drop prescription for previous periods.
+		rx_cur = rx_slice(patient_rx, t_s, T_treat)
 		
 		# Solve optimal control problem from current period forward.
-		result = dynamic_treatment_admm(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
+		T_left = T_treat - t_s
+		result = dynamic_treatment_admm(T_left*[A_list[t_s]], T_left*[F_list[t_s]], T_left*[G_list[t_s]], T_left*[r_list[t_s]], h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
+		# result = dynamic_treatment_admm(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
 		solve_time += result["solve_time"]
 		
 		if mpc_verbose:
