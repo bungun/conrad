@@ -9,10 +9,10 @@ from mpc_funcs import dynamic_treatment, mpc_treatment
 
 np.random.seed(1)
 
-T = 20     # Length of treatment.
+T = 20          # Length of treatment.
 n_grid = 1000
 offset = 0.01   # Displacement between beams.
-n_angle = 10   # Number of angles.
+n_angle = 10    # Number of angles.
 n_bundle = 10   # Number of beams per angle.
 n = n_angle*n_bundle   # Total number of beams.
 
@@ -32,9 +32,9 @@ A, angles, offs_vec = line_integral_mat(regions, angles = n_angle, n_bundle = n_
 A_list = T*[A]
 
 # F = np.diag([1.02, 0.95, 0.90, 0.75])
-F = np.diag([1.02, 0.90, 0.75, 0.95])
+F = np.diag([1.02, 0.90, 0.75, 0.80, 0.95])
 # G = -np.eye(K)
-G = -np.diag([0.01, 0.95, 0.25, 0.0065])
+G = -np.diag([0.01, 0.95, 0.25, 0.10, 0.0065])
 r = np.zeros(K)
 h_init = np.array([1] + (K-1)*[0])
 
@@ -78,7 +78,8 @@ health_upper = np.zeros((T,K))
 # health_lower[:,1:] = -2.5    # Lower bound on OARs.
 health_lower[:,1] = -0.5
 health_lower[:,2] = -0.75
-health_lower[:,3] = -1.0
+health_lower[:,3] = -0.75
+health_lower[:,4] = -0.9
 health_upper[:15,0] = 1.5    # Upper bound on PTV for t = 1,...,15.
 health_upper[15:,0] = 0.05   # Upper bound on PTV for t = 16,...,20.
 patient_rx["health_constrs"] = {"lower": health_lower, "upper": health_upper}

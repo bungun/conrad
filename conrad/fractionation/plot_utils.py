@@ -23,7 +23,7 @@ def transp_cmap(cmap, lower = 0, upper = 1):
 	return cmap_transp
 
 # Plot structures.
-def plot_structures(x, y, structures, filename = None, *args, **kwargs):
+def plot_structures(x, y, structures, title = None, filename = None, one_idx = False, *args, **kwargs):
 	m, n = x.shape
 	if y.shape != (m,n):
 		raise ValueError("y must have dimensions ({0},{1})".format(m,n))
@@ -33,19 +33,20 @@ def plot_structures(x, y, structures, filename = None, *args, **kwargs):
 	fig = plt.figure()
 	fig.set_size_inches(10,8)
 	
-	labels = np.unique(structures)
+	labels = np.unique(structures + int(one_idx))
 	lmin = np.min(labels)
 	lmax = np.max(labels)
 	levels = np.arange(lmin, lmax + 2) - 0.5
 	
-	ctf = plt.contourf(x, y, structures, levels = levels, *args, **kwargs)
+	ctf = plt.contourf(x, y, structures + int(one_idx), levels = levels, *args, **kwargs)
 	
 	plt.axhline(0, lw = 1, ls = ':', color = "grey")
 	plt.axvline(0, lw = 1, ls = ':', color = "grey")
 	plt.xticks([0])
 	plt.yticks([0])
 	
-	plt.title("Anatomical Structures")
+	if title is not None:
+		plt.title(title)
 	cbar = plt.colorbar(ctf, ticks = np.arange(lmin, lmax + 1))
 	cbar.solids.set(alpha = 1)
 	plt.show()
@@ -53,7 +54,7 @@ def plot_structures(x, y, structures, filename = None, *args, **kwargs):
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot beams.
-def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = False, filename = None, structures = None, struct_kw = dict(), *args, **kwargs):
+def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = False, title = None, filename = None, structures = None, struct_kw = dict(), one_idx = False, *args, **kwargs):
 	T = b.shape[0]
 	n = b.shape[1]
 	xlim = kwargs.pop("xlim", (-1,1))
@@ -71,7 +72,7 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 		struct_x, struct_y, struct_labels = structures
 		
 		# Set levels for structure colorbar.
-		labels = np.unique(struct_labels)
+		labels = np.unique(struct_labels + int(one_idx))
 		lmin = np.min(labels)
 		lmax = np.max(labels)
 		struct_levels = np.arange(lmin, lmax + 2) - 0.5
@@ -96,7 +97,7 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 		
 		# Plot anatomical structures.
 		if structures is not None:
-			ctf = ax.contourf(struct_x, struct_y, struct_labels, levels = struct_levels, **struct_kw)
+			ctf = ax.contourf(struct_x, struct_y, struct_labels + int(one_idx), levels = struct_levels, **struct_kw)
 		
 		# Set colors based on beam intensity.
 		lc = LineCollection(segments, *args, **kwargs)
@@ -107,7 +108,8 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 		ax.set_yticks([])
 		ax.set_xlim(xlim)
 		ax.set_ylim(ylim)
-		ax.set_title("$b({0})$".format(t+1))
+		# ax.set_title("$b({0})$".format(t+1))
+		ax.set_title("$t = {0}$".format(t+1))
 		t = min(t + stepsize, T-1)
 	
 	# Display colorbar for structures by label.
@@ -127,13 +129,14 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 	cbar.solids.set(alpha = 1)
 	cax_right.yaxis.set_label_position("left")
 	
-	plt.suptitle("Beam Intensities vs. Time")
+	if title is not None:
+		plt.suptitle(title)
 	plt.show()
 	if filename is not None:
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot health curves.
-def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, filename = None):
+def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, filename = None):
 	T = h.shape[0] - 1
 	m = h.shape[1]
 	
@@ -179,15 +182,18 @@ def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, boun
 	for col in range(left):
 		axs[rows-1, maxcols-1-col].set_axis_off()
 	
-	fig.legend(handles = handles, loc = "center right", borderaxespad = 1)
+	ax.legend(handles = handles, loc = "upper right", borderaxespad = 1)
+	# fig.legend(handles = handles, loc = "center right", borderaxespad = 1)
 	# fig.legend(handles = [ltreat, lnone], labels = ["Treated", "Untreated"], loc = "center right", borderaxespad = 1)
-	plt.suptitle("Health Status vs. Time")
+	
+	if title is not None:
+		plt.suptitle(title)
 	plt.show()
 	if filename is not None:
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot treatment curves.
-def plot_treatment(d, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, filename = None):
+def plot_treatment(d, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, filename = None):
 	T = d.shape[0]
 	n = d.shape[1]
 	
@@ -228,7 +234,8 @@ def plot_treatment(d, stepsize = 10, maxcols = 5, T_treat = None, bounds = None,
 	for col in range(left):
 		axs[rows-1, maxcols-1-col].set_axis_off()
 	
-	plt.suptitle("Treatment Dose vs. Time")
+	if title is not None:
+		plt.suptitle(title)
 	plt.show()
 	if filename is not None:
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
