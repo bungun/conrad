@@ -82,7 +82,7 @@ print("Dynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
 print("Solve Time:", res_dynamic["solve_time"])
-# print("Iterations:", res_dynamic["num_iters"])
+print("Iterations:", res_dynamic["num_iters"])
 
 # Plot dynamic beam, health, and treatment curves.
 # Set beam colors on logarithmic scale.
@@ -96,8 +96,8 @@ plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize =
 plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), title = "Health Status vs. Time")
 plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), title = "Treatment Dose vs. Time")
 
-# plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "ex_cardioid3_1000_admm_residuals.png")
+# plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "2ex_cardioid3_1000_admm_residuals.png")
 # plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
-#			structures = (x_grid, y_grid, regions), struct_kw = struct_kw, one_idx = True, filename = "ex_cardioid3_1000_admm_beams.png")
-# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "ex_cardioid3_1000_admm_health.png")
-# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "ex_cardioid3_1000_admm_doses.png")
+#			structures = (x_grid, y_grid, regions), struct_kw = struct_kw, one_idx = True, filename = "2ex_cardioid3_1000_admm_beams.png")
+# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), filename = "2ex_cardioid3_1000_admm_health.png")
+# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), filename = "2ex_cardioid3_1000_admm_doses.png")
