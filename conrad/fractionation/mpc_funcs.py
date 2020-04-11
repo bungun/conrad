@@ -185,7 +185,7 @@ def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 
 	h_cur = h_init
 	for t_s in range(T_treat):
 		# Drop prescription for previous periods.
-		rx_cur = rx_slice(patient_rx, t_s, T_treat)
+		rx_cur = rx_slice(patient_rx, t_s, T_treat, squeeze = False)
 		
 		# Solve optimal control problem from current period forward.
 		T_left = T_treat - t_s

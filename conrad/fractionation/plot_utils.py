@@ -23,7 +23,7 @@ def transp_cmap(cmap, lower = 0, upper = 1):
 	return cmap_transp
 
 # Plot structures.
-def plot_structures(x, y, structures, title = None, filename = None, one_idx = False, *args, **kwargs):
+def plot_structures(x, y, structures, title = None, one_idx = False, filename = None, *args, **kwargs):
 	m, n = x.shape
 	if y.shape != (m,n):
 		raise ValueError("y must have dimensions ({0},{1})".format(m,n))
@@ -54,7 +54,7 @@ def plot_structures(x, y, structures, title = None, filename = None, one_idx = F
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot beams.
-def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = False, title = None, filename = None, structures = None, struct_kw = dict(), one_idx = False, *args, **kwargs):
+def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = False, title = None, one_idx = False, filename = None, structures = None, struct_kw = dict(), *args, **kwargs):
 	T = b.shape[0]
 	n = b.shape[1]
 	xlim = kwargs.pop("xlim", (-1,1))
@@ -136,7 +136,7 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot health curves.
-def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, filename = None):
+def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, one_idx = False, filename = None):
 	T = h.shape[0] - 1
 	m = h.shape[1]
 	
@@ -163,7 +163,7 @@ def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, boun
 			handles += [lcurve]
 		# lnone, = ax.plot(range(T+1), x_prog[:,i], ls = '--', color = "red")
 		# ax.set_title("$x_{{{0}}}(t)$".format(i))
-		ax.set_title("$h_{{{0}}}(t)$".format(i))
+		ax.set_title("$h_{{{0}}}(t)$".format(i + int(one_idx)))
 		
 		# Label transition from treatment to recovery period.
 		xt = np.arange(0, T, stepsize)
@@ -193,7 +193,7 @@ def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, boun
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot treatment curves.
-def plot_treatment(d, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, filename = None):
+def plot_treatment(d, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, one_idx = False, filename = None):
 	T = d.shape[0]
 	n = d.shape[1]
 	
@@ -215,7 +215,7 @@ def plot_treatment(d, stepsize = 10, maxcols = 5, T_treat = None, bounds = None,
 			ax = axs[int(j / maxcols), j % maxcols]
 		ax.plot(range(1,T+1), d[:,j])
 		# ax.set_title("$u_{{{0}}}(t)$".format(j))
-		ax.set_title("$d_{{{0}}}(t)$".format(j))
+		ax.set_title("$d_{{{0}}}(t)$".format(j + int(one_idx)))
 		
 		# Label transition from treatment to recovery period.
 		xt = np.arange(1, T, stepsize)
