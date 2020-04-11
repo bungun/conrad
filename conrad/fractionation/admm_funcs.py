@@ -4,7 +4,7 @@ import numpy.linalg as LA
 from cvxpy import *
 from time import time
 from multiprocessing import Process, Pipe
-from data_utils import pad_matrix, check_dyn_matrices, health_prognosis
+from data_utils import pad_matrix, check_dyn_matrices, health_map, health_prognosis
 from mpc_funcs import dose_penalty, health_penalty, dyn_objective, rx_to_constrs, rx_slice
 
 def build_dyn_prob_dose(A_list, patient_rx, T_recov = 0):
@@ -123,7 +123,7 @@ def run_dose_worker(pipe, A, patient_rx, T_recov, rho, *args, **kwargs):
 	d_val = A.dot(b.value)
 	pipe.send((b.value, d_val))
 
-def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, partial_results = False, admm_verbose = False, *args, **kwargs):
+def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, h_noise = None, health_kw = dict(), partial_results = False, admm_verbose = False, *args, **kwargs):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
 	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
@@ -219,7 +219,7 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	if partial_results:
 		# TODO: Return primal/dual residuals as well?
 		# obj_pred = dyn_objective(d_val, h.value, patient_rx).value
-		h_val = health_prognosis(h_init, T_treat, F_list[:T_treat], G_list, r_list[:T_treat], d_val, health_map)
+		h_val = health_prognosis(h_init, T_treat, F_list[:T_treat], G_list, r_list[:T_treat], d_val, h_noise, **health_kw)
 		obj_pred = dyn_objective(d_val, h_val, patient_rx).value
 		return {"obj": obj_pred, "status": prox.status, "solve_time": solve_time, "beams": b_val, "doses": d_val}
 	
@@ -227,12 +227,12 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 	beams_all = pad_matrix(b_val, T_recov)
 	doses_all = pad_matrix(d_val, T_recov)
 	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
-	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
+	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, h_noise, **health_kw)
 	obj = dyn_objective(d_val, health_all[:(T_treat+1)], patient_rx).value
 	return {"obj": obj, "status": prox.status, "num_iters": k, "total_time": end - start, "solve_time": solve_time, 
 			"beams": beams_all, "doses": doses_all, "health": health_all, "primal": np.array(r_prim[:k]), "dual": np.array(r_dual[:k])}
 
-def mpc_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
+def mpc_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_kw = dict(), mpc_verbose = False, *args, **kwargs):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
 	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
@@ -265,12 +265,12 @@ def mpc_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_rec
 		doses[t_s] = result["doses"][0]
 		
 		# Update health for next period.
-		h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], t_s)
+		h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], **health_kw)
 	
 	# Construct full results.
 	beams_all = pad_matrix(beams, T_recov)
 	doses_all = pad_matrix(doses, T_recov)
 	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
-	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
+	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_kw)
 	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], patient_rx).value
 	return {"obj": obj_treat, "status": status, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}

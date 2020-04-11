@@ -223,11 +223,33 @@ def check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov = 0):
 			raise ValueError("G_t must have dimensions ({0},{0})".format(K))
 	for r in r_list:
 		if r.shape != (K,) and r.shape != (K,1):
-			raise ValueError("r_t must have dimensions ({K},)".format(K))
+			raise ValueError("r_t must have dimensions ({0},)".format(K))
 	return F_list, G_list, r_list
 
-# Health prognosis with a given treatment.
-def health_prognosis(h_init, T, F_list, G_list = None, r_list = None, doses = None, health_map = lambda h,t: h):
+# Health status with additive noise and thresholding.
+def health_map(h, noise = None, threshold = False, is_target = None):
+	K = h.shape[0]
+	if h.shape != (K,) and h.shape != (K,1):
+		raise ValueError("h must have dimensions ({0},)".format(K))
+	if noise is None:
+		noise = np.zeros(K)
+	elif noise.shape != (K,) and noise.shape != (K,1):
+		raise ValueError("noise must have dimensions ({0},)".format(K))
+	if is_target is None:
+		is_target = np.full((K,), False)
+		# is_target[0] = True
+	elif is_target.shape != (K,) and is_target.shape != (K,1):
+		raise ValueError("is_target must have dimensions ({0},)".format(K))
+	
+	# Add noise to health status.
+	h_true = h + noise
+	if threshold:   # Threshold values at zero?
+		h_true[is_target] = np.maximum(h_true[is_target], 0)     # h_t >= 0 for PTV.
+		h_true[~is_target] = np.minimum(h_true[~is_target], 0)   # h_t <= 0 for OAR.
+	return h_true
+
+# Health prognosis for a given treatment.
+def health_prognosis(h_init, T, F_list, G_list = None, r_list = None, doses = None, noises = None, *args, **kwargs):
 	K = h_init.shape[0]
 	h_prog = np.zeros((T+1,K))
 	h_prog[0] = h_init
@@ -240,8 +262,13 @@ def health_prognosis(h_init, T, F_list, G_list = None, r_list = None, doses = No
 		raise ValueError("Both G_list and doses must be provided.")
 	if r_list is None:
 		r_list = T*[np.zeros(K)]
+	if noises is None:
+		noises = T*[None]
+	elif noises.shape != (T,K):
+		raise ValueError("noises must have dimensions ({0},{1})".format(T,K))
 	
 	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T, T_recov = 0)
 	for t in range(T):
-		h_prog[t+1] = health_map(F_list[t].dot(h_prog[t]) + G_list[t].dot(doses[t]) + r_list[t], t)
+		h_pred = F_list[t].dot(h_prog[t]) + G_list[t].dot(doses[t]) + r_list[t]
+		h_prog[t+1] = health_map(h_pred, noise = noises[t], *args, **kwargs)
 	return h_prog

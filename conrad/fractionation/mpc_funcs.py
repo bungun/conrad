@@ -1,7 +1,7 @@
 import cvxpy
 import numpy as np
 from cvxpy import *
-from data_utils import pad_matrix, check_dyn_matrices, health_prognosis
+from data_utils import pad_matrix, check_dyn_matrices, health_map, health_prognosis
 
 def rx_slice(patient_rx, t_start, t_end, t_step = 1, squeeze = True):
 	t_slice = slice(t_start, t_end, t_step)
@@ -153,7 +153,7 @@ def single_treatment(A, patient_rx, *args, **kwargs):
 	# h = F.dot(h_init) + G.dot(d.value)
 	return {"obj": prob.value, "status": prob.status, "beams": b.value, "doses": d.value}
 
-def dynamic_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, *args, **kwargs):
+def dynamic_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, h_noise = None, health_kw = dict(), *args, **kwargs):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
 	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
@@ -168,14 +168,18 @@ def dynamic_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_reco
 	beams_all = pad_matrix(b.value, T_recov)
 	doses_all = pad_matrix(d.value, T_recov)
 	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
-	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
+	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, h_noise, **health_kw)
 	obj = dyn_objective(d.value, health_all[:(T_treat+1)], patient_rx).value
 	return {"obj": obj, "status": prob.status, "solve_time": prob.solver_stats.solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
 
-def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, health_map = lambda h,t: h, mpc_verbose = False, *args, **kwargs):
+def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 0, h_noise = None, health_kw = dict(), mpc_verbose = False, *args, **kwargs):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
 	F_list, G_list, r_list = check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov)
+	if h_noise is None:
+		h_noise = (T_treat + T_recov)*[None]
+	elif h_noise.shape != (T_treat + T_recov, K):
+		raise ValueError("h_noise must have dimensions ({0},{1})".format(T_treat + T_recov, K))
 	
 	# Initialize values.
 	beams = np.zeros((T_treat,n))
@@ -183,9 +187,11 @@ def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 
 	solve_time = 0
 	
 	h_cur = h_init
+	# h_noise = np.zeros((T_treat + T_recov,K))
+	# h_noise = 0.025*np.random.randn(T_treat + T_recov, K)
 	for t_s in range(T_treat):
 		# Drop prescription for previous periods.
-		rx_cur = rx_slice(patient_rx, t_s, T_treat)
+		rx_cur = rx_slice(patient_rx, t_s, T_treat, squeeze = False)
 		
 		# Solve optimal control problem from current period forward.
 		T_left = T_treat - t_s
@@ -205,16 +211,19 @@ def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 
 		# Save beams, doses, and penalties for current period.
 		status = prob.status
 		beams[t_s] = b.value[0]
-		doses[t_s] = d.value[0]
+		# doses[t_s] = d.value[0]
+		doses[t_s] = A_list[t_s].dot(beams[t_s])
 		
 		# Update health for next period.
-		h_cur = health_map(h.value[1], t_s)
-		# h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], t_s)
+		# h_cur = health_map(h.value[1], **health_kw)
+		# h_cur = health_map(F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s], **health_kw)
+		h_pred = F_list[t_s].dot(h_cur) + G_list[t_s].dot(doses[t_s]) + r_list[t_s]
+		h_cur = health_map(h_pred, noise = h_noise[t_s], **health_kw)
 	
 	# Construct full results.
 	beams_all = pad_matrix(beams, T_recov)
 	doses_all = pad_matrix(doses, T_recov)
 	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
-	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
+	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, h_noise, **health_kw)
 	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], patient_rx).value
 	return {"obj": obj_treat, "status": status, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
