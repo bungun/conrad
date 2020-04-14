@@ -221,7 +221,8 @@ def dynamic_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T
 		# obj_pred = dyn_objective(d_val, h.value, patient_rx).value
 		h_val = health_prognosis(h_init, T_treat, F_list[:T_treat], G_list, r_list[:T_treat], d_val, health_map)
 		obj_pred = dyn_objective(d_val, h_val, patient_rx).value
-		return {"obj": obj_pred, "status": prox.status, "solve_time": solve_time, "beams": b_val, "doses": d_val}
+		# TODO: Return "weakest" status over all iterations?
+		return {"obj": obj_pred, "status": prox.status, "num_iters": k, "solve_time": solve_time, "beams": b_val, "doses": d_val}
 	
 	# Construct full results.
 	beams_all = pad_matrix(b_val, T_recov)
@@ -241,23 +242,27 @@ def mpc_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_rec
 	beams = np.zeros((T_treat,n))
 	doses = np.zeros((T_treat,K))
 	solve_time = 0
+	num_iters = 0
 	
 	h_cur = h_init
 	for t_s in range(T_treat):
 		# Drop prescription for previous periods.
-		rx_cur = rx_slice(patient_rx, t_s, T_treat)
+		rx_cur = rx_slice(patient_rx, t_s, T_treat, squeeze = False)
 		
 		# Solve optimal control problem from current period forward.
+		# TODO: Warm start next ADMM solve, or better yet, rewrite code so no teardown/rebuild process between ADMM solves.
 		T_left = T_treat - t_s
 		result = dynamic_treatment_admm(T_left*[A_list[t_s]], T_left*[F_list[t_s]], T_left*[G_list[t_s]], T_left*[r_list[t_s]], h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
 		# result = dynamic_treatment_admm(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov, partial_results = True, *args, **kwargs)
 		solve_time += result["solve_time"]
+		num_iters += result["num_iters"]
 		
 		if mpc_verbose:
-			print("Start Time:", t_s)
+			print("\nStart Time:", t_s)
 			print("Status:", result["status"])
 			print("Objective:", result["obj"])
 			print("Solve Time:", result["solve_time"])
+			print("Iterations:", result["num_iters"])
 		
 		# Save beam, doses, and penalties for current period.
 		status = result["status"]
@@ -272,5 +277,5 @@ def mpc_treatment_admm(A_list, F_list, G_list, r_list, h_init, patient_rx, T_rec
 	doses_all = pad_matrix(doses, T_recov)
 	G_list_pad = G_list + T_recov*[np.zeros(G_list[0].shape)]
 	health_all = health_prognosis(h_init, T_treat + T_recov, F_list, G_list_pad, r_list, doses_all, health_map)
-	obj_treat = dyn_objective(doses, health_all[:(T_treat+1)], patient_rx).value
-	return {"obj": obj_treat, "status": status, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}
+	obj = dyn_objective(doses, health_all[:(T_treat+1)], patient_rx).value
+	return {"obj": obj, "status": status, "num_iters": num_iters, "solve_time": solve_time, "beams": beams_all, "doses": doses_all, "health": health_all}

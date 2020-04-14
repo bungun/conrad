@@ -1,0 +1,165 @@
+Iteration: 0
+Iteration: 10
+Iteration: 20
+Iteration: 30
+Iteration: 40
+Iteration: 50
+Iteration: 60
+Iteration: 70
+Iteration: 80
+Iteration: 90
+Iteration: 100
+Iteration: 110
+Iteration: 120
+Iteration: 130
+Iteration: 140
+Iteration: 150
+Iteration: 160
+Iteration: 170
+Iteration: 180
+Iteration: 190
+Iteration: 200
+Iteration: 210
+Iteration: 220
+Iteration: 230
+Iteration: 240
+Iteration: 250
+Iteration: 260
+Iteration: 270
+Iteration: 280
+Iteration: 290
+Dynamic Treatment
+Status: optimal
+Objective: 4492.617218170863
+Solve Time: 28.945648814999984
+Iterations: 294
+Average Health Violation 0.025153835708379608
+
+Starting MPC algorithm...
+
+Start Time: 0
+Status: optimal
+Objective: 4495.428277388144
+Solve Time: 28.590986572999995
+Iterations: 294
+
+Start Time: 1
+Status: optimal_inaccurate
+Objective: 5520.548481825733
+Solve Time: 111.3470733379998
+Iterations: 1000
+
+Start Time: 2
+Status: optimal
+Objective: 2073.953408057986
+Solve Time: 15.442384842000004
+Iterations: 172
+
+Start Time: 3
+Status: optimal_inaccurate
+Objective: 2202.7087249462274
+Solve Time: 25.964819219999995
+Iterations: 320
+
+Start Time: 4
+Status: optimal
+Objective: 1789.7213230976936
+Solve Time: 16.053348521000004
+Iterations: 206
+
+Start Time: 5
+Status: optimal
+Objective: 1583.2150473877316
+Solve Time: 7.496263627000005
+Iterations: 101
+
+Start Time: 6
+Status: optimal
+Objective: 1414.5654934154238
+Solve Time: 6.026362216999997
+Iterations: 89
+
+Start Time: 7
+Status: optimal
+Objective: 1258.0979167814128
+Solve Time: 5.326988163000002
+Iterations: 87
+
+Start Time: 8
+Status: optimal
+Objective: 1148.7818295681589
+Solve Time: 4.696679384000001
+Iterations: 86
+
+Start Time: 9
+Status: optimal
+Objective: 1031.4158482492826
+Solve Time: 4.706322101000001
+Iterations: 82
+
+Start Time: 10
+Status: optimal
+Objective: 896.5715009406451
+Solve Time: 4.032383694000001
+Iterations: 82
+
+Start Time: 11
+Status: optimal
+Objective: 815.6673901490083
+Solve Time: 3.5242694979999993
+Iterations: 82
+
+Start Time: 12
+Status: optimal
+Objective: 748.5691929882645
+Solve Time: 3.4229034239999994
+Iterations: 81
+
+Start Time: 13
+Status: optimal
+Objective: 605.7878409721626
+Solve Time: 2.9696715060000014
+Iterations: 81
+
+Start Time: 14
+Status: optimal
+Objective: 509.6531487294176
+Solve Time: 2.8558426520000006
+Iterations: 82
+
+Start Time: 15
+Status: optimal
+Objective: 428.6826003188895
+Solve Time: 2.4812636289999994
+Iterations: 86
+
+Start Time: 16
+Status: optimal
+Objective: 404.8473921367008
+Solve Time: 1.0795344250000003
+Iterations: 55
+
+Start Time: 17
+Status: optimal
+Objective: 303.34606597612304
+Solve Time: 0.6603761589999996
+Iterations: 35
+
+Start Time: 18
+Status: optimal
+Objective: 196.14940090973053
+Solve Time: 1.3970823489999997
+Iterations: 69
+
+Start Time: 19
+Status: optimal
+Objective: 78.49184264310531
+Solve Time: 3.3093288030000014
+Iterations: 181
+
+MPC Treatment
+Status: optimal
+Objective: 5201.36007336438
+Solve Time: 251.3838841249998
+Iterations: 3271
+Average Health Violation 0.007140528384861811

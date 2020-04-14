@@ -136,7 +136,7 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot health curves.
-def plot_health(h, curves = [], stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, label = "Treated", one_idx = False, filename = None, *args, **kwargs):
+def plot_health(h, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, one_idx = False, filename = None):
 	T = h.shape[0] - 1
 	m = h.shape[1]
 	
@@ -156,11 +156,10 @@ def plot_health(h, curves = [], stepsize = 10, maxcols = 5, T_treat = None, boun
 			ax = axs if cols == 1 else axs[i]
 		else:
 			ax = axs[int(i / maxcols), i % maxcols]
-		ltreat, = ax.plot(range(T+1), h[:,i], label = label, *args, **kwargs)
+		ltreat, = ax.plot(range(T+1), h[:,i], label = "Treated")
 		handles = [ltreat]
-		for curve in curves:
-			curve_kw = curve.get("kwargs", {})
-			lcurve, = ax.plot(range(T+1), curve["h"][:,i], label = curve["label"], **curve_kw)
+		for label, curve in curves.items():
+			lcurve, = ax.plot(range(T+1), curve[:,i], label = label)
 			handles += [lcurve]
 		# lnone, = ax.plot(range(T+1), h_prog[:,i], ls = '--', color = "red")
 		# ax.set_title("$x_{{{0}}}(t)$".format(i))
@@ -183,10 +182,9 @@ def plot_health(h, curves = [], stepsize = 10, maxcols = 5, T_treat = None, boun
 	for col in range(left):
 		axs[rows-1, maxcols-1-col].set_axis_off()
 	
-	if len(curves) != 0:
-		ax.legend(handles = handles, loc = "upper right", borderaxespad = 1)
-		# fig.legend(handles = handles, loc = "center right", borderaxespad = 1)
-		# fig.legend(handles = [ltreat, lnone], labels = ["Treated", "Untreated"], loc = "center right", borderaxespad = 1)
+	ax.legend(handles = handles, loc = "upper right", borderaxespad = 1)
+	# fig.legend(handles = handles, loc = "center right", borderaxespad = 1)
+	# fig.legend(handles = [ltreat, lnone], labels = ["Treated", "Untreated"], loc = "center right", borderaxespad = 1)
 	
 	if title is not None:
 		plt.suptitle(title)
@@ -195,7 +193,7 @@ def plot_health(h, curves = [], stepsize = 10, maxcols = 5, T_treat = None, boun
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot treatment curves.
-def plot_treatment(d, curves = [], stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, label = "Treatment", one_idx = False, filename = None, *args, **kwargs):
+def plot_treatment(d, curves = {}, stepsize = 10, maxcols = 5, T_treat = None, bounds = None, title = None, one_idx = False, filename = None):
 	T = d.shape[0]
 	n = d.shape[1]
 	
@@ -215,13 +213,7 @@ def plot_treatment(d, curves = [], stepsize = 10, maxcols = 5, T_treat = None, b
 			ax = axs if cols == 1 else axs[j]
 		else:
 			ax = axs[int(j / maxcols), j % maxcols]
-		ldose, = ax.plot(range(1,T+1), d[:,j], label = label, *args, **kwargs)
-		handles = [ldose]
-		for curve in curves:
-			curve_kw = curve.get("kwargs", {})
-			lcurve, = ax.plot(range(1,T+1), curve["d"][:,j], label = curve["label"], **curve_kw)
-			handles += [lcurve]
-		# ax.plot(range(1,T+1), d[:,j])
+		ax.plot(range(1,T+1), d[:,j])
 		# ax.set_title("$u_{{{0}}}(t)$".format(j))
 		ax.set_title("$d_{{{0}}}(t)$".format(j + int(one_idx)))
 		
@@ -241,9 +233,6 @@ def plot_treatment(d, curves = [], stepsize = 10, maxcols = 5, T_treat = None, b
 	
 	for col in range(left):
 		axs[rows-1, maxcols-1-col].set_axis_off()
-	
-	if len(curves) != 0:
-		ax.legend(handles = handles, loc = "upper right", borderaxespad = 1)
 	
 	if title is not None:
 		plt.suptitle(title)

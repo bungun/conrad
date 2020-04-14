@@ -197,13 +197,13 @@ def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 
 		solve_time += prob.solver_stats.solve_time
 		
 		if mpc_verbose:
-			print("Start Time:", t_s)
+			print("\nStart Time:", t_s)
 			print("Status:", prob.status)
 			print("Objective:", prob.value)
 			print("Solve Time:", prob.solver_stats.solve_time)
 		
 		# Save beams, doses, and penalties for current period.
-		status = prob.status
+		status = prob.status   # TODO: Save "weakest" status over all iterations?
 		beams[t_s] = b.value[0]
 		doses[t_s] = d.value[0]
 		

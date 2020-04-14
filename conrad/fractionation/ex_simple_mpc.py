@@ -6,6 +6,7 @@ from plot_utils import *
 from data_utils import line_integral_mat, health_prognosis
 from example_utils import simple_structures, simple_colormap
 from mpc_funcs import dynamic_treatment, mpc_treatment
+from admm_funcs import dynamic_treatment_admm, mpc_treatment_admm
 
 np.random.seed(1)
 
@@ -16,10 +17,13 @@ n_angle = 20  # 10    # Number of angles.
 n_bundle = 50  # 10   # Number of beams per angle.
 n = n_angle*n_bundle   # Total number of beams.
 
+prop_cycle = plt.rcParams['axes.prop_cycle']
+colors = prop_cycle.by_key()['color']
+
 # Display structures on a polar grid.
 x_grid, y_grid, regions = simple_structures(n_grid, n_grid)
 struct_kw = simple_colormap(one_idx = True)
-# plot_structures(x_grid, y_grid, regions, title = "Anatomical Structures", one_idx = True, **struct_kw)
+plot_structures(x_grid, y_grid, regions, title = "Anatomical Structures", one_idx = True, **struct_kw)
 # plot_structures(x_grid, y_grid, regions, one_idx = True, filename = "ex_cardioid_structures.png", **struct_kw)
 
 # Problem data.
@@ -52,8 +56,15 @@ def health_map(h,t):
 
 # Health prognosis.
 h_prog = health_prognosis(h_init, T, F, r_list = r, health_map = health_map)
-curves = {"Untreated": h_prog}
+# curves = {"Untreated": h_prog}
+h_curves = [{"h": h_prog, "label": "Untreated", "kwargs": {"color": colors[1]}}]
 
+# Health violations.
+def health_viol(h, bounds):
+	lower, upper = bounds
+	viols = np.maximum(h - upper, 0) + np.maximum(lower - h, 0)
+	return np.sum(viols)/T
+	
 # Penalty function.
 rx_health_weights = [K*[1], K*[1]]
 rx_health_goal = np.zeros(K)
@@ -87,13 +98,17 @@ health_upper[15:,0] = 0.05   # Upper bound on PTV for t = 16,...,20.
 patient_rx["health_constrs"] = {"lower": health_lower, "upper": health_upper}
 
 # Dynamic treatment.
-res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, health_map = health_map, solver = "ECOS")
-# res_dynamic = dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, health_map = health_map, rho = 25, max_iter = 1000, solver = "ECOS", admm_verbose = True)
+# res_dynamic = dynamic_treatment(A_list, F, G, r, h_init, patient_rx, health_map = health_map, solver = "ECOS")
+res_dynamic = dynamic_treatment_admm(A_list, F, G, r, h_init, patient_rx, health_map = health_map, rho = 25, max_iter = 1000, solver = "ECOS", admm_verbose = True)
 print("Dynamic Treatment")
 print("Status:", res_dynamic["status"])
 print("Objective:", res_dynamic["obj"])
 print("Solve Time:", res_dynamic["solve_time"])
-# print("Iterations:", res_dynamic["num_iters"])
+print("Iterations:", res_dynamic["num_iters"])
+
+# Calculate actual health constraint violation.
+h_viol_dyn = health_viol(res_dynamic["health"][1:], (health_lower, health_upper))
+print("Average Health Violation", h_viol_dyn)
 
 # Plot dynamic beam, health, and treatment curves.
 # Set beam colors on logarithmic scale.
@@ -101,32 +116,31 @@ b_min = np.min(res_dynamic["beams"][res_dynamic["beams"] > 0])
 b_max = np.max(res_dynamic["beams"])
 lc_norm = LogNorm(vmin = b_min, vmax = b_max)
 
-# plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True)
+plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True)
 plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
 			title = "Beam Intensities vs. Time", one_idx = True, structures = (x_grid, y_grid, regions), struct_kw = struct_kw)
-plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), title = "Health Status vs. Time", one_idx = True)
+plot_health(res_dynamic["health"], curves = h_curves, stepsize = 10, bounds = (health_lower, health_upper), title = "Health Status vs. Time", one_idx = True)
 plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), title = "Treatment Dose vs. Time", one_idx = True)
 
 # plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "ex_noisy_dyn_admm_residuals.png")
 # plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
 #			one_idx = True, structures = (x_grid, y_grid, regions), struct_kw = struct_kw, filename = "ex_noisy_dyn_beams.png")
-# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), one_idx = True, filename = "ex_noisy_dyn_health.png")
+# plot_health(res_dynamic["health"], curves = h_curves, stepsize = 10, bounds = (health_lower, health_upper), one_idx = True, filename = "ex_noisy_dyn_health.png")
 # plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), one_idx = True, filename = "ex_noisy_dyn_doses.png")
-
-# Modify health constraints for MPC.
-# health_upper_mpc = health_upper.copy()
-# health_upper_mpc[:15,0] = np.linspace(1.5, 0.05, num = 15)
-# patient_rx_mpc = patient_rx.copy()
-# patient_rx_mpc["health_constrs"]["upper"] = health_upper_mpc
 
 # Dynamic treatment with MPC.
 print("\nStarting MPC algorithm...")
-# res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx_mpc, health_map = health_map, solver = "ECOS")
-res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx, health_map = health_map, solver = "ECOS", mpc_verbose = True)
+# res_mpc = mpc_treatment(A_list, F, G, r, h_init, patient_rx, health_map = health_map, solver = "ECOS", mpc_verbose = True)
+res_mpc = mpc_treatment_admm(A_list, F, G, r, h_init, patient_rx, health_map = health_map, rho = 25, max_iter = 1000, solver = "ECOS", mpc_verbose = True)
 print("\nMPC Treatment")
 print("Status:", res_mpc["status"])
 print("Objective:", res_mpc["obj"])
 print("Solve Time:", res_mpc["solve_time"])
+print("Iterations:", res_mpc["num_iters"])
+
+# Calculate actual health constraint violation.
+h_viol_mpc = health_viol(res_mpc["health"][1:], (health_lower, health_upper))
+print("Average Health Violation", h_viol_mpc)
 
 # Plot dynamic MPC beam, health, and treatment curves.
 # Set beam colors on logarithmic scale.
@@ -134,12 +148,21 @@ b_min = np.min(res_mpc["beams"][res_mpc["beams"] > 0])
 b_max = np.max(res_mpc["beams"])
 lc_norm = LogNorm(vmin = b_min, vmax = b_max)
 
+# Compare one-shot dynamic and MPC treatment results.
+d_curves = [{"d": res_dynamic["doses"], "label": "Naive", "kwargs": {"color": colors[0]}}]
+h_naive = [{"h": res_dynamic["health"], "label": "Treated (Naive)", "kwargs": {"color": colors[0]}}]
+h_curves = h_naive + h_curves
+
 plot_beams(res_mpc["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
 			title = "Beam Intensities vs. Time", one_idx = True, structures = (x_grid, y_grid, regions), struct_kw = struct_kw)
-plot_health(res_mpc["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), title = "Health Status vs. Time", one_idx = True)
-plot_treatment(res_mpc["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), title = "Treatment Dose vs. Time", one_idx = True)
+plot_health(res_mpc["health"], curves = h_curves, stepsize = 10, bounds = (health_lower, health_upper), \
+			title = "Health Status vs. Time", label = "Treated (MPC)", color = colors[2], one_idx = True)
+plot_treatment(res_mpc["doses"], curves = d_curves, stepsize = 10, bounds = (dose_lower, dose_upper), \
+			title = "Treatment Dose vs. Time", label = "MPC", color = colors[2], one_idx = True)
 
 # plot_beams(res_mpc["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
-#		  	one_idx = True, structures = (x_grid, y_grid, regions), struct_kw = struct_kw, filename = "ex_noisy_mpc_beams.png")
-# plot_health(res_mpc["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper_mpc), one_idx = True, filename = "ex_noisy_mpc_health.png")
-# plot_treatment(res_mpc["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), one_idx = True, filename = "ex_noisy_mpc_doses.png")
+#		  	one_idx = True, structures = (x_grid, y_grid, regions), struct_kw = struct_kw, filename = "ex_noisy_mpc_admm_beams.png")
+# plot_health(res_mpc["health"], curves = h_curves, stepsize = 10, bounds = (health_lower, health_upper), \
+#			label = "Treated (MPC)", color = colors[2], one_idx = True, filename = "ex_noisy_mpc_admm_health.png")
+# plot_treatment(res_mpc["doses"], curves = d_curves, stepsize = 10, bounds = (dose_lower, dose_upper), \
+#			label = "MPC", color = colors[2], one_idx = True, filename = "ex_noisy_mpc_admm_doses.png")
