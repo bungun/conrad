@@ -61,7 +61,8 @@ patient_rx["beam_constrs"] = {"upper": beam_upper}
 
 # Dose constraints.
 dose_lower = np.zeros((T,K))
-dose_upper = np.full((T,K), 25)   # Upper bound on doses.
+# dose_upper = np.full((T,K), 25)   # Upper bound on doses.
+dose_upper = np.full((T,K), 50)
 patient_rx["dose_constrs"] = {"lower": dose_lower, "upper": dose_upper}
 
 # Health constraints.
@@ -97,8 +98,8 @@ plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize =
 plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), title = "Health Status vs. Time", one_idx = True)
 plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), title = "Treatment Dose vs. Time", one_idx = True)
 
-# plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "ex_cardioid3_1000_admm_residuals.png")
+# plot_residuals(res_dynamic["primal"], res_dynamic["dual"], semilogy = True, filename = "ex_cardioid4_Dmax50_admm_residuals.png")
 # plot_beams(res_dynamic["beams"], angles = angles, offsets = offs_vec, stepsize = 1, cmap = transp_cmap(plt.cm.Reds, upper = 0.5), \
-#			one_idx = True, structures = (x_grid, y_grid, regions), struct_kw = struct_kw, filename = "ex_cardioid3_1000_admm_beams.png")
-# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), one_idx = True, filename = "ex_cardioid3_1000_admm_health.png")
-# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), one_idx = True, filename = "ex_cardioid3_1000_admm_doses.png")
+#			one_idx = True, structures = (x_grid, y_grid, regions), struct_kw = struct_kw, filename = "ex_cardioid4_Dmax50_admm_beams.png")
+# plot_health(res_dynamic["health"], curves = curves, stepsize = 10, bounds = (health_lower, health_upper), one_idx = True, filename = "ex_cardioid4_Dmax50_admm_health.png")
+# plot_treatment(res_dynamic["doses"], stepsize = 10, bounds = (dose_lower, dose_upper), one_idx = True, filename = "ex_cardioid4_Dmax50_admm_doses.png")

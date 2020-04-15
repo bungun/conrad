@@ -136,7 +136,7 @@ print("\nMPC Treatment")
 print("Status:", res_mpc["status"])
 print("Objective:", res_mpc["obj"])
 print("Solve Time:", res_mpc["solve_time"])
-print("Iterations:", res_mpc["num_iters"])
+# print("Iterations:", res_mpc["num_iters"])
 
 # Calculate actual health constraint violation.
 h_viol_mpc = health_viol(res_mpc["health"][1:], (health_lower, health_upper))
