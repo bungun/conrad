@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import copy
 from matplotlib.collections import LineCollection
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap, Normalize
 from data_utils import line_segments
 
 savepath = "/home/anqi/Dropbox/Research/Fractionation/Figures/"
@@ -59,6 +59,7 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 	n = b.shape[1]
 	xlim = kwargs.pop("xlim", (-1,1))
 	ylim = kwargs.pop("ylim", (-1,1))
+	norm = kwargs.pop("norm", Normalize(vmin = np.min(b), vmax = np.max(b)))
 	
 	if len(angles)*len(offsets) != n:
 		raise ValueError("len(angles)*len(offsets) must equal {0}".format(n))
@@ -100,7 +101,7 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 			ctf = ax.contourf(struct_x, struct_y, struct_labels + int(one_idx), levels = struct_levels, **struct_kw)
 		
 		# Set colors based on beam intensity.
-		lc = LineCollection(segments, *args, **kwargs)
+		lc = LineCollection(segments, norm = norm, *args, **kwargs)
 		lc.set_array(np.asarray(b[t]))
 		ax.add_collection(lc)
 		
@@ -123,7 +124,7 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 	# Display colorbar for entire range of intensities.
 	fig.subplots_adjust(right = 0.8)
 	cax_right = fig.add_axes([0.85, 0.15, 0.02, 0.7])
-	lc = LineCollection(2*[np.zeros((2,2))], *args, **kwargs)
+	lc = LineCollection(2*[np.zeros((2,2))], norm = norm, *args, **kwargs)
 	lc.set_array(np.array([np.min(b), np.max(b)]))
 	cbar = fig.colorbar(lc, cax = cax_right, label = "Beam Intensity")
 	cbar.solids.set(alpha = 1)
