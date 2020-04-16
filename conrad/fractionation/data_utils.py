@@ -30,6 +30,9 @@ def limacon(x, y, a = 1, b = 0, center = (0,0), angle = 0):
 
 # Generate xy-coordinate pairs from line angles and displacements.
 def line_segments(angles, d_vec, xlim = (-1,1), ylim = (-1,1)):
+	if np.any(angles < 0) or np.any(angles > np.pi):
+		raise ValueError("angles must all be in [0,pi]")
+	
 	n_angles = len(angles)
 	n_offsets = len(d_vec)
 	n_lines = n_angles*n_offsets
@@ -41,13 +44,12 @@ def line_segments(angles, d_vec, xlim = (-1,1), ylim = (-1,1)):
 	
 	k = 0
 	for i in range(n_angles):
-		ct = np.cos(angles[i])
-		st = np.sin(angles[i])
-		slope = st/ct
+		# Slope of line.
+		slope = np.tan(np.pi - angles[i])
 		
 		# Center of line.
-		x0 = xc - d_vec*st
-		y0 = yc + d_vec*ct
+		x0 = xc - d_vec*np.sin(np.pi/2 - angles[i])
+		y0 = yc + d_vec*np.cos(np.pi/2 - angles[i])
 		
 		# Endpoints of line.
 		for j in range(n_offsets):
@@ -99,7 +101,7 @@ def line_integral_mat(structures, angles = 10, n_bundle = 1, offset = 0.01, *arg
 	n = n_angle*n_bundle
 	A = np.zeros((K, n))
 	
-	# Orthogonal offsets of line from image center (counterclockwise).
+	# Orthogonal offsets of line from image center (pos = northwest).
 	n_half = n_bundle//2
 	d_vec = np.arange(-n_half, n_half+1)
 	if n_bundle % 2 == 0:
@@ -126,8 +128,8 @@ def line_pixel_length(d, theta, n):
 	----------
 	d : displacement of line, i.e., distance of line from center of image, 
 		measured in pixel lengths (and orthogonally to line).
-	theta : angle of line, measured in radians from x-axis. Must be between
-		0 and pi, inclusive.
+	theta : angle of line, measured in radians clockwise from x-axis. 
+			Must be between 0 and pi, inclusive.
 	n : image size is n by n.
 	
 	Returns
