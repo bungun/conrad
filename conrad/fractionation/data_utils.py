@@ -29,36 +29,38 @@ def limacon(x, y, a = 1, b = 0, center = (0,0), angle = 0):
 	return (xr**2 + yr**2 - a*xr)**2 - b**2*(xr**2 + yr**2)
 
 # Generate xy-coordinate pairs from line angles and displacements.
-def line_segments(angles, d_vec, xlim = (-1,1), ylim = (-1,1)):
+def line_segments(angles, d_vec, n_grid, xlim = (-1,1), ylim = (-1,1)):
 	if np.any(angles < 0) or np.any(angles > np.pi):
 		raise ValueError("angles must all be in [0,pi]")
 	
 	n_angles = len(angles)
 	n_offsets = len(d_vec)
 	n_lines = n_angles*n_offsets
+	segments = np.zeros((n_lines,2,2))   # n_lines x n_points x n_dims = 2.
 	
 	xc = (xlim[1] + xlim[0])/2
 	yc = (ylim[1] + ylim[0])/2
-	x_edges = np.zeros((n_lines, 2))
-	y_edges = np.zeros((n_lines, 2))
+	x_scale = (xlim[1] - xlim[0])/n_grid   # (x_max - x_min)/(x_len_pixels)
+	y_scale = (ylim[1] - ylim[0])/n_grid   # (y_max - y_min)/(y_len_pixels)
+	dydx_scale = (ylim[1] - ylim[0])/(xlim[1] - xlim[0])
 	
 	k = 0
 	for i in range(n_angles):
 		# Slope of line.
-		slope = np.tan(np.pi - angles[i])
+		slope = dydx_scale*np.tan(np.pi - angles[i])
 		
 		# Center of line.
-		x0 = xc - d_vec*np.sin(np.pi/2 - angles[i])
-		y0 = yc + d_vec*np.cos(np.pi/2 - angles[i])
+		x0 = xc - x_scale*d_vec*np.sin(angles[i])
+		y0 = yc - y_scale*d_vec*np.cos(angles[i])
 		
 		# Endpoints of line.
 		for j in range(n_offsets):
 			if slope == 0:
-				x_edges[k,:] = [xlim[0], y0[j]]
-				y_edges[k,:] = [xlim[1], y0[j]]
+				segments[k,0,:] = [xlim[0], y0[j]]
+				segments[k,1,:] = [xlim[1], y0[j]]
 			elif np.isinf(slope):
-				x_edges[k,:] = [x0[j], ylim[0]]
-				y_edges[k,:] = [x0[j], ylim[1]]
+				segments[k,0,:] = [x0[j], ylim[0]]
+				segments[k,1,:] = [x0[j], ylim[1]]
 			else:
 				# y - y0 = slope*(x - x0).
 				ys = y0[j] + slope*(xlim - x0[j])
@@ -71,18 +73,13 @@ def line_segments(angles, d_vec, xlim = (-1,1), ylim = (-1,1)):
 				e2 = np.column_stack([xs, ylim])[idx_x]
 				edges = np.row_stack([e1, e2])
 				
-				x_edges[k,:] = edges[0]
-				y_edges[k,:] = edges[1]
+				segments[k,0,:] = edges[0]
+				segments[k,1,:] = edges[1]
 			k = k + 1
-	
-	coords = np.zeros((2*n_lines,2))
-	coords[0::2,:] = x_edges
-	coords[1::2,:] = y_edges
-	segments = np.split(coords, n_lines)
 	return segments
 
 # Construct line integral matrix.
-def line_integral_mat(structures, angles = 10, n_bundle = 1, offset = 0.01, *args, **kwargs):
+def line_integral_mat(structures, angles = 10, n_bundle = 1, offset = 10):
 	m_grid, n_grid = structures.shape
 	K = np.unique(structures).size
 	
@@ -101,7 +98,7 @@ def line_integral_mat(structures, angles = 10, n_bundle = 1, offset = 0.01, *arg
 	n = n_angle*n_bundle
 	A = np.zeros((K, n))
 	
-	# Orthogonal offsets of line from image center (pos = northwest).
+	# Orthogonal offsets of line from image center (pos = northwest) given in pixel lengths.
 	n_half = n_bundle//2
 	d_vec = np.arange(-n_half, n_half+1)
 	if n_bundle % 2 == 0:
@@ -111,7 +108,8 @@ def line_integral_mat(structures, angles = 10, n_bundle = 1, offset = 0.01, *arg
 	j = 0
 	for i in range(n_angle):
 		for d in d_vec:
-			L = line_pixel_length(d, angles[i], n_grid)
+			# Flip angle since we measure counterclockwise from x-axis.
+			L = line_pixel_length(d, np.pi-angles[i], n_grid)
 			for k in range(K):
 				A[k,j] = np.sum(L[structures == k])
 			j = j + 1

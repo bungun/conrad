@@ -54,7 +54,7 @@ def plot_structures(x, y, structures, title = None, one_idx = False, filename = 
 		fig.savefig(savepath + filename, bbox_inches = "tight", dpi = 300)
 
 # Plot beams.
-def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = False, title = None, one_idx = False, filename = None, structures = None, struct_kw = dict(), *args, **kwargs):
+def plot_beams(b, angles, offsets, n_grid, stepsize = 10, maxcols = 5, standardize = False, title = None, one_idx = False, filename = None, structures = None, struct_kw = dict(), *args, **kwargs):
 	T = b.shape[0]
 	n = b.shape[1]
 	xlim = kwargs.pop("xlim", (-1,1))
@@ -89,7 +89,7 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 	fig.set_size_inches(16,8)
 	
 	t = 0
-	segments = line_segments(angles, offsets, xlim, ylim)   # Create collection of beams.
+	segments = line_segments(angles, offsets, n_grid, xlim, ylim)   # Create collection of beams.
 	for t_step in range(T_steps):
 		if rows == 1:
 			ax = axs if cols == 1 else axs[t_step]
@@ -124,7 +124,7 @@ def plot_beams(b, angles, offsets, stepsize = 10, maxcols = 5, standardize = Fal
 	# Display colorbar for entire range of intensities.
 	fig.subplots_adjust(right = 0.8)
 	cax_right = fig.add_axes([0.85, 0.15, 0.02, 0.7])
-	lc = LineCollection(2*[np.zeros((2,2))], norm = norm, *args, **kwargs)
+	lc = LineCollection(np.zeros((1,2,2)), norm = norm, *args, **kwargs)
 	lc.set_array(np.array([np.min(b), np.max(b)]))
 	cbar = fig.colorbar(lc, cax = cax_right, label = "Beam Intensity")
 	cbar.solids.set(alpha = 1)
