@@ -7,6 +7,13 @@ def rx_slice(patient_rx, t_start, t_end, t_step = 1, squeeze = True):
 	t_slice = slice(t_start, t_end, t_step)
 	
 	rx_cur = patient_rx.copy()
+	for goal_key in {"dose_goal", "health_goal"}:
+		if goal_key in patient_rx:
+			rx_old_slice = patient_rx[goal_key][t_slice]
+			if squeeze:
+				rx_old_slice = np.squeeze(rx_old_slice)
+			rx_cur[goal_key] = rx_old_slice
+			
 	for constr_key in {"beam_constrs", "dose_constrs", "health_constrs"}:
 		if constr_key in patient_rx:
 			rx_cur[constr_key] = {}
@@ -36,11 +43,15 @@ def dyn_objective(d_var, h_var, patient_rx):
 	T, K = d_var.shape
 	if h_var.shape[0] != T+1:
 		raise ValueError("h_var must have exactly {0} rows".format(T+1))
+	if patient_rx["dose_goal"].shape != (T,K):
+		raise ValueError("dose_goal must have dimensions ({0},{1})".format(T,K))
+	if patient_rx["health_goal"].shape != (T,K):
+		raise ValueError("health_goal must have dimensions ({0},{1})".format(T,K))
 	
 	penalties = []
 	for t in range(T):
-		d_penalty = dose_penalty(d_var[t], patient_rx["dose_goal"], patient_rx["dose_weights"])
-		h_penalty = health_penalty(h_var[t+1], patient_rx["health_goal"], patient_rx["health_weights"])
+		d_penalty = dose_penalty(d_var[t], patient_rx["dose_goal"][t], patient_rx["dose_weights"])
+		h_penalty = health_penalty(h_var[t+1], patient_rx["health_goal"][t], patient_rx["health_weights"])
 		penalties.append(d_penalty + h_penalty)
 	return sum(penalties)
 
@@ -135,6 +146,9 @@ def build_dyn_prob(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov =
 
 def single_treatment(A, patient_rx, *args, **kwargs):
 	K, n = A.shape
+	if patient_rx["dose_goal"].shape not in [(K,), (K,1)]:
+		raise ValueError("dose_goal must have dimensions ({0},)".format(K))
+	
 	b = Variable(n, pos = True)   # Beams.
 	d = Variable(K, pos = True)   # Doses.
 	
@@ -193,6 +207,7 @@ def mpc_treatment(A_list, F_list, G_list, r_list, h_init, patient_rx, T_recov = 
 		# prob, b, h, d = build_dyn_prob(A_list[t_s:], F_list[t_s:], G_list[t_s:], r_list[t_s:], h_cur, rx_cur, T_recov)
 		prob.solve(*args, **kwargs)
 		if prob.status not in ["optimal", "optimal_inaccurate"]:
+			# TODO: Handle infeasible cases by relaxing dose/health constraints and adding a penalty on the relaxation.
 			raise RuntimeError("Solver failed with status {0}".format(prob.status))
 		solve_time += prob.solver_stats.solve_time
 		

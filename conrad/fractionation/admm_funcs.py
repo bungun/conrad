@@ -10,13 +10,15 @@ from mpc_funcs import dose_penalty, health_penalty, dyn_objective, rx_to_constrs
 def build_dyn_prob_dose(A_list, patient_rx, T_recov = 0):
 	T_treat = len(A_list)
 	K, n = A_list[0].shape
+	if patient_rx["dose_goal"].shape != (T_treat,K):
+		raise ValueError("dose_goal must have dimensions ({0},{1})".format(T_treat,K))
 	
 	# Define variables.
 	b = Variable((T_treat,n), pos = True, name = "beams")   # Beams.
 	d = vstack([A_list[t]*b[t] for t in range(T_treat)])    # Doses.
 	
 	# Dose penalty function.
-	obj = sum([dose_penalty(d[t], patient_rx["dose_weights"]) for t in range(T_treat)])
+	obj = sum([dose_penalty(d[t], patient_rx["dose_goal"][t], patient_rx["dose_weights"]) for t in range(T_treat)])
 	
 	# Additional beam constraints.
 	# constrs = [b >= 0]
@@ -56,13 +58,15 @@ def build_dyn_prob_dose_period(A, patient_rx, T_recov = 0):
 
 def build_dyn_prob_health(F_list, G_list, r_list, h_init, patient_rx, T_treat, T_recov = 0):
 	K = h_init.shape[0]
+	if patient_rx["health_goal"].shape != (T_treat,K):
+		raise ValueError("health_goal must have dimensions ({0},{1})".format(T_treat,K))
 	
 	# Define variables.
 	h = Variable((T_treat+1,K), name = "health")   # Health statuses.
 	d = Variable((T_treat,K), pos = True, name = "doses")   # Doses.
 	
 	# Health penalty function.
-	obj = sum([health_penalty(h[t+1], patient_rx["health_goal"], patient_rx["health_weights"]) for t in range(T_treat)])
+	obj = sum([health_penalty(h[t+1], patient_rx["health_goal"][t], patient_rx["health_weights"]) for t in range(T_treat)])
 	
 	# Health dynamics for treatment stage.
 	constrs = [h[0] == h_init]

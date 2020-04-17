@@ -19,7 +19,7 @@ def simple_structures(m_grid, n_grid, xlim = (-1,1), ylim = (-1,1)):
 	regions[cardioid(x_grid, y_grid, 0.125, (-0.1,0), np.pi) <= 0] = 0
 
 	# OAR (s = 1).
-	r_inner = 0.7
+	r_inner = 0.6
 	r_outer = 0.85
 	r0 = (r_inner + r_outer)/2
 	theta0_l = 3*np.pi/8
@@ -32,17 +32,17 @@ def simple_structures(m_grid, n_grid, xlim = (-1,1), ylim = (-1,1)):
 	# regions[(r_grid >= 0.5) & (r_grid <= 0.65) & (theta_grid <= np.pi/2)] = 1
 
 	# OAR (s = 2).
-	x0 = -0.275  # -0.375
+	x0 = -0.5  # -0.375
 	y0 = 0.45  # 0.65
-	x_width = 0.15  # 0.1
-	y_width = 0.25  # 0.18
+	x_width = 0.25  # 0.1
+	y_width = 0.35  # 0.18
 	regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width), np.pi/3) <= 0] = 2
 	
 	# OAR (s = 3).
 	x0 = -0.1
 	y0 = -0.7
-	x_width = 0.2
-	y_width = 0.15
+	x_width = 0.4
+	y_width = 0.2
 	regions[ellipse(x_grid, y_grid, (x0, y0), (x_width, y_width)) <= 0] = 3
 	return x_grid, y_grid, regions
 

@@ -59,7 +59,10 @@ def plot_beams(b, angles, offsets, n_grid, stepsize = 10, maxcols = 5, standardi
 	n = b.shape[1]
 	xlim = kwargs.pop("xlim", (-1,1))
 	ylim = kwargs.pop("ylim", (-1,1))
-	norm = kwargs.pop("norm", Normalize(vmin = np.min(b), vmax = np.max(b)))
+	
+	vmax_eps = 1e-3*(np.max(b) - np.min(b))
+	# norm = kwargs.pop("norm", Normalize(vmin = np.min(b), vmax = np.max(b)))
+	norm = kwargs.pop("norm", Normalize(vmin = 0, vmax = np.max(b) + vmax_eps))
 	
 	if len(angles)*len(offsets) != n:
 		raise ValueError("len(angles)*len(offsets) must equal {0}".format(n))

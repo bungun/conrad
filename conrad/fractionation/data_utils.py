@@ -223,8 +223,9 @@ def check_dyn_matrices(F_list, G_list, r_list, K, T_treat, T_recov = 0):
 		if G.shape != (K,K):
 			raise ValueError("G_t must have dimensions ({0},{0})".format(K))
 	for r in r_list:
-		if r.shape != (K,) and r.shape != (K,1):
-			raise ValueError("r_t must have dimensions ({K},)".format(K))
+		# if r.shape != (K,) and r.shape != (K,1):
+		if r.shape not in [(K,), (K,1)]:
+			raise ValueError("r_t must have dimensions ({0},)".format(K))
 	return F_list, G_list, r_list
 
 # Health prognosis with a given treatment.
