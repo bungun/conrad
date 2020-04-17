@@ -47,11 +47,11 @@ def line_segments(angles, d_vec, n_grid, xlim = (-1,1), ylim = (-1,1)):
 	k = 0
 	for i in range(n_angles):
 		# Slope of line.
-		slope = dydx_scale*np.tan(np.pi - angles[i])
+		slope = dydx_scale*np.tan(angles[i])
 		
 		# Center of line.
 		x0 = xc - x_scale*d_vec*np.sin(angles[i])
-		y0 = yc - y_scale*d_vec*np.cos(angles[i])
+		y0 = yc + y_scale*d_vec*np.cos(angles[i])
 		
 		# Endpoints of line.
 		for j in range(n_offsets):
@@ -98,7 +98,8 @@ def line_integral_mat(structures, angles = 10, n_bundle = 1, offset = 10):
 	n = n_angle*n_bundle
 	A = np.zeros((K, n))
 	
-	# Orthogonal offsets of line from image center (pos = northwest) given in pixel lengths.
+	# Orthogonal offsets of line from image center given in pixel lengths.
+	# Positive direction = northwest for angle <= np.pi/2, southwest for angle > np.pi/2.
 	n_half = n_bundle//2
 	d_vec = np.arange(-n_half, n_half+1)
 	if n_bundle % 2 == 0:
